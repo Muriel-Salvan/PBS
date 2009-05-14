@@ -29,10 +29,11 @@ module PBS
         rMenu = Wx::Menu.new
 
         # TODO: Create the menu correctly
-        @Controller.addMenuCommand(self, rMenu, ID_EDIT_SHORTCUT) do |iEvent, oValidator|
+        @Controller.addMenuCommand(self, rMenu, Wx::ID_EDIT) do |iEvent, oValidator|
           oValidator.authorizeCmd(
             :parentWindow => nil,
-            :shortcut => @Controller.ShortcutsList[0]
+            :objectID => ID_SHORTCUT,
+            :object => @Controller.ShortcutsList[0]
           )
         end
         rMenu.append_separator

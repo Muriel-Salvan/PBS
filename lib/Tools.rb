@@ -17,13 +17,21 @@ module PBS
     # Object that is used with the clipboard
     class DataObjectTag < Wx::DataObjectSimple
 
-      # Constructor
-      def initialize
+      # Get the data format
+      #
+      # Return:
+      # * <em>Wx::DataFormat</em>: The data format
+      def self.getDataFormat
         if (!defined?(@@PBS_CLIPBOARD_DATA_FORMAT))
           # Custom format, that ensures only PBS will use this clipboard data
           @@PBS_CLIPBOARD_DATA_FORMAT = Wx::DataFormat.new('PBSClipboardDataFormat')
         end
-        super(@@PBS_CLIPBOARD_DATA_FORMAT)
+        return @@PBS_CLIPBOARD_DATA_FORMAT
+      end
+
+      # Constructor
+      def initialize
+        super(DataObjectTag.getDataFormat)
       end
 
       # The data to encapsulate
@@ -49,6 +57,42 @@ module PBS
         return @Data
       end
 
+    end
+
+    # Create an image list, considering the minimal size of every image given as input.
+    #
+    # Parameters:
+    # * *iFileNames* (<em>list<String></em>): File names list, relative to PBS directory
+    # Return:
+    # * <em>Wx::ImageList</em>: The image list
+    def createImageList(iFileNames)
+      lBitmapList = []
+      lMinWidth = nil
+      lMinHeight = nil
+      # Read every file given as input, and get minimal width/height
+      iFileNames.each do |iFileName|
+        lBitmap = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/#{iFileName}")
+        if ((lMinWidth == nil) or
+            (lBitmap.width < lMinWidth))
+          lMinWidth = lBitmap.width
+        end
+        if ((lMinHeight == nil) or
+            (lBitmap.height < lMinHeight))
+          lMinHeight = lBitmap.height
+        end
+        lBitmapList << lBitmap
+      end
+      if (lMinWidth == nil)
+        # No image, empty list will be returned
+        lMinWidth = 0
+        lMinHeight = 0
+      end
+      # Create the image list and populate it with the previously read bitmaps
+      rImageList = Wx::ImageList.new(lMinWidth, lMinHeight)
+      lBitmapList.each do |iBitmap|
+        rImageList << iBitmap
+      end
+      return rImageList
     end
 
     # Save data in a file

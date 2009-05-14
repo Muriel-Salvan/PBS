@@ -32,6 +32,15 @@ module PBS
         puts "!!! Tree node #{iItemID} has unknown ID (#{lID}). It will be marked in the tree. Bug ?"
         @TCMainTree.set_item_text(iItemID, "!!! Unknown Data ID (Node ID: #{iItemID}, Data ID: #{lID}) !!!")
       end
+      if (@CutObjectID == lObject.getUniqueID)
+        # This Tag is being Cut. Mark it.
+        @TCMainTree.set_item_image(iItemID, 0)
+      elsif (@CopyObjectID == lObject.getUniqueID)
+        # This Tag is being Copied. Mark it.
+        @TCMainTree.set_item_image(iItemID, 1)
+      else
+        @TCMainTree.set_item_image(iItemID, -1)
+      end
     end
 
     # Remove a branch of the main tree
@@ -332,6 +341,104 @@ module PBS
       fillMainTree
     end
 
+    # An object has been cut
+    #
+    # Parameters:
+    # * *iObjectID* (_Integer_): The cut object ID (ID_TAG or ID_SHORTCUT)
+    # * *iObject* (_Object_): The cut object
+    def onObjectCut(iObjectID, iObject)
+      case (iObjectID)
+      when ID_TAG
+        updateMainTree do
+          @CutObjectID = iObject.getUniqueID
+          lTagID = @TagsToMainTree[iObject]
+          if (lTagID == nil)
+            puts '!!! The updated Tag was not inserted in the main tree. Bug ?'
+          else
+            updateMainTreeNode(lTagID)
+          end
+        end
+      when ID_SHORTCUT
+        updateMainTree do
+          @CutObjectID = iObject.getUniqueID
+          # Just retrieve existing nodes and update them
+          @TCMainTree.traverse do |iItemID|
+            lID, lObject = @TCMainTree.get_item_data(iItemID)
+            if (lObject == iObject)
+              # Update iItemID with the new info from iSC
+              updateMainTreeNode(iItemID)
+            end
+          end
+        end
+      end
+    end
+
+    # An object has been copied
+    #
+    # Parameters:
+    # * *iObjectID* (_Integer_): The copied object ID (ID_TAG or ID_SHORTCUT)
+    # * *iObject* (_Object_): The copied object
+    def onObjectCopy(iObjectID, iObject)
+      case (iObjectID)
+      when ID_TAG
+        updateMainTree do
+          @CopyObjectID = iObject.getUniqueID
+          lTagID = @TagsToMainTree[iObject]
+          if (lTagID == nil)
+            puts '!!! The updated Tag was not inserted in the main tree. Bug ?'
+          else
+            updateMainTreeNode(lTagID)
+          end
+        end
+      when ID_SHORTCUT
+        updateMainTree do
+          @CopyObjectID = iObject.getUniqueID
+          # Just retrieve existing nodes and update them
+          @TCMainTree.traverse do |iItemID|
+            lID, lObject = @TCMainTree.get_item_data(iItemID)
+            if (lObject == iObject)
+              # Update iItemID with the new info from iSC
+              updateMainTreeNode(iItemID)
+            end
+          end
+        end
+      end
+    end
+
+    # A marked to be copied/cut object has been cancelled
+    #
+    # Parameters:
+    # * *iObjectID* (_Integer_): The to be copied object ID (ID_TAG or ID_SHORTCUT)
+    # * *iObject* (_Object_): The to be copied object
+    def onCancelCopy(iObjectID, iObject)
+      case (iObjectID)
+      when ID_TAG
+        updateMainTree do
+          @CutObjectID = nil
+          @CopyObjectID = nil
+          lTagID = @TagsToMainTree[iObject]
+          if (lTagID == nil)
+            puts '!!! The updated Tag was not inserted in the main tree. Bug ?'
+          else
+            updateMainTreeNode(lTagID)
+          end
+        end
+      when ID_SHORTCUT
+        updateMainTree do
+          @CutObjectID = nil
+          @CopyObjectID = nil
+          # Just retrieve existing nodes and update them
+          @TCMainTree.traverse do |iItemID|
+            lID, lObject = @TCMainTree.get_item_data(iItemID)
+            if (lObject == iObject)
+              # Update iItemID with the new info from iSC
+              updateMainTreeNode(iItemID)
+            end
+          end
+        end
+      end
+    end
+
     # Get the currently selected object and its ID from the main tree
     #
     # Return:
@@ -379,8 +486,15 @@ module PBS
         self.destroy
       end
 
+      # Cut/Copy markers
+      @CutObjectID = nil
+      @CopyObjectID = nil
+
       # Create the treeview
       @TCMainTree = Wx::TreeCtrl.new(self)
+      # Create the image list for the tree
+      lImageList = createImageList(['MiniCut.png', 'MiniCopy.png'])
+      @TCMainTree.image_list = lImageList
       # fill the tree view from scratch
       fillMainTree
 
@@ -426,7 +540,17 @@ module PBS
       addMenuCommand(lEditMenu, Wx::ID_UNDO)
       addMenuCommand(lEditMenu, Wx::ID_REDO)
       lEditMenu.append_separator
-      addMenuCommand(lEditMenu, Wx::ID_CUT)
+      addMenuCommand(lEditMenu, Wx::ID_CUT) do |iEvent, oValidator|
+        lID, lObject = getCurrentTreeSelection
+        if (lID == nil)
+          oValidator.setError('No selection in the Tree when invoking Cut.')
+        else
+          oValidator.authorizeCmd(
+            :objectID => lID,
+            :object => lObject
+          )
+        end
+      end
       addMenuCommand(lEditMenu, Wx::ID_COPY) do |iEvent, oValidator|
         lID, lObject = getCurrentTreeSelection
         if (lID == nil)
@@ -480,25 +604,20 @@ module PBS
         addMenuCommand(lNewSCsMenu, ID_NEW_SHORTCUT_BASE + iType.index)
       end
       lEditMenu.append_sub_menu(lNewSCsMenu, 'New Shortcut')
-      addMenuCommand(lEditMenu, ID_EDIT_SHORTCUT) do |iEvent, oValidator|
+      addMenuCommand(lEditMenu, Wx::ID_EDIT) do |iEvent, oValidator|
         lID, lObject = getCurrentTreeSelection
         if (lID == nil)
-          oValidator.setError('No selection in the Tree when invoking Edit Shortcut.')
+          oValidator.setError('No selection in the Tree when invoking Edit.')
         else
-          case lID
-          when ID_SHORTCUT
-            oValidator.authorizeCmd(
-              :parentWindow => self,
-              :shortcut => lObject
-            )
-          else
-            oValidator.setError("No shortcut selected in the Tree when invoking Edit Shortcut (Node #{lSelectedSCID}, ID = #{lID}).")
-          end
+          oValidator.authorizeCmd(
+            :parentWindow => self,
+            :objectID => lID,
+            :object => lObject
+          )
         end
       end
       lEditMenu.append_separator
       addMenuCommand(lEditMenu, ID_NEW_TAG)
-      addMenuCommand(lEditMenu, ID_EDIT_TAG)
       # Setup menu
       lSetupMenu = Wx::Menu.new
       addMenuCommand(lSetupMenu, ID_TAGS_EDITOR)
@@ -533,9 +652,11 @@ module PBS
         Wx::ID_OPEN,
         Wx::ID_SAVEAS,
         Wx::ID_SEPARATOR,
-        ID_EDIT_SHORTCUT,
+        Wx::ID_EDIT,
         Wx::ID_UNDO,
-        Wx::ID_REDO
+        Wx::ID_REDO,
+        Wx::ID_COPY,
+        Wx::ID_PASTE
       ]
 
       # Create the toolbar
@@ -564,6 +685,47 @@ module PBS
 
       # Set the application title, as it depends on context
       setAppTitle
+
+      # Enables Copy/Cut/Delete/Edit/Paste depending on selected items in the tree
+      evt_tree_sel_changed(@TCMainTree) do |iEvent|
+        lID, lObject = getCurrentTreeSelection
+        case lID
+        when ID_TAG
+          lName = "Tag #{lObject.Name}"
+        when ID_SHORTCUT
+          lName = "Shortcut #{lObject.Metadata['title']}"
+        else
+          lName = nil
+        end
+        lGUIEnabled = ((lID == ID_TAG) or
+                       (lID == ID_SHORTCUT))
+        [ [ Wx::ID_CUT, 'Cut' ],
+          [ Wx::ID_COPY, 'Copy' ],
+          [ Wx::ID_EDIT, 'Edit' ],
+          [ Wx::ID_DELETE, 'Delete' ] ].each do |iCommandInfo|
+          iCommandID, iCommandName = iCommandInfo
+          @Controller.setMenuItemGUIEnabled(lEditMenu, iCommandID, lGUIEnabled)
+          if (lName != nil)
+            @Controller.setMenuItemGUITitle(lEditMenu, iCommandID, "#{iCommandName} #{lName}")
+          else
+            @Controller.setMenuItemGUITitle(lEditMenu, iCommandID, nil)
+          end
+          lButton = lToolBar.find_by_id(iCommandID)
+          if (lButton != nil)
+            @Controller.setToolbarButtonGUIEnabled(lButton, iCommandID, lGUIEnabled)
+            if (lName != nil)
+              @Controller.setToolbarButtonGUITitle(lButton, iCommandID, "#{iCommandName} #{lName}")
+            else
+              @Controller.setToolbarButtonGUITitle(lButton, iCommandID, nil)
+            end
+          end
+        end
+        @Controller.setMenuItemGUIEnabled(lEditMenu, Wx::ID_PASTE, lID == ID_TAG)
+        lButton = lToolBar.find_by_id(Wx::ID_PASTE)
+        if (lButton != nil)
+          @Controller.setToolbarButtonGUIEnabled(lButton, Wx::ID_PASTE, lID == ID_TAG)
+        end
+      end
 
     end
 

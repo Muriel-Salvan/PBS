@@ -15,15 +15,13 @@ module PBS
 
   # Define constants for commands that are not among predefined Wx ones
   ID_OPEN_MERGE = 1000
-  ID_EDIT_SHORTCUT = 1001
-  ID_NEW_TAG = 1002
-  ID_EDIT_TAG = 1003
-  ID_TAGS_EDITOR = 1004
-  ID_TYPES_CONFIG = 1005
-  ID_KEYMAPS = 1006
-  ID_ENCRYPTION = 1007
-  ID_TOOLBARS = 1008
-  ID_STATS = 1009
+  ID_NEW_TAG = 1001
+  ID_TAGS_EDITOR = 1002
+  ID_TYPES_CONFIG = 1003
+  ID_KEYMAPS = 1004
+  ID_ENCRYPTION = 1005
+  ID_TOOLBARS = 1006
+  ID_STATS = 1007
   # Following constants are base integers for plugins related commands. WxRuby takes 5000 - 6000 range.
   ID_IMPORT_BASE = 6000
   ID_IMPORT_MERGE_BASE = 7000
@@ -163,9 +161,13 @@ module PBS
     # * *oMenu* (<em>Wx::Menu</em>): The menu in which we insert the menu item
     # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
     # * *iFetchParametersCode* (_Proc_): Code to be called to fetch parameters (or nil if none needed)
-    def setMenuItemAppearanceWhileInsert(ioMenuItem, iCommandID, iMenuItemPos, oMenu, iEvtWindow, iFetchParametersCode)
+    # * *iParams* (<em>map<Symbol,Object></em>): Additional properties, specific to this command item [optional = {}]
+    def setMenuItemAppearanceWhileInsert(ioMenuItem, iCommandID, iMenuItemPos, oMenu, iEvtWindow, iFetchParametersCode, iParams = {})
       lCommand = @Commands[iCommandID]
       lTitle = lCommand[:title]
+      if (iParams[:GUITitle] != nil)
+        lTitle = iParams[:GUITitle]
+      end
       if (lCommand[:accelerator] != nil)
         lTitle += "\t#{getStringForAccelerator(lCommand[:accelerator])}"
       end
@@ -174,7 +176,10 @@ module PBS
       ioMenuItem.bitmap = lCommand[:bitmap]
       # Insert it
       oMenu.insert(iMenuItemPos, ioMenuItem)
-      if (!lCommand[:enabled])
+      lEnabled = ((lCommand[:enabled]) and
+                  ((iParams[:GUIEnabled] == nil) or
+                   (iParams[:GUIEnabled])))
+      if (!lEnabled)
         # We enable it this way, as using lNewMenuItem.enable works only half (bug ?)
         oMenu.enable(iCommandID, false)
       end
@@ -217,7 +222,10 @@ module PBS
     # * *iCommand* (<em>map<Symbol,Object></em>): The command
     # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
     # * *iFetchParametersCode* (_Proc_): Code to be called to fetch parameters (or nil if none needed)
-    def updateMenuItemAppearance(ioMenuItem, iCommand, iEvtWindow, iFetchParametersCode)
+    # * *iParams* (<em>map<Symbol,Object></em>): Additional properties, specific to this command item [optional = {}]
+    # ** *GUIEnabled* (_Boolean_): Does the GUI enable this item specifically ?
+    # ** *GUITitle* (_String_): Override title if not nil
+    def updateMenuItemAppearance(ioMenuItem, iCommand, iEvtWindow, iFetchParametersCode, iParams = {})
       lMenu = ioMenuItem.menu
       lCommandID = ioMenuItem.get_id
       # To update, we are going to remove the old MenuItem and add a new one. This is due because just updating the item normally messes up the bitmap and shortcuts (don't know why still ... bug ?)
@@ -233,14 +241,48 @@ module PBS
       # Delete the old MenuItem from the menu and the registered items
       lMenu.delete(lCommandID)
       iCommand[:registeredMenuItems].delete_if do |iMenuItemInfo|
-        iMenuItem, iEvtWindow, iParametersCode = iMenuItemInfo
+        iMenuItem, iEvtWindow, iParametersCode, iAdditionalParams = iMenuItemInfo
         ioMenuItem == iMenuItem
       end
       # Create the new one and register it
       lNewMenuItem = Wx::MenuItem.new(lMenu, lCommandID)
-      iCommand[:registeredMenuItems] << [ lNewMenuItem, iEvtWindow, iFetchParametersCode ]
+      iCommand[:registeredMenuItems] << [ lNewMenuItem, iEvtWindow, iFetchParametersCode, iParams ]
       # Fill its attributes (do it at the same time it is inserted as otherwise bitmaps are ignored ... bug ?)
-      setMenuItemAppearanceWhileInsert(lNewMenuItem, lCommandID, lMenuItemPos, lMenu, iEvtWindow, iFetchParametersCode)
+      setMenuItemAppearanceWhileInsert(lNewMenuItem, lCommandID, lMenuItemPos, lMenu, iEvtWindow, iFetchParametersCode, iParams)
+    end
+
+    # Find the GUI specific parameters of a registered menu item
+    #
+    # Parameters:
+    # * *iMenu* (<em>Wx::Menu</em>): Menu to which the menu item belongs.
+    # * *iCommandID* (_Integer_): The command ID of the menu item
+    # * *CodeBlock*: The code to call once the menu item has been retrieved
+    # ** *ioParams* (<em>map<Symbol,Object></em>): The parameters, free to be updated
+    def findRegisteredMenuItemParams(iMenu, iCommandID)
+      lCommand = @Commands[iCommandID]
+      if (lCommand == nil)
+        puts "!!! Unknown command of ID #{iCommandID}. Ignoring action."
+      else
+        # find the registered menu item
+        lFound = false
+        lCommand[:registeredMenuItems].each do |iMenuItemInfo|
+          iMenuItem, iEvtWindow, iFetchParametersCode, iParams = iMenuItemInfo
+          if ((iMenuItem.menu == iMenu) and
+              (iMenuItem.get_id == iCommandID))
+            # Found it
+            lOldParams = iParams.clone
+            yield(iParams)
+            if (lOldParams != iParams)
+              # Update the appearance
+              updateMenuItemAppearance(iMenuItem, lCommand, iEvtWindow, iFetchParametersCode, iParams)
+            end
+            lFound = true
+          end
+        end
+        if (!lFound)
+          puts "!!! Failed to retrieve the registered menu item for command ID #{iCommandID} under menu #{iMenu}. Bug ?"
+        end
+      end
     end
 
     # Update the appearance of a toolbar button based on a command
@@ -248,17 +290,59 @@ module PBS
     # Parameters:
     # * *ioToolbarButton* (<em>Wx::ToolBarTool</em>): The toolbar button to update
     # * *iCommand* (<em>map<Symbol,Object></em>: The command's parameters
-    def updateToolbarButtonAppearance(iToolbarButton, iCommand)
+    # * *iParams* (<em>map<Symbol,Object></em>): Additional properties, specific to this command item [optional = {}]
+    # ** *GUIEnabled* (_Boolean_): Does the GUI enable this item specifically ?
+    # ** *GUITitle* (_String_): Override title if not nil
+    def updateToolbarButtonAppearance(iToolbarButton, iCommand, iParams = {})
       lToolbar = iToolbarButton.tool_bar
       lCommandID = iToolbarButton.id
       lTitle = iCommand[:title]
+      if (iParams[:GUITitle] != nil)
+        lTitle = iParams[:GUITitle]
+      end
       if (iCommand[:accelerator] != nil)
         lTitle += " (#{getStringForAccelerator(iCommand[:accelerator])})"
       end
       lToolbar.set_tool_normal_bitmap(lCommandID, iCommand[:bitmap])
       lToolbar.set_tool_short_help(lCommandID, lTitle)
       lToolbar.set_tool_long_help(lCommandID, iCommand[:help])
-      lToolbar.enable_tool(lCommandID, iCommand[:enabled])
+      lEnabled = ((iCommand[:enabled]) and
+                  ((iParams[:GUIEnabled] == nil) or
+                   (iParams[:GUIEnabled])))
+      lToolbar.enable_tool(lCommandID, lEnabled)
+    end
+
+    # Find parameters associated to a registered toolbar button
+    #
+    # Parameters:
+    # * *iToolbarButton* (<em>Wx::ToolbarTool</em>): The toolbar button
+    # * *iCommandID* (_Integer_): ID of the command to add
+    # * *CodeBlock*: The code to call once the menu item has been retrieved
+    # ** *ioParams* (<em>map<Symbol,Object></em>): The parameters, free to be updated
+    def findRegisteredToolbarButtonParams(iToolbarButton, iCommandID)
+      lCommand = @Commands[iCommandID]
+      if (lCommand == nil)
+        puts "!!! Unknown command of ID #{iCommandID}. Ignoring action."
+      else
+        # Find the toolbar button
+        lFound = false
+        lCommand[:registeredToolbarButtons].each do |iToolbarButtonInfo|
+          iRegisteredToolbarButton, iParams = iToolbarButtonInfo
+          if (iToolbarButton == iRegisteredToolbarButton)
+            # Found it
+            lOldParams = iParams.clone
+            yield(iParams)
+            if (lOldParams != iParams)
+              # Update the appearance
+              updateToolbarButtonAppearance(iToolbarButton, lCommand, iParams)
+            end
+            lFound = true
+          end
+        end
+        if (!lFound)
+          puts "!!! Failed to retrieve the registered toolbar button for command ID #{iCommandID}. Bug ?"
+        end
+      end
     end
 
     # Update appearance of GUI components after changes in a command
@@ -268,11 +352,27 @@ module PBS
     def updateImpactedAppearance(iCommandID)
       lCommandParams = @Commands[iCommandID]
       lCommandParams[:registeredMenuItems].each do |ioMenuItemInfo|
-        ioMenuItem, iEvtWindow, iParametersCode = ioMenuItemInfo
-        updateMenuItemAppearance(ioMenuItem, lCommandParams, iEvtWindow, iParametersCode)
+        ioMenuItem, iEvtWindow, iParametersCode, iAdditionalParams = ioMenuItemInfo
+        updateMenuItemAppearance(ioMenuItem, lCommandParams, iEvtWindow, iParametersCode, iAdditionalParams)
       end
-      lCommandParams[:registeredToolbarButtons].each do |ioToolbarButton|
-        updateToolbarButtonAppearance(ioToolbarButton, lCommandParams)
+      lCommandParams[:registeredToolbarButtons].each do |ioToolbarButtonInfo|
+        ioToolbarButton, iAdditionalParams = ioToolbarButtonInfo
+        updateToolbarButtonAppearance(ioToolbarButton, lCommandParams, iAdditionalParams)
+      end
+    end
+
+    # Give the possibility to update the description of a command, and update impacted GUI elements if necessary after.
+    #
+    # Parameters:
+    # * *iCommandID* (_Integer_): The command iD
+    # * *CodeBlock*: The code called to update the command
+    # ** *ioCommand* (<em>map<Symbol,Object></em>): The command description, free to be updated
+    def updateCommand(iCommandID)
+      lCommand = @Commands[iCommandID]
+      lOldCommand = lCommand.clone
+      yield(lCommand)
+      if (lCommand != lOldCommand)
+        updateImpactedAppearance(iCommandID)
       end
     end
 
@@ -286,6 +386,11 @@ module PBS
       @CurrentUndoableOperation = nil
       @UndoStack = []
       @RedoStack = []
+
+      # Copy/Cut management
+      @CopiedObjectID = nil
+      @CopiedObject = nil
+      @CopiedMode = nil
 
       # Plugins
       @TypesPlugins = readPlugins('Types')
@@ -318,13 +423,6 @@ module PBS
           :method => :cmdExit, # TODO
           :accelerator => nil
         },
-        Wx::ID_CUT => {
-          :title => 'Cut',
-          :help => 'Cut selection',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Cut.png"),
-          :method => :cmdCut, # TODO
-          :accelerator => [ Wx::MOD_CMD, 'x'[0] ]
-        },
         Wx::ID_FIND => {
           :title => 'Find',
           :help => 'Find a Shortcut',
@@ -337,13 +435,6 @@ module PBS
           :help => 'Create a new Tag',
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
           :method => :cmdNewTag, # TODO
-          :accelerator => nil
-        },
-        ID_EDIT_TAG => {
-          :title => 'Edit Tag',
-          :help => 'Edit the selected Tag\'s parameters',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdEditTag, # TODO
           :accelerator => nil
         },
         ID_TAGS_EDITOR => {

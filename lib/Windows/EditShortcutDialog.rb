@@ -8,6 +8,8 @@ module PBS
   # Dialog that edits a Shortcut
   class EditShortcutDialog < Wx::Dialog
 
+    include Tools
+
     # Create the metadata panel
     #
     # Parameters:
@@ -60,42 +62,6 @@ module PBS
         @TCTags.set_item_data(lChildTagID, iChildTag)
         populateCheckedTagsTreeCtrl(lChildTagID, iChildTag, iSelectedTags)
       end
-    end
-
-    # Create an image list, considering the minimal size of every image given as input.
-    #
-    # Parameters:
-    # * *iFileNames* (<em>list<String></em>): File names list, relative to PBS directory
-    # Return:
-    # * <em>Wx::ImageList</em>: The image list
-    def createImageList(iFileNames)
-      lBitmapList = []
-      lMinWidth = nil
-      lMinHeight = nil
-      # Read every file given as input, and get minimal width/height
-      iFileNames.each do |iFileName|
-        lBitmap = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/#{iFileName}")
-        if ((lMinWidth == nil) or
-            (lBitmap.width < lMinWidth))
-          lMinWidth = lBitmap.width
-        end
-        if ((lMinHeight == nil) or
-            (lBitmap.height < lMinHeight))
-          lMinHeight = lBitmap.height
-        end
-        lBitmapList << lBitmap
-      end
-      if (lMinWidth == nil)
-        # No image, empty list will be returned
-        lMinWidth = 0
-        lMinHeight = 0
-      end
-      # Create the image list and populate it with the previously read bitmaps
-      rImageList = Wx::ImageList.new(lMinWidth, lMinHeight)
-      lBitmapList.each do |iBitmap|
-        rImageList << iBitmap
-      end
-      return rImageList
     end
 
     # Create the tags panel
