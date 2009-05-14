@@ -42,7 +42,7 @@ module PBS
           lPerformOpen = true
           if (@CurrentOpenedFileModified)
             case Wx::MessageDialog.new(lWindow,
-                "Current Shortcuts are not saved.\nAre you sure you want to discard current Shortcuts to load new ones ? You will still be able to undo the operation in case of mistake.",
+                "Current Shortcuts are not saved.\nAre you sure you want to discard current Shortcuts to load new ones ?\nYou will still be able to undo the operation in case of mistake.",
                 :caption => 'Confirm discard',
                 :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
               ).show_modal

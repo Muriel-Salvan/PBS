@@ -92,6 +92,18 @@ module PBS
       end
     end
 
+    # Delete a Tag.
+    # It also deletes all its sub-Tags.
+    # It is assumed that no Shortcut references it any longer before calling this function, as well as any of its Shortcuts.
+    #
+    # Parameters:
+    # * *iTag* (_Tag_): The Tag to delete
+    def deleteTag(iTag)
+      ensureUndoableOperation("Delete Tag #{iTag.Name}") do
+        atomicOperation(Controller::UAO_DeleteTag.new(self, iTag))
+      end
+    end
+
     # Add a new Shortcut.
     # It is assumed that the given Shortcut is not already part of @ShortcutsList.
     #
@@ -100,6 +112,16 @@ module PBS
     def addNewShortcut(iShortcut)
       ensureUndoableOperation("Add Shortcut #{iShortcut.Metadata['title']}") do
         atomicOperation(Controller::UAO_AddNewShortcut.new(self, iShortcut))
+      end
+    end
+
+    # Delete a given Shortcut
+    #
+    # Parameters:
+    # * *iShortcut* (_Shortcut_): The Shortcut to delete
+    def deleteShortcut(iShortcut)
+      ensureUndoableOperation("Delete Shortcut #{iShortcut.Metadata['title']}") do
+        atomicOperation(Controller::UAO_DeleteShortcut.new(self, iShortcut))
       end
     end
 

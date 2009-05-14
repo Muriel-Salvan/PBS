@@ -224,6 +224,50 @@ module PBS
   # Shortcuts
   class Shortcut
 
+    # Class used to serialize data of a Shortcut.
+    # This class is used to represent the complete data of a Shortcut, without any reference (other than IDs) to external objects.
+    class Serialized
+
+      # The name of the Type plugin
+      #    String
+      attr_reader :TypePluginName
+
+      # The IDs of the Tags
+      #   list< list< String > >
+      attr_reader :TagsIDs
+
+      # The content
+      #   Object
+      attr_reader :Content
+
+      # The metadata
+      #   map< String, Object >
+      attr_reader :Metadata
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iTypePluginName* (_String_): The Types plugin name
+      # * *iTagsIDs* (<em>list<list<String>></em>): The list of Tags IDs
+      # * *iContent* (_Object_): The content
+      # * *iMetadata* (<em>map<String,Object></em>): The metadata
+      def initialize(iTypePluginName, iTagsIDs, iContent, iMetadata)
+        @TypePluginName = iTypePluginName
+        @TagsIDs = iTagsIDs
+        @Content = iContent
+        @Metadata = iMetadata
+      end
+
+      # Clone this serialized data
+      #
+      # Return:
+      # * <em>Shortcut::Serialized</em>: The clone
+      def clone
+        return Serialized.new(@TypePluginName, @TagsIDs.clone, @Content.clone, @Metadata.clone)
+      end
+
+    end
+
     # The type
     #   Object
     attr_reader :Type
@@ -273,23 +317,23 @@ module PBS
     # This is used internally by Save/Undo operations
     #
     # Return:
-    # * _Object_: Data serialized
+    # * <em>Shortcut::Serialized</em>: Data serialized
     def getSerializedData
       lTagIDs = []
       @Tags.each do |iTag, iNil|
         lTagIDs << iTag.getUniqueID
       end
-      return [ @Type.pluginName, lTagIDs, @Content, @Metadata ]
+      return Serialized.new(@Type.pluginName, lTagIDs, @Content, @Metadata)
     end
 
     # Get the name from a serialized Shortcut data.
     #
     # Parameters:
-    # * *iSerializedData* (_Object_): Data serialized
+    # * *iSerializedData* (<em>Shortcut::Serialized</em>): Data serialized
     # Return:
     # * _String_: Name of the Shortcut
     def self.getSerializedShortcutName(iSerializedData)
-      return iSerializedData[3]['title']
+      return iSerializedData.Metadata['title']
     end
 
     # Create a new shortcut from a shortcut serialized data (serialized by getSerializedData.
@@ -299,12 +343,15 @@ module PBS
     # Parameters:
     # * *iRootTag* (_Tag_): The existing root Tag
     # * *iTypes* (<em>map<String,Object></em>): The known types
-    # * *iSerializedData* (_Object_): The data serialized, as in the getSerializedData method
+    # * *iSerializedData* (<em>Shortcut::Serialized</em>): The data serialized, as in the getSerializedData method
     # * *iIgnoreTags* (_Boolean_): Do we ignore Tags ?
     def self.createShortcutFromSerializedData(iRootTag, iTypes, iSerializedData, iIgnoreTags)
       rNewShortcut = nil
 
-      lTypeID, lTagIDs, lContent, lMetadata = iSerializedData
+      lTypeID = iSerializedData.TypePluginName
+      lTagIDs = iSerializedData.TagsIDs
+      lContent = iSerializedData.Content
+      lMetadata = iSerializedData.Metadata
       # Search for the corresponding type
       lType = iTypes[lTypeID]
       if (lType == nil)

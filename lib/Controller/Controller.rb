@@ -325,13 +325,6 @@ module PBS
           :method => :cmdCut, # TODO
           :accelerator => [ Wx::MOD_CMD, 'x'[0] ]
         },
-        Wx::ID_DELETE => {
-          :title => 'Delete',
-          :help => 'Delete selection',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdDelete, # TODO
-          :accelerator => [ Wx::MOD_NONE, Wx::K_DELETE ]
-        },
         Wx::ID_FIND => {
           :title => 'Find',
           :help => 'Find a Shortcut',

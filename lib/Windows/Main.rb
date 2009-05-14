@@ -173,7 +173,7 @@ module PBS
         @RootID = @TCMainTree.add_root('     ')
         # Keep a correspondance of each Tag and its corresponding Tree ID
         # map< Tag, Integer >
-        @TagsToMainTree = {}
+        @TagsToMainTree = { @Controller.RootTag => @RootID }
         # Insert each tag
         @Controller.RootTag.Children.each do |iTag|
           insertTreeBranch(@RootID, iTag)
@@ -460,7 +460,18 @@ module PBS
           )
         end
       end
-      addMenuCommand(lEditMenu, Wx::ID_DELETE)
+      addMenuCommand(lEditMenu, Wx::ID_DELETE) do |iEvent, oValidator|
+        lID, lObject = getCurrentTreeSelection
+        if (lID == nil)
+          oValidator.setError('No selection in the Tree when invoking Delete.')
+        else
+          oValidator.authorizeCmd(
+            :parentWindow => self,
+            :objectID => lID,
+            :object => lObject
+          )
+        end
+      end
       lEditMenu.append_separator
       addMenuCommand(lEditMenu, Wx::ID_FIND)
       lEditMenu.append_separator
@@ -470,6 +481,7 @@ module PBS
       end
       lEditMenu.append_sub_menu(lNewSCsMenu, 'New Shortcut')
       addMenuCommand(lEditMenu, ID_EDIT_SHORTCUT) do |iEvent, oValidator|
+        lID, lObject = getCurrentTreeSelection
         if (lID == nil)
           oValidator.setError('No selection in the Tree when invoking Edit Shortcut.')
         else

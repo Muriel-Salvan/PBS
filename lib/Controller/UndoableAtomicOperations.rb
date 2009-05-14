@@ -26,6 +26,7 @@ module PBS
     # 09. Redo (Recreate SC1: a different object in memory, with title='A')
     # 10. Redo (Modify SC1.title = 02.NewTitle) !!! Here, if Operation 02. did not clone 02.NewTitle during Use, Operation 03. would have modified 02.NewTitle to 'C', and never undone it as due to Operation 04., undoing Operation 03. modified a different object in memory.
     # 11. Redo (Modify SC1.title = 03.NewTitle) !!! Here, if Operation 03. did not clone 03.NewTitle during Save, Operation 02. would have modified it to 'B' during the Undo of Operation 02, which is incorrect. !!! Also here, if Operation 03. did not clone 03.OldTitle during Use, Undoing operation 02. would have modified it to 'B', and not corrected before redoing Operation 01. has created a different object in memory.
+    # * No references to Tags or Shortcuts from the main data (@Controller.ShortcutsList or @Controller.RootTag) should be saved in an object. Always use IDs. This is because the references can then become obsolete later when replacing the data. There is no guarantee at all on the persistent of Shortcuts/Tags references.
     class UndoableAtomicOperation
 
       # Constructor
@@ -74,6 +75,41 @@ module PBS
 
     end
 
+    # Class that deletes a Tag
+    class UAO_DeleteTag < UndoableAtomicOperation
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iController* (_Controller_): The model controller
+      # * *iTag* (_Tag_): The Tag to delete
+      def initialize(iController, iTag)
+        super(iController)
+
+        @ParentTagID = iTag.Parent.getUniqueID.clone
+        @Tag = iTag.clone(nil)
+      end
+
+      # Perform the operation
+      def doOperation
+        puts "UAO_DeleteTag #{@Tag.Name}"
+        lParentTag = @Controller.findTag(@ParentTagID)
+        lOldChildrenList = lParentTag.Children.clone
+        lParentTag.deleteChildTag_UNDO(@Tag.Name)
+        @Controller.notifyTagChildrenUpdate(lParentTag, lOldChildrenList)
+      end
+
+      # Undo the operation
+      def undoOperation
+        puts "UNDO - UAO_DeleteTag #{@Tag.Name}"
+        lParentTag = @Controller.findTag(@ParentTagID)
+        lOldChildrenList = lParentTag.Children.clone
+        @Tag.clone(lParentTag)
+        @Controller.notifyTagChildrenUpdate(lParentTag, lOldChildrenList)
+      end
+
+    end
+
     # Class that adds a new Shortcut
     class UAO_AddNewShortcut < UndoableAtomicOperation
 
@@ -85,23 +121,57 @@ module PBS
       def initialize(iController, iShortcut)
         super(iController)
 
-        @ShortcutToAdd = iShortcut.clone
+        @NewShortcutSerializedData = iShortcut.getSerializedData.clone
+        @ShortcutID = iShortcut.getUniqueID
       end
 
       # Perform the operation
       def doOperation
-        puts "UAO_AddNewShortcut #{@ShortcutToAdd.Metadata['title']}"
-        lNewShortcut = @ShortcutToAdd.clone
+        puts "UAO_AddNewShortcut #{Shortcut.getSerializedShortcutName(@NewShortcutSerializedData)}"
+        lNewShortcut = Shortcut.createShortcutFromSerializedData(@Controller.RootTag, @Controller.TypesPlugins, @NewShortcutSerializedData.clone, false)
         @Controller.addShortcut_UNDO(lNewShortcut)
         @Controller.notifyShortcutAdd(lNewShortcut)
       end
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_AddNewShortcut #{@ShortcutToAdd.Metadata['title']}"
-        lAddedShortcut = @Controller.findShortcut(@ShortcutToAdd.getUniqueID)
-        @Controller.deleteShortcut_UNDO(@ShortcutToAdd.getUniqueID)
+        puts "UNDO - UAO_AddNewShortcut #{Shortcut.getSerializedShortcutName(@NewShortcutSerializedData)}"
+        lAddedShortcut = @Controller.findShortcut(@ShortcutID)
+        @Controller.deleteShortcut_UNDO(@ShortcutID)
         @Controller.notifyShortcutDelete(lAddedShortcut)
+      end
+
+    end
+
+    # Class that deletes a Shortcut
+    class UAO_DeleteShortcut < UndoableAtomicOperation
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iController* (_Controller_): The model controller
+      # * *iShortcut* (_Shortcut_): The Shortcut to delete
+      def initialize(iController, iShortcut)
+        super(iController)
+
+        @NewShortcutSerializedData = iShortcut.getSerializedData.clone
+        @ShortcutID = iShortcut.getUniqueID
+      end
+
+      # Perform the operation
+      def doOperation
+        puts "UAO_DeleteShortcut #{Shortcut.getSerializedShortcutName(@NewShortcutSerializedData)}"
+        lShortcut = @Controller.findShortcut(@ShortcutID)
+        @Controller.deleteShortcut_UNDO(@ShortcutID)
+        @Controller.notifyShortcutDelete(lShortcut)
+      end
+
+      # Undo the operation
+      def undoOperation
+        puts "UNDO - UAO_DeleteShortcut #{Shortcut.getSerializedShortcutName(@NewShortcutSerializedData)}"
+        lNewShortcut = Shortcut.createShortcutFromSerializedData(@Controller.RootTag, @Controller.TypesPlugins, @NewShortcutSerializedData.clone, false)
+        @Controller.addShortcut_UNDO(lNewShortcut)
+        @Controller.notifyShortcutAdd(lNewShortcut)
       end
 
     end
@@ -166,8 +236,14 @@ module PBS
           @NewMetadata = nil
         end
         if (iShortcut.Tags != iNewTags)
-          @OldTags = iShortcut.Tags.clone
-          @NewTags = iNewTags.clone
+          @OldTags = []
+          iShortcut.Tags.each do |iTag, iNil|
+            @OldTags << iTag.getUniqueID
+          end
+          @NewTags = []
+          iNewTags.each do |iTag, iNil|
+            @NewTags << iTag.getUniqueID
+          end
         else
           @OldTags = nil
           @NewTags = nil
@@ -191,8 +267,18 @@ module PBS
             @Controller.notifyShortcutDataUpdate(lShortcut, @OldShortcutID, @OldContent, @OldMetadata)
           end
           if (@NewTags != nil)
-            lShortcut.setTags_UNDO(@NewTags.clone)
-            @Controller.notifyShortcutTagsUpdate(lShortcut, @OldTags)
+            lOldTags = lShortcut.Tags
+            lNewTags = {}
+            @NewTags.each do |iTagID|
+              lTag = @Controller.findTag(iTagID)
+              if (lTag == nil)
+                puts "!!! Tag ID #{iTagID} should exist, but the controller returned nil. Bug ?"
+              else
+                lNewTags[lTag] = nil
+              end
+            end
+            lShortcut.setTags_UNDO(lNewTags)
+            @Controller.notifyShortcutTagsUpdate(lShortcut, lOldTags)
           end
         end
       end
@@ -214,8 +300,18 @@ module PBS
             @Controller.notifyShortcutDataUpdate(lShortcut, @NewShortcutID, @NewContent, @NewMetadata)
           end
           if (@OldTags != nil)
-            lShortcut.setTags_UNDO(@OldTags.clone)
-            @Controller.notifyShortcutTagsUpdate(lShortcut, @NewTags)
+            lNewTags = lShortcut.Tags
+            lOldTags = {}
+            @OldTags.each do |iTagID|
+              lTag = @Controller.findTag(iTagID)
+              if (lTag == nil)
+                puts "!!! Tag ID #{iTagID} should exist, but the controller returned nil. Bug ?"
+              else
+                lOldTags[lTag] = nil
+              end
+            end
+            lShortcut.setTags_UNDO(lOldTags)
+            @Controller.notifyShortcutTagsUpdate(lShortcut, lNewTags)
           end
         end
       end
@@ -270,6 +366,9 @@ module PBS
       def initialize(iController, iNewRootTag, iNewShortcutsList)
         super(iController)
 
+        # This class is a little bit different: it stores references to Tags/Shortcuts inside its own saved data.
+        # The reason why it works is that all those objects will never be referenced by anyone outside them.
+        # Therefore we can keep the references knowing that we save every Tag/Shortcut.
         # Be careful when cloning, as the Shortcuts list contains references to Tags that are among iNewRootTag
         @OldRootTag, @OldShortcutsList = cloneTagsShortcuts(@Controller.RootTag, @Controller.ShortcutsList)
         @NewRootTag, @NewShortcutsList = cloneTagsShortcuts(iNewRootTag, iNewShortcutsList)
