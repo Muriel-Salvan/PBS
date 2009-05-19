@@ -22,6 +22,7 @@ module PBS
   ID_ENCRYPTION = 1005
   ID_TOOLBARS = 1006
   ID_STATS = 1007
+  ID_DEVDEBUG = 1008
   # Following constants are base integers for plugins related commands. WxRuby takes 5000 - 6000 range.
   ID_IMPORT_BASE = 6000
   ID_IMPORT_MERGE_BASE = 7000
@@ -85,42 +86,42 @@ module PBS
 
     end
 
-  # Class storing information about undoable operations.
-  # Basically it is a list of UndoableAtomicOperations, grouped with a title.
-  class UndoableOperation
+    # Class storing information about undoable operations.
+    # Basically it is a list of UndoableAtomicOperations, grouped with a title.
+    class UndoableOperation
 
-    # Title of the Undoable opersation
-    #   String
-    attr_accessor :Title
+      # Title of the Undoable opersation
+      #   String
+      attr_accessor :Title
 
-    # List of the atomic modifications
-    #   list< UndoableAtomicOperation >
-    attr_accessor :AtomicOperations
+      # List of the atomic modifications
+      #   list< UndoableAtomicOperation >
+      attr_accessor :AtomicOperations
 
-    # Constructor
-    #
-    # Parameters:
-    # * *iTitle* (_String_): The title of the undoable operation
-    def initialize(iTitle)
-      @Title = iTitle
-      @AtomicOperations = []
-    end
-
-    # Undo this operation
-    def undo
-      @AtomicOperations.reverse_each do |iAtomicOperation|
-        iAtomicOperation.undoOperation
+      # Constructor
+      #
+      # Parameters:
+      # * *iTitle* (_String_): The title of the undoable operation
+      def initialize(iTitle)
+        @Title = iTitle
+        @AtomicOperations = []
       end
-    end
 
-    # Redo this operation
-    def redo
-      @AtomicOperations.each do |iAtomicOperation|
-        iAtomicOperation.doOperation
+      # Undo this operation
+      def undo
+        @AtomicOperations.reverse_each do |iAtomicOperation|
+          iAtomicOperation.undoOperation
+        end
       end
-    end
 
-  end
+      # Redo this operation
+      def redo
+        @AtomicOperations.each do |iAtomicOperation|
+          iAtomicOperation.doOperation
+        end
+      end
+
+    end
 
     # Method that sends notifications to registered GUIs that implement desired methods
     #
@@ -388,9 +389,9 @@ module PBS
       @RedoStack = []
 
       # Copy/Cut management
-      @CopiedObjectID = nil
-      @CopiedObject = nil
+      @CopiedSelection = nil
       @CopiedMode = nil
+      @CopiedID = nil
 
       # Plugins
       @TypesPlugins = readPlugins('Types')
@@ -735,6 +736,43 @@ end
     def deleteShortcut_UNDO(iSCID)
       @ShortcutsList.delete_if do |iSC|
         iSC.getUniqueID == iSCID
+      end
+    end
+
+    # Dump a Tag
+    #
+    # Parameters:
+    # * *iTag* (_Tag_): The Tag to dump
+    # * *iPrefix* (_String_): Prefix of each dump line [optional = '']
+    # * *iLastItem* (_Boolean_): Is this item the last one of the list it belongs to ? [optional = true]
+    def dumpTag(iTag, iPrefix = '', iLastItem = true)
+      puts "#{iPrefix}+-#{iTag.Name} (@#{iTag.object_id})"
+      if (iLastItem)
+        lChildPrefix = "#{iPrefix}  "
+      else
+        lChildPrefix = "#{iPrefix}| "
+      end
+      lIdx = 0
+      iTag.Children.each do |iChildTag|
+        dumpTag(iChildTag, lChildPrefix, lIdx == iTag.Children.size - 1)
+        lIdx += 1
+      end
+    end
+
+    # Dump a Shortcuts list
+    #
+    # Parameters:
+    # * *iShortcutsList* (<em>list<Shortcut></em>): The Shortcuts list to dump
+    def dumpShortcutsList(iShortcutsList)
+      iShortcutsList.each do |iSC|
+        puts "=== #{iSC.Metadata['title']} (@#{iSC.object_id})"
+        puts "  = Type: #{iSC.Type.inspect}"
+        puts "  = Metadata: #{iSC.Metadata.inspect}"
+        puts "  = Content: #{iSC.Content.inspect}"
+        puts "  = #{iSC.Tags.size} Tags:"
+        iSC.Tags.each do |iTag, iNil|
+          puts "  = - #{iTag.Name}: ID #{iTag.getUniqueID.join('/')} (@#{iTag.object_id})"
+        end
       end
     end
 

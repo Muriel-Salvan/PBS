@@ -27,21 +27,20 @@ module PBS
       #
       # Parameters:
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *objectID* (_Integer_): ID of the object to be copied
-      # ** *object* (_Object_): Object to be copied
+      # ** *selection* (_MultipleSelection_): the current selection.
       def cmdCopy(iParams)
-        lObjectID = iParams[:objectID]
-        lObject = iParams[:object]
-        if ((lObjectID == ID_TAG) or
-            (lObjectID == ID_SHORTCUT))
-          lClipboardData = Tools::DataObjectTag.new
-          lClipboardData.Data = Marshal.dump([lObjectID, lObject.getSerializedData])
-          Wx::Clipboard.open do | ioClipboard |
+        lSelection = iParams[:selection]
+        lSerializedTags, lSerializedShortcuts = lSelection.getSerializedSelection
+        # If there is something to copy, fill the clipboard with it.
+        if ((!lSerializedShortcuts.empty?) or
+            (!lSerializedTags.empty?))
+          lCopyID = getNewCopyID
+          lClipboardData = Tools::DataObjectSelection.new
+          lClipboardData.setData(Wx::ID_COPY, lCopyID, lSerializedTags, lSerializedShortcuts)
+          Wx::Clipboard.open do |ioClipboard|
             ioClipboard.data = lClipboardData
           end
-          notifyObjectCopied(lObjectID, lObject)
-        else
-          puts "!!! The selected item is neither a Shortcut nor a Tag, ID = #{lObjectID}). Bug ?"
+          notifyObjectsCopied(lSelection, lCopyID)
         end
       end
 

@@ -3,6 +3,7 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
+require 'optparse'
 require 'rubygems'
 require 'wx'
 
@@ -47,9 +48,39 @@ module PBS
 
   end
 
+  # Get command line parameters
+  #
+  # Return:
+  # * _OptionParser_: The options parser
+  def self.getOptions
+    rOptions = OptionParser.new
+
+    rOptions.banner = 'pbs.rb [-d|--devdebug]'
+    rOptions.on('-d', '--devdebug',
+      'Set developer debug interface.') do
+      $PBS_DevDebug = true
+    end
+
+    return rOptions
+  end
+
 end
 
 # Be prepared to be just a library: don't do anything unless called explicitly
 if (__FILE__ == $0)
-  PBS::MainApp.new(PBS::Controller.new).main_loop
+  # Default switches, that can be altered with command line options
+  $PBS_DevDebug = false
+  # Parse command line arguments
+  lOptions = PBS::getOptions
+  lSuccess = true
+  begin
+    lOptions.parse(ARGV)
+  rescue Exception
+    puts "Error while parsing arguments: #{$!}"
+    puts lOptions
+    lSuccess = false
+  end
+  if (lSuccess)
+    PBS::MainApp.new(PBS::Controller.new).main_loop
+  end
 end

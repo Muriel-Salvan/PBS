@@ -10,6 +10,105 @@ module PBS
   # Tags
   class Tag
 
+    # Class used to serialize data of a Tag.
+    # This class is used to represent the complete data of a Tag, without any reference (other than IDs) to external objects.
+    class Serialized
+
+      # The name of the Tag
+      #    String
+      attr_reader :Name
+
+      # The list of serialized sub-Tags
+      #   list< Serialized >
+      attr_reader :Children
+
+      # The list of serialized Shortcuts belonging to it
+      #   list< Object >
+      attr_reader :Shortcuts
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iName* (_String_): The name
+      # * *iChildren* (<em>list<Serialized></em>): The list of serialized sub-Tags
+      # * *iShortcuts* (<em>list<Object></em>): The list of serialized Shortcuts
+      def initialize(iName, iChildren, iShortcuts)
+        @Name = iName
+        @Children = iChildren
+        @Shortcuts = iShortcuts
+      end
+
+      # Return the name of a serialized Tag
+      #
+      # Return:
+      # * _String_: Tag's name
+      def getName
+        return @Name
+      end
+
+      # Return the simple content to be pasted to the clipboard in case of a single selection of this item.
+      #
+      # Return:
+      # * _String_: The clipboard content
+      def getSingleClipContent
+        return getName
+      end
+
+      # Create a Tag from this serialized one.
+      # It is created as a sub Tag of a specified parent Tag (which can be nil).
+      #
+      # Parameters:
+      # * *iParentTag* (_Tag_): The existing parent Tag, or nil if it has no parent Tag
+      # * *iShortcutTypes* (<em>map<String,Object></em>): The set of Types plugins, or nil if we don't want to instantiate Shortcuts)
+      # * *ioShortcutsList* (<em>list<Shortcut></em>): The list of Shortcuts to complete with the ones attached to this Tag. This parameter is ignored if iShortcutTypes is nil.
+      # Return:
+      # * _Tag_: The newly created Tag
+      def createTag(iParentTag, iShortcutTypes, ioShortcutsList)
+        rNewTag = nil
+
+        # Create the Tag for real
+        if (iParentTag != nil)
+          rNewTag = iParentTag.createSubTag(@Name)
+        else
+          rNewTag = Tag.new(@Name, nil)
+        end
+        # Create its children
+        @Children.each do |iChildSerializedData|
+          iChildSerializedData.createTag(rNewTag, iShortcutTypes, ioShortcutsList)
+        end
+        # Create its Shortcuts
+        if ((@Shortcuts != nil) and
+            (iShortcutTypes != nil))
+          @Shortcuts.each do |iSerializedShortcut|
+            # First check if this serialized Shortcut is already present in the Shortcuts list
+            lExistingSC = nil
+            lNewUniqueID = iSerializedShortcut.getUniqueID
+            ioShortcutsList.each do |iExistingSC|
+              if (iExistingSC.getUniqueID == lNewUniqueID)
+                # Found it
+                lExistingSC = iExistingSC
+                break
+              end
+            end
+            if (lExistingSC != nil)
+              # There is already a Shortcut. Just add this Tag among its ones.
+              lExistingSC.Tags[rNewTag] = nil
+            else
+              # Create a new Shortcut.
+              lNewShortcut = iSerializedShortcut.createShortcut(nil, iShortcutTypes)
+              # Set the new Tag as its only one.
+              lNewShortcut.Tags[rNewTag] = nil
+              # Add it to the list.
+              ioShortcutsList << lNewShortcut
+            end
+          end
+        end
+
+        return rNewTag
+      end
+
+    end
+
     # Its name
     #   String
     attr_reader :Name
@@ -26,6 +125,7 @@ module PBS
     def initialize(iName, iParent)
       @Name = iName
       @Parent = iParent
+      @UniqueID = nil
       @Children = []
       if (iParent != nil)
         iParent.Children << self
@@ -70,40 +170,100 @@ module PBS
       end
     end
 
+    # Is this Tag a sub-Tag of another one ?
+    #
+    # Parameters:
+    # * *iOtherTag* (_Tag_): The other Tag
+    # Return:
+    # * _Boolean_: Is this Tag a sub-Tag of another one ?
+    def subTagOf?(iOtherTag)
+      rFound = false
+
+      lCheckTag = @Parent
+      while (lCheckTag != nil)
+        if (lCheckTag == iOtherTag)
+          rFound = true
+          break
+        end
+        lCheckTag = lCheckTag.Parent
+      end
+
+      return rFound
+    end
+
     # Get an ID that is unique for this Tag
     #
     # Return:
     # * _Object_: The Unique ID
     def getUniqueID
-      if (@Parent == nil)
-        # We are root
-        return []
-      else
-        return @Parent.getUniqueID + [@Name]
+      if (@UniqueID == nil)
+        # Compute it first
+        if (@Parent == nil)
+          # We are root
+          @UniqueID = []
+        else
+          @UniqueID = @Parent.getUniqueID + [@Name]
+        end
       end
+      return @UniqueID
     end
 
     # Get the data ready to be marshalled.
     # This is a recursive method: it serializes all sub Tags also.
     #
     # Return:
-    # * _Object_: Data serialized
+    # * _Serialized_: Data serialized
     def getSerializedData
       lSerializedChildren = []
       @Children.each do |iChildTag|
         lSerializedChildren << iChildTag.getSerializedData
       end
-      return [ @Name, lSerializedChildren ]
+      return Serialized.new(@Name, lSerializedChildren, nil)
     end
 
-    # Return the name of a serialized Tag
+    # Get the list of sub-Tags and Shortcuts that belong recursively to us.
     #
     # Parameters:
-    # * *iSerializedTag* (_Object_): Tag serialized with the getSerializedData method
+    # * *iShortcutsList* (<em>list<Shortcut></em>): The Shortcuts list to find which ones belong to us
+    # * *oSelectedShortcutsList* (<em>list<[Integer,list<String>]></em>): The selected Shortcuts IDs list (with the corresponding parent Tag ID) to be completed
+    # * *oSelectedSubTagsList* (<em>list<list<String>></em>): The selected sub-Tags ID's list to be completed
+    def getSecondaryObjects(iShortcutsList, oSelectedShortcutsList, oSelectedSubTagsList)
+      # The children
+      @Children.each do |iChildTag|
+        oSelectedSubTagsList << iChildTag.getUniqueID
+        iChildTag.getSecondaryObjects(iShortcutsList, oSelectedShortcutsList, oSelectedSubTagsList)
+      end
+      # The Shortcuts
+      iShortcutsList.each do |iSC|
+        if (iSC.Tags.has_key?(self))
+          # We take this one with us
+          oSelectedShortcutsList << [ iSC.getUniqueID, getUniqueID ]
+        end
+      end
+    end
+
+    # Get the data ready to be marshalled, including Shortcuts belonging to this Tag.
+    # This is a recursive method: it serializes all sub Tags also.
+    #
+    # Parameters:
+    # * *iShortcutsList* (<em>list<Shortcut></em>): The Shortcuts list to find which ones belong to us
     # Return:
-    # * _String_: Tag's name
-    def self.getSerializedTagName(iSerializedTag)
-      return iSerializedTag[0]
+    # * _Serialized_: Data serialized
+    def getSerializedDataWithShortcuts(iShortcutsList)
+      # The children
+      lSerializedChildren = []
+      @Children.each do |iChildTag|
+        lSerializedChildren << iChildTag.getSerializedDataWithShortcuts(iShortcutsList)
+      end
+      # The Shortcuts
+      lSerializedSCs = []
+      iShortcutsList.each do |iSC|
+        if (iSC.Tags.has_key?(self))
+          # We take this one with us
+          lSerializedSCs << iSC.getSerializedData(true)
+        end
+      end
+      return Serialized.new(@Name, lSerializedChildren, lSerializedSCs)
     end
 
     # Create a new Tag as a sub-Tag.
@@ -127,35 +287,10 @@ module PBS
       if (!lFound)
         rTag = Tag.new(iName, self)
       else
-        puts "!!! Tag #{iName}, child of #{self.getUniqueID.join('/')} was already created. Ignoring its new definition."
+        puts "!!! Tag #{iName}, child of #{getUniqueID.join('/')} was already created. Ignoring its new definition."
       end
 
       return rTag
-    end
-
-    # Create a Tag from a serialized one.
-    # It is created as a sub Tag of a specified parent Tag (which can be nil).
-    #
-    # Parameters:
-    # * *iParentTag* (_Tag_): The existing parent Tag, or nil if it has no parent Tag
-    # * *iSerializedData* (_Object_): The data serialized, as in the getSerializedData method
-    # Return:
-    # * _Tag_: The newly created Tag
-    def self.createTagFromSerializedData(iParentTag, iSerializedData)
-      rNewTag = nil
-
-      lName, lSerializedChildren = iSerializedData
-      rNewTag = nil
-      if (iParentTag != nil)
-        rNewTag = iParentTag.createSubTag(lName)
-      else
-        rNewTag = Tag.new(lName, nil)
-      end
-      lSerializedChildren.each do |iChildSerializedData|
-        Tag.createTagFromSerializedData(rNewTag, iChildSerializedData)
-      end
-
-      return rNewTag
     end
 
     # Search for a given Tag recursively, among children.
@@ -191,16 +326,17 @@ module PBS
     # * *iParentTag* (_Tag_): The parent Tag
     def setParent_UNDO(iParentTag)
       @Parent = iParentTag
+      resetUniqueIDs
     end
 
-    # Add a child tag
-    # !!! This method has to be used only by the atomic operation dealing with Tags
-    #
-    # Parameters:
-    # * *ioChildTag* (_Tag_): The child Tag
-    def addChildTag_UNDO(ioChildTag)
-      @Children << ioChildTag
-      ioChildTag.Parent = self
+    # Reset Unique IDs of this Tag and all its children.
+    # This is used when changing a parent Tag somewhere in the branch.
+    def resetUniqueIDs
+      @UniqueID = nil
+      # Reset also UniqueIDs of every child
+      @Children.each do |iChildTag|
+        iChildTag.resetUniqueIDs
+      end
     end
 
     # Delete a given child name.
@@ -266,6 +402,73 @@ module PBS
         return Serialized.new(@TypePluginName, @TagsIDs.clone, @Content.clone, @Metadata.clone)
       end
 
+      # Get the name of the serialized Shortcut
+      #
+      # Return:
+      # * _String_: The name
+      def getName
+        return @Metadata['title']
+      end
+
+      # Return the simple content to be pasted to the clipboard in case of a single selection of this item.
+      #
+      # Return:
+      # * _String_: The clipboard content
+      def getSingleClipContent
+        rClipContent = nil
+
+        if (@Content.kind_of?(String))
+          rClipContent = @Content.clone
+        elsif (@Content.respond_to?(:getSingleClipContent))
+          rClipContent = @Content.send(:getSingleClipContent)
+        end
+
+        return rClipContent
+      end
+
+      # Get the unique ID of the serialized Shortcut
+      #
+      # Return:
+      # * _Integer_: The unique ID
+      def getUniqueID
+        return Shortcut.getUniqueID(@Content, @Metadata)
+      end
+
+      # Create a new shortcut from this serialized data.
+      # It is assumed that its Tags are already created.
+      # It is assumed that its Type exists already.
+      #
+      # Parameters:
+      # * *iRootTag* (_Tag_): The existing root Tag (if nil, we ignore the Tags: the created Tags set will be empty)
+      # * *iTypes* (<em>map<String,Object></em>): The known types
+      # Return:
+      # * _Shortcut_: The resulting Shortcut
+      def createShortcut(iRootTag, iTypes)
+        rNewShortcut = nil
+
+        # Search for the corresponding type
+        lType = iTypes[@TypePluginName]
+        if (lType == nil)
+          puts "!!! Shortcut has type #{@TypePluginName} which is unknown. Verify your Shortcut types plugins in the /Types directory. Ignoring this Shortcut."
+        else
+          lTags = {}
+          if (iRootTag != nil)
+            # Search for each Tag
+            @TagsIDs.each do |iTagID|
+              lTag = iRootTag.searchTag(iTagID)
+              if (lTag == nil)
+                puts "!!! Shortcut has Tag #{iTagID.join('/')} which is unknown. Ignoring this Tag for this Shortcut."
+              else
+                lTags[lTag] = nil
+              end
+            end
+          end
+          rNewShortcut = Shortcut.new(lType, lTags, @Content, @Metadata)
+        end
+
+        return rNewShortcut
+      end
+
     end
 
     # The type
@@ -316,63 +519,18 @@ module PBS
     # Get the data ready to be marshalled.
     # This is used internally by Save/Undo operations
     #
+    # Parameters:
+    # * *iIgnoreTags* (_Boolean_): Do we ignore Tags ? [optional = false]
     # Return:
     # * <em>Shortcut::Serialized</em>: Data serialized
-    def getSerializedData
+    def getSerializedData(iIgnoreTags)
       lTagIDs = []
-      @Tags.each do |iTag, iNil|
-        lTagIDs << iTag.getUniqueID
+      if (!iIgnoreTags)
+        @Tags.each do |iTag, iNil|
+          lTagIDs << iTag.getUniqueID
+        end
       end
       return Serialized.new(@Type.pluginName, lTagIDs, @Content, @Metadata)
-    end
-
-    # Get the name from a serialized Shortcut data.
-    #
-    # Parameters:
-    # * *iSerializedData* (<em>Shortcut::Serialized</em>): Data serialized
-    # Return:
-    # * _String_: Name of the Shortcut
-    def self.getSerializedShortcutName(iSerializedData)
-      return iSerializedData.Metadata['title']
-    end
-
-    # Create a new shortcut from a shortcut serialized data (serialized by getSerializedData.
-    # It is assumed that its Tags are already created.
-    # It is assumed that its Type exists already.
-    #
-    # Parameters:
-    # * *iRootTag* (_Tag_): The existing root Tag
-    # * *iTypes* (<em>map<String,Object></em>): The known types
-    # * *iSerializedData* (<em>Shortcut::Serialized</em>): The data serialized, as in the getSerializedData method
-    # * *iIgnoreTags* (_Boolean_): Do we ignore Tags ?
-    def self.createShortcutFromSerializedData(iRootTag, iTypes, iSerializedData, iIgnoreTags)
-      rNewShortcut = nil
-
-      lTypeID = iSerializedData.TypePluginName
-      lTagIDs = iSerializedData.TagsIDs
-      lContent = iSerializedData.Content
-      lMetadata = iSerializedData.Metadata
-      # Search for the corresponding type
-      lType = iTypes[lTypeID]
-      if (lType == nil)
-        puts "!!! Shortcut has type #{lTypeID} which is unknown. Verify your Shortcut types plugins in the /Types directory. Ignoring this Shortcut."
-      else
-        lTags = {}
-        if (!iIgnoreTags)
-          # Search for each Tag
-          lTagIDs.each do |iTagID|
-            lTag = iRootTag.searchTag(iTagID)
-            if (lTag == nil)
-              puts "!!! Shortcut has Tag #{iTagID.join('/')} which is unknown. Ignoring this Tag for this Shortcut."
-            else
-              lTags[lTag] = nil
-            end
-          end
-        end
-        rNewShortcut = Shortcut.new(lType, lTags, lContent, lMetadata)
-      end
-
-      return rNewShortcut
     end
 
     # Replace Tags with new ones.

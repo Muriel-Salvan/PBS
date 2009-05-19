@@ -127,15 +127,15 @@ module PBS
 
       # Perform the operation
       def doOperation
-        puts "UAO_AddNewShortcut #{Shortcut.getSerializedShortcutName(@NewShortcutSerializedData)}"
-        lNewShortcut = Shortcut.createShortcutFromSerializedData(@Controller.RootTag, @Controller.TypesPlugins, @NewShortcutSerializedData.clone, false)
+        puts "UAO_AddNewShortcut #{@NewShortcutSerializedData.getName}"
+        lNewShortcut = @NewShortcutSerializedData.clone.createShortcut(@Controller.RootTag, @Controller.TypesPlugins)
         @Controller.addShortcut_UNDO(lNewShortcut)
         @Controller.notifyShortcutAdd(lNewShortcut)
       end
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_AddNewShortcut #{Shortcut.getSerializedShortcutName(@NewShortcutSerializedData)}"
+        puts "UNDO - UAO_AddNewShortcut #{@NewShortcutSerializedData.getName}"
         lAddedShortcut = @Controller.findShortcut(@ShortcutID)
         @Controller.deleteShortcut_UNDO(@ShortcutID)
         @Controller.notifyShortcutDelete(lAddedShortcut)
@@ -154,13 +154,13 @@ module PBS
       def initialize(iController, iShortcut)
         super(iController)
 
-        @NewShortcutSerializedData = iShortcut.getSerializedData.clone
+        @NewShortcutSerializedData = iShortcut.getSerializedData(false).clone
         @ShortcutID = iShortcut.getUniqueID
       end
 
       # Perform the operation
       def doOperation
-        puts "UAO_DeleteShortcut #{Shortcut.getSerializedShortcutName(@NewShortcutSerializedData)}"
+        puts "UAO_DeleteShortcut #{@NewShortcutSerializedData.getName}"
         lShortcut = @Controller.findShortcut(@ShortcutID)
         @Controller.deleteShortcut_UNDO(@ShortcutID)
         @Controller.notifyShortcutDelete(lShortcut)
@@ -168,8 +168,8 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_DeleteShortcut #{Shortcut.getSerializedShortcutName(@NewShortcutSerializedData)}"
-        lNewShortcut = Shortcut.createShortcutFromSerializedData(@Controller.RootTag, @Controller.TypesPlugins, @NewShortcutSerializedData.clone, false)
+        puts "UNDO - UAO_DeleteShortcut #{@NewShortcutSerializedData.getName}"
+        lNewShortcut = @NewShortcutSerializedData.clone.createShortcut(@Controller.RootTag, @Controller.TypesPlugins)
         @Controller.addShortcut_UNDO(lNewShortcut)
         @Controller.notifyShortcutAdd(lNewShortcut)
       end

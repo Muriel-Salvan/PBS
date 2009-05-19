@@ -28,104 +28,159 @@ module PBS
       # Parameters:
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
       # ** *parentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
-      # ** *objectID* (_Integer_): ID of the object to be deleted
-      # ** *object* (_Object_): Object to be deleted
+      # ** *selection* (_MultipleSelection_): the current selection.
+      # ** *deleteTaggedShortcuts* (_Boolean_): Do we delete systematically tagged Shortcuts ? (can be nil to prompt the user about it)
+      # ** *deleteOrphanShortcuts* (_Boolean_): Do we delete systematically orphan Shortcuts ? (can be nil to prompt the user about it)
       def cmdDelete(iParams)
         lWindow = iParams[:parentWindow]
-        lObjectID = iParams[:objectID]
-        lObject = iParams[:object]
-        case lObjectID
-        when ID_TAG
-          # Get the list of Tags we are going to delete
-          lTagsToDelete = [lObject]
-          lObject.traverse do |iChildTag|
-            lTagsToDelete << iChildTag
-          end
-          # Check if there are some Shortcuts belonging to those Tags only
-          # The list of Shortcuts that have only Tags from the ones to be deleted
-          lDeletableShortcuts = []
-          # The list of Shortcuts that have at least 1 of the Tags to be deleted, but are not in the lDeletableShortcuts list
-          lConcernedShortcuts = []
-          @ShortcutsList.each do |iSC|
-            # Check if there is at least 1 Tag belonging to lTagsToDelete, and no other Tag not belonging to lTagsToDelete
-            lTagPresent = false
-            lForeignTagPresent = false
-            iSC.Tags.each do |iTag, iNil|
-              if (lTagsToDelete.include?(iTag))
-                lTagPresent = true
-                if (lForeignTagPresent)
-                  break
-                end
-              else
-                lForeignTagPresent = true
-                if (lTagPresent)
-                  break
-                end
+        lSelection = iParams[:selection]
+        lForceDeleteTaggedShortcuts = iParams[:deleteTaggedShortcuts]
+        lForceDeleteOrphanShortcuts = iParams[:deleteOrphanShortcuts]
+        undoableOperation("Delete #{lSelection.getDescription}") do
+
+          # ###########################
+          # 1 - We delete every selected Shortcut (primary and secondary)
+          # ###########################
+          # For each Shortcut, get the set of Tags to remove from it, and compute the new set of Tags
+          # map< Shortcut, [ map< Tag, nil >, map< Tag, nil > ] >
+          lSelectedShortcuts = {}
+          (lSelection.SelectedPrimaryShortcuts + lSelection.SelectedSecondaryShortcuts).each do |iSelectedShortcutInfo|
+            iSelectedShortcutID, iParentTagID = iSelectedShortcutInfo
+            lSC = findShortcut(iSelectedShortcutID)
+            if (lSC == nil)
+              puts "!!! Shortcut of ID #{iSelectedShortcutID} was part of the selection, but it is non existent. Ignoring it. Bug ?"
+            else
+              if (lSelectedShortcuts[lSC] == nil)
+                lSelectedShortcuts[lSC] = [ {}, nil ]
               end
-            end
-            if (lTagPresent)
-              if (!lForeignTagPresent)
-                lDeletableShortcuts << iSC
+              lTag = findTag(iParentTagID)
+              if (lTag == nil)
+                puts "!!! Tag #{iParentTagID.join('/')} was marked as the parent Tag of Shortcut #{lSC.Metadata['title']}. However it does not exist. Bug ?"
               else
-                lConcernedShortcuts << iSC
+                lSelectedShortcuts[lSC][0][lTag] = nil
               end
             end
           end
-          undoableOperation("Delete Tag #{lObject.Name}") do
-            if (!lDeletableShortcuts.empty?)
-              # First ask if we also want to delete Shortcuts belonging to this Tag and its sub-Tags only
-              case Wx::MessageDialog.new(lWindow,
-                  "Do you also want to delete the #{lDeletableShortcuts.size} orphan Shortcuts that will have no Tag anymore after deleting this Tag and its sub-Tags ?\nYou will still be able to undo the operation in case of mistake.",
-                  :caption => 'Confirm delete orphan Shortcuts',
-                  :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
-                ).show_modal
-              when Wx::ID_YES
-                # Delete Shortcuts present in lShortcuts
-                lDeletableShortcuts.each do |iSC|
-                  deleteShortcut(iSC)
-                end
-              when Wx::ID_NO
-                # Delete the Tags references from each Shortcut
-                lDeletableShortcuts.each do |iSC|
-                  lNewTags = iSC.Tags.clone
-                  lNewTags.delete_if do |iTag, iNil|
-                    lTagsToDelete.include?(iTag)
+          if (!lSelectedShortcuts.empty?)
+            lExistOrphanShortcuts = false
+            lExistTaggedShortcuts = false
+            # First check if we ask the question whether to remove empty tagged Shortcuts or not.
+            # Do we have some Shortcuts that would be without Tags after deletion ?
+            lSelectedShortcuts.each do |iSC, ioTagsInfo|
+              iSelectedTagsSet, iNewTagsSet = ioTagsInfo
+              if (!iSC.Tags.empty?)
+                lExistTaggedShortcuts = true
+                # Compute the new Tags
+                lNewTags = {}
+                iSC.Tags.each do |iTag, iNil|
+                  if (!iSelectedTagsSet.has_key?(iTag))
+                    lNewTags[iTag] = nil
                   end
-                  modifyShortcut(iSC, iSC.Content, iSC.Metadata, lNewTags)
+                end
+                if (lNewTags.empty?)
+                  lExistOrphanShortcuts = true
+                end
+                # Remember it
+                ioTagsInfo[1] = lNewTags
+              end
+            end
+            # Now ask questions if they are not forced by the parameters
+            lDeleteTaggedShortcuts = false
+            if (lForceDeleteTaggedShortcuts != nil)
+              lDeleteTaggedShortcuts = lForceDeleteTaggedShortcuts
+            else
+              if (lExistTaggedShortcuts)
+                case Wx::MessageDialog.new(lWindow,
+                    "Do you want to delete completely the selected Shortcuts ?\nIf No, this will just untag them accordingly.",
+                    :caption => 'Confirm delete Shortcut',
+                    :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
+                  ).show_modal
+                when Wx::ID_YES
+                  lDeleteTaggedShortcuts = true
                 end
               end
             end
-            # Modify concerned Shortcuts
-            lConcernedShortcuts.each do |iSC|
-              lNewTags = iSC.Tags.clone
-              lNewTags.delete_if do |iTag, iNil|
-                lTagsToDelete.include?(iTag)
+            lDeleteOrphanShortcuts = false
+            if (lForceDeleteOrphanShortcuts != nil)
+              lDeleteOrphanShortcuts = lForceDeleteOrphanShortcuts
+            else
+              if ((!lDeleteTaggedShortcuts) and
+                  (lExistOrphanShortcuts))
+                case Wx::MessageDialog.new(lWindow,
+                    "Do you want to delete the selected Shortcuts that will have no Tag anymore ?",
+                    :caption => 'Confirm delete orphan Shortcuts',
+                    :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
+                  ).show_modal
+                when Wx::ID_YES
+                  lDeleteOrphanShortcuts = true
+                end
               end
-              modifyShortcut(iSC, iSC.Content, iSC.Metadata, lNewTags)
             end
-            # Then we delete the Tags for real
-            deleteTag(lObject)
-          end
-        when ID_SHORTCUT
-          # First check if this Shortcut is present in other Tags
-          lPerformDelete = true
-          if (lObject.Tags.size > 1)
-            case Wx::MessageDialog.new(lWindow,
-                "This Shortcut has several Tags. Are you sure you want to delete it ?",
-                :caption => 'Confirm delete Shortcut',
-                :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
-              ).show_modal
-            when Wx::ID_NO
-              lPerformDelete = false
+            # Now perform what has been decided on Shortcuts
+            lSelectedShortcuts.each do |iSC, iTagsInfo|
+              iSelectedTagsSet, iNewTagsSet = iTagsInfo
+              # We delete this Shortcut if:
+              # * It has no Tag, OR
+              # * We want to delete tagged Shortcuts, OR
+              # * We want to delete orphan Shortcuts AND it the new Tags set is empty
+              if ((iSC.Tags.empty?) or
+                  (lDeleteTaggedShortcuts) or
+                  ((lDeleteOrphanShortcuts) and
+                   (iNewTagsSet.empty?)))
+                # Delete iSC for real
+                deleteShortcut(iSC)
+              else
+                # Here, we are sure that this Shortcut:
+                # * Has at least 1 Tag, AND
+                # * We refuse to delete systematically tagged Shortcuts, AND
+                # * We refuse to delete orphan Shortcuts, OR it has some remaining Tags even after deleting selected ones.
+                # So here we just replace its Tags set with the new one computed previously.
+                modifyShortcut(iSC, iSC.Content, iSC.Metadata, iNewTagsSet)
+              end
             end
           end
-          if (lPerformDelete)
-            undoableOperation("Delete Shortcut #{lObject.Metadata['title']}") do
-              deleteShortcut(lObject)
+
+          # ###########################
+          # 2 - We delete every selected Tag (primary is enough, as secondary will be deleted recursively)
+          # ###########################
+          if (!lSelection.SelectedPrimaryTags.empty?)
+            # We first have to select Tags that do not have other primary selected Tags among their predecessor (as the primary selected predecessor will also delete its children Tags)
+            # list< Tag >
+            lTagsToDelete = []
+            lSelection.SelectedPrimaryTags.each do |iTagID|
+              lTag = findTag(iTagID)
+              if (lTag == nil)
+                puts "!!! Tag of ID #{iTagID.join('/')} was part of the selection, but non existent. Ignoring it. Bug ?"
+              else
+                # If this Tag is not already a sub-Tag (recursively) of an already selected one, add it
+                lFound = false
+                lCheckTag = lTag
+                while (lCheckTag != nil)
+                  if (lTagsToDelete.include?(lCheckTag))
+                    # Already present
+                    lFound = true
+                    break
+                  end
+                  lCheckTag = lCheckTag.Parent
+                end
+                if (!lFound)
+                  # No parent Tag of lTag is present in lTagsToDelete.
+                  # Now we have to make sure that existing Tags are not part of the sub-Tags of iTag also, and delete them if it is the case.
+                  # Delete Tags from the list that are sub-Tags of iTag
+                  lTagsToDelete.delete_if do |iSelectedTag|
+                    iSelectedTag.subTagOf?(lTag)
+                  end
+                  # Add the Tag to be deleted
+                  lTagsToDelete << lTag
+                end
+              end
+            end
+            # Now we can delete safely every Tag from lTagsToDelete
+            lTagsToDelete.each do |iTag|
+              deleteTag(iTag)
             end
           end
-        else
-          puts "!!! Unknown ID of selection: #{lObjectID}. Bug ?"
+          setCurrentFileModified
         end
       end
 

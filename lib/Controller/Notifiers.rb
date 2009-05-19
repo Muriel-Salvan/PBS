@@ -19,31 +19,73 @@ module PBS
       end
       notifyRegisteredGUIs(:onInit)
       # Create the Timer monitoring the clipboard
+      lAlreadyProcessingDelete = false
       Wx::Timer.every(500) do
         # Check if the clipboard has some data we can paste
         Wx::Clipboard.open do |iClipboard|
           updateCommand(Wx::ID_PASTE) do |ioCommand|
-            if iClipboard.supported?(Tools::DataObjectTag.getDataFormat)
+            if (iClipboard.supported?(Tools::DataObjectSelection.getDataFormat))
               # OK, this is data we understand.
               # Get some details to display what we can paste
-              lClipboardData = Tools::DataObjectTag.new
+              lClipboardData = Tools::DataObjectSelection.new
               iClipboard.get_data(lClipboardData)
-              lDataID, lDataContent = Marshal.load(lClipboardData.Data)
-              lName = nil
-              case lDataID
-              when ID_TAG
-                lName = "Tag #{Tag.getSerializedTagName(lDataContent)}"
-              when ID_SHORTCUT
-                lName = "Shortcut #{Shortcut.getSerializedShortcutName(lDataContent)}"
-              end
-              if (lName != nil)
-                # Activate the Paste command with a cool title
-                ioCommand[:enabled] = true
-                ioCommand[:title] = "Paste #{lName}"
+              lCopyType, lCopyID, lSerializedTags, lSerializedShortcuts = lClipboardData.getData
+              lCopyName = nil
+              case lCopyType
+              when Wx::ID_CUT
+                lCopyName = 'Move'
+              when Wx::ID_COPY
+                lCopyName = 'Copy'
+              when Wx::ID_DELETE
+                # Nothing
               else
-                # Deactivate the Paste command, and explain why
+                puts "!!! Unsupported copy type: #{lCopyType}. This will be treated as a normal Copy/Paste operation. Bug ?"
+              end
+              if (lCopyType == Wx::ID_DELETE)
+                # Check that this message is adressed to us for real (if many instances of PBS are running, it is possible that some other instance was cutting things)
+                if (@CopiedID == lCopyID)
+                  # Here we have to take some action:
+                  # Delete the objects marked as being 'Cut', as we got the acknowledge of pasting it somewhere.
+                  if (@CopiedMode == Wx::ID_CUT)
+                    if (!lAlreadyProcessingDelete)
+                      # Ensure that the loop will not come here again for this item.
+                      lAlreadyProcessingDelete = true
+                      cmdDelete({
+                          :parentWindow => nil,
+                          :selection => @CopiedSelection,
+                          :deleteTaggedShortcuts => false,
+                          :deleteOrphanShortcuts => false
+                        })
+                      # Then empty the clipboard.
+                      Wx::Clipboard.open do |ioClipboard|
+                        ioClipboard.clear
+                      end
+                      # Cancel the Cut pending commands.
+                      notifyCutPerformed
+                      lAlreadyProcessingDelete = false
+                    end
+                  else
+                    puts '!!! We have been notified of a clipboard Cut acknowledgement, but no item was marked as to be Cut. Bug ?'
+                  end
+                end
+                # Deactivate the Paste command
                 ioCommand[:enabled] = false
-                ioCommand[:title] = "Paste (invalid id #{lDataID}) - Bug ?"
+                ioCommand[:title] = 'Paste'
+              else
+                if (lCopyID != @CopiedID)
+                  # Here, we have another application of PBS that has put data in the clipboard. It is not us anymore.
+                  notifyCancelCopy
+                end
+                lName = Tools::MultipleSelection.getDescription(lSerializedTags, lSerializedShortcuts)
+                if (lCopyName != nil)
+                  # Activate the Paste command with a cool title
+                  ioCommand[:enabled] = true
+                  ioCommand[:title] = "Paste #{lName} (#{lCopyName})"
+                else
+                  # Deactivate the Paste command, and explain why
+                  ioCommand[:enabled] = false
+                  ioCommand[:title] = "Paste (invalid type #{lCopyType}) - Bug ?"
+                end
               end
             else
               # Deactivate the Paste command
@@ -147,40 +189,50 @@ module PBS
 
     # Notify the GUI that what has enventually been copied/cut is not anymore available
     def notifyCancelCopy
-      if (@CopiedObjectID != nil)
-        notifyRegisteredGUIs(:onCancelCopy, @CopiedObjectID, @CopiedObject)
-        @CopiedObjectID = nil
-        @CopiedObject = nil
+      if (@CopiedSelection != nil)
+        notifyRegisteredGUIs(:onCancelCopy, @CopiedSelection)
+        @CopiedSelection = nil
         @CopiedMode = nil
+        @CopiedID = nil
       end
     end
 
     # Notify the GUI that an object has just been copied
     #
     # Parameters:
-    # * *iObjectID* (_Integer_): Object ID
-    # * *iObject* (_Object_): The object
-    def notifyObjectCopied(iObjectID, iObject)
-      # First notify to uncopy the previous
+    # * *iSelection* (_MultipleSelection_): The copied selection
+    # * *iCopyID* (_Integer_): Unique ID identifying this Copy operation
+    def notifyObjectsCopied(iSelection, iCopyID)
+      # First notify to uncopy the previous ones
       notifyCancelCopy
-      @CopiedObjectID = iObjectID
-      @CopiedObject = iObject
+      @CopiedSelection = iSelection
       @CopiedMode = Wx::ID_COPY
-      notifyRegisteredGUIs(:onObjectCopy, @CopiedObjectID, @CopiedObject)
+      @CopiedID = iCopyID
+      notifyRegisteredGUIs(:onObjectsCopied, @CopiedSelection)
     end
 
     # Notify the GUI that an object has just been cut
     #
     # Parameters:
-    # * *iObjectID* (_Integer_): Object ID
-    # * *iObject* (_Object_): The object
-    def notifyObjectCut(iObjectID, iObject)
+    # * *iSelection* (_MultipleSelection_): The copied selection
+    # * *iCopyID* (_Integer_): Unique ID identifying this Copy operation
+    def notifyObjectsCut(iSelection, iCopyID)
       # First notify to uncopy the previous
       notifyCancelCopy
-      @CopiedObjectID = iObjectID
-      @CopiedObject = iObject
+      @CopiedSelection = iSelection
       @CopiedMode = Wx::ID_CUT
-      notifyRegisteredGUIs(:onObjectCut, @CopiedObjectID, @CopiedObject)
+      @CopiedID = iCopyID
+      notifyRegisteredGUIs(:onObjectsCut, @CopiedSelection)
+    end
+
+    # Notify the GUI that the Cut has effectively been performed
+    def notifyCutPerformed
+      if (@CopiedSelection != nil)
+        notifyRegisteredGUIs(:onCutPerformed, @CopiedSelection)
+        @CopiedSelection = nil
+        @CopiedMode = nil
+        @CopiedID = nil
+      end
     end
 
   end

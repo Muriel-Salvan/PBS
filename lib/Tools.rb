@@ -15,7 +15,41 @@ module PBS
   module Tools
 
     # Object that is used with the clipboard
-    class DataObjectTag < Wx::DataObjectSimple
+    class DataObjectSelection < Wx::DataObject
+
+      # constructor
+      def initialize
+        super
+        @Data = nil
+        @DataAsText = nil
+      end
+
+      # Set the data to send to the clipboard
+      #
+      # Parameters:
+      # * *iCopyType* (_Integer_): Type of the copy (Wx::ID_COPY/Wx::ID_CUT)
+      # * *iCopyID* (_Integer_): ID of the copy
+      # * *iSerializedTags* (<em>list<Object></em>): The list of serialized Tags, with their sub-Tags and Shortcuts (can be nil for acks)
+      # * *iSerializedShortcuts* (<em>list<[Object,String]></em>): The list of serialized Shortcuts, with their parent Tag's ID (can be nil for acks)
+      def setData(iCopyType, iCopyID, iSerializedTags, iSerializedShortcuts)
+        @Data = Marshal.dump( [ iCopyType, iCopyID, iSerializedTags, iSerializedShortcuts ] )
+        if (iSerializedTags == nil)
+          @DataAsText = nil
+        else
+          @DataAsText = MultipleSelection::getSingleContent(iSerializedTags, iSerializedShortcuts)
+        end
+      end
+
+      # Get the data from the clipboard
+      #
+      # Return:
+      # * _Integer_: Type of the copy (Wx::ID_COPY/Wx::ID_CUT)
+      # * _Integer_: ID of the copy
+      # * <em>list<Object></em>: The list of serialized Tags, with their sub-Tags and Shortcuts (can be nil for acks)
+      # * <em>list<[Object,String]></em>: The list of serialized Shortcuts, with their parent Tag's ID (can be nil for acks)
+      def getData
+        return Marshal.load(@Data)
+      end
 
       # Get the data format
       #
@@ -29,22 +63,34 @@ module PBS
         return @@PBS_CLIPBOARD_DATA_FORMAT
       end
 
-      # Constructor
-      def initialize
-        super(DataObjectTag.getDataFormat)
+      # Get the list of all supported formats.
+      #
+      # Parameters:
+      # * *iDirection* (_Object_): ? Not documented
+      # Return:
+      # * <em>list<Wx::DataFormat></em>: List of supported data formats
+      def get_all_formats(iDirection)
+        if (@DataAsText != nil)
+          return [ DataObjectSelection.getDataFormat, Wx::DF_TEXT ]
+        else
+          return [ DataObjectSelection.getDataFormat ]
+        end
       end
-
-      # The data to encapsulate
-      #   String
-      attr_accessor :Data
 
       # Method used by the clipboard itself to fill data
       #
-      # Parsameters:
+      # Parameters:
       # * *iFormat* (<em>Wx::DataFormat</em>): The format used
       # * *iData* (_String_): The data
       def set_data(iFormat, iData)
-        @Data = iData
+        case iFormat
+        when Wx::DF_TEXT
+          @DataAsText = iData
+        when DataObjectSelection.getDataFormat
+          @Data = iData
+        else
+          puts "!!! Set unknown format: #{iFormat}"
+        end
       end
 
       # Method used by Wxruby to retrieve the data
@@ -54,7 +100,331 @@ module PBS
       # Return:
       # * _String_: The data
       def get_data_here(iFormat)
-        return @Data
+        rData = nil
+
+        case iFormat
+        when Wx::DF_TEXT
+          rData = @DataAsText
+        when DataObjectSelection.getDataFormat
+          rData = @Data
+        else
+          puts "!!! Asked unknown format: #{iFormat}"
+        end
+
+        return rData
+      end
+
+      # Redefine this method to be used with Wx::DataObjectComposite that requires it
+      #
+      # Parameters:
+      # * *iFormat* (<em>Wx::DataFormat</em>): The format used
+      # Return:
+      # * _Integer_: The data size
+      def get_data_size(iFormat)
+        rDataSize = 0
+
+        case iFormat
+        when Wx::DF_TEXT
+          # Add 1, otherwise it replaces last character with \0x00
+          rDataSize = @DataAsText.length + 1
+        when DataObjectSelection.getDataFormat
+          rDataSize = @Data.length
+        else
+          puts "!!! Asked unknown format for size: #{iFormat}"
+        end
+
+        return rDataSize
+      end
+
+    end
+
+    # Class that stores a selection of several Tags and Shortcuts alltogether
+    class MultipleSelection
+
+      # The list of Shortcuts IDs directly selected, with their corresponding parent Tag ID
+      #   list< [ Integer, list< String > ] >
+      attr_reader :SelectedPrimaryShortcuts
+
+      # The list of Tags IDs directly selected
+      #   list< list< String > >
+      attr_reader :SelectedPrimaryTags
+
+      # The list of Shortcuts IDs that are part of the selection because they belong to a selected Tag
+      #   list< [ Integer, list< String > ] >
+      attr_reader :SelectedSecondaryShortcuts
+
+      # The list of Tags IDs that are part of the selection because they are a sub-Tag of a selected Tag
+      #   list< list< String > >
+      attr_reader :SelectedSecondaryTags
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iController* (_Controller_): The model controller
+      def initialize(iController)
+        @Controller = iController
+        @SerializedTags = nil
+        @SerializedShortcuts = nil
+        @SelectedPrimaryShortcuts = []
+        @SelectedPrimaryTags = []
+        @SelectedSecondaryShortcuts = []
+        @SelectedSecondaryTags = []
+      end
+
+      # Add a Tag to the selection
+      #
+      # Parameters:
+      # * *iTag* (_Tag_): The Tag to add (nil in case of the Root Tag)
+      def selectTag(iTag)
+        if (iTag == @Controller.RootTag)
+          # In this case, it is different: we select every first level Tag, and Shortcuts having no Tags as primary selection.
+          # This is equivalent to selecting everything.
+          # Select Tags
+          @Controller.RootTag.Children.each do |iChildTag|
+            selectTag(iChildTag)
+          end
+          # Select Shortcuts
+          @Controller.ShortcutsList.each do |iSC|
+            if (iSC.Tags.empty?)
+              selectShortcut(iSC, nil)
+            end
+          end
+        else
+          iTag.getSecondaryObjects(@Controller.ShortcutsList, @SelectedSecondaryShortcuts, @SelectedSecondaryTags)
+          @SelectedPrimaryTags << iTag.getUniqueID
+        end
+      end
+
+      # Add a Shortcut to the selection
+      #
+      # Parameters:
+      # * *iShortcut* (_Shortcut_): The Shortcut
+      # * *iParentTag* (_Tag_): The Tag from which the Shortcut was selected (nil for Root)
+      def selectShortcut(iShortcut, iParentTag)
+        if (iParentTag == nil)
+          @SelectedPrimaryShortcuts << [ iShortcut.getUniqueID, @Controller.RootTag.getUniqueID ]
+        else
+          @SelectedPrimaryShortcuts << [ iShortcut.getUniqueID, iParentTag.getUniqueID ]
+        end
+      end
+
+      # Is the given Tag selected as a primary selection ?
+      #
+      # Parameters:
+      # * *iTag* (_Tag_): The Tag to check
+      # Return:
+      # * _Boolean_: Is the given Tag selected as a primary selection ?
+      def isTagPrimary?(iTag)
+        return @SelectedPrimaryTags.include?(iTag.getUniqueID)
+      end
+
+      # Is the given Tag selected as a secondary selection ?
+      #
+      # Parameters:
+      # * *iTag* (_Tag_): The Tag to check
+      # Return:
+      # * _Boolean_: Is the given Tag selected as a secondary selection ?
+      def isTagSecondary?(iTag)
+        return @SelectedSecondaryTags.include?(iTag.getUniqueID)
+      end
+
+      # Is the given Shortcut selected as a primary selection ?
+      #
+      # Parameters:
+      # * *iSC* (_Shortcut_): The Shortcut to check
+      # * *iParentTag* (_Tag_): The corresponding parent Tag (can be nil for root)
+      # Return:
+      # * _Boolean_: Is the given Shortcut selected as a primary selection ?
+      def isShortcutPrimary?(iSC, iParentTag)
+        if (iParentTag == nil)
+          return @SelectedPrimaryShortcuts.include?( [ iSC.getUniqueID, @Controller.RootTag.getUniqueID ] )
+        else
+          return @SelectedPrimaryShortcuts.include?( [ iSC.getUniqueID, iParentTag.getUniqueID ] )
+        end
+      end
+
+      # Is the given Shortcut selected as a secondary selection ?
+      #
+      # Parameters:
+      # * *iSC* (_Shortcut_): The Shortcut to check
+      # * *iParentTag* (_Tag_): The corresponding parent Tag (can be nil for root)
+      # Return:
+      # * _Boolean_: Is the given Shortcut selected as a secondary selection ?
+      def isShortcutSecondary?(iSC, iParentTag)
+        if (iParentTag == nil)
+          return @SelectedSecondaryShortcuts.include?( [ iSC.getUniqueID, @Controller.RootTag.getUniqueID ] )
+        else
+          return @SelectedSecondaryShortcuts.include?( [ iSC.getUniqueID, iParentTag.getUniqueID ] )
+        end
+      end
+
+      # Is the selection empty ?
+      #
+      # Return:
+      # * _Boolean_: Is the selection empty ?
+      def empty?
+        return ((@SelectedPrimaryShortcuts.empty?) and
+                (@SelectedPrimaryTags.empty?))
+      end
+
+      # Is the selection about a single Tag ?
+      #
+      # Return:
+      # * _Boolean_: Is the selection about a single Tag ?
+      def singleTag?
+        return ((@SelectedPrimaryShortcuts.empty?) and
+                (@SelectedPrimaryTags.size == 1))
+      end
+
+      # Is the selection about a single Shortcut ?
+      #
+      # Return:
+      # * _Boolean_: Is the selection about a single Shortcut ?
+      def singleShortcut?
+        return ((@SelectedPrimaryShortcuts.size == 1) and
+                (@SelectedPrimaryTags.empty?))
+      end
+
+      # Return a simple string summary of what is selected
+      #
+      # Return:
+      # * _String_: The simple description of the selection
+      def getDescription
+        rDescription = nil
+
+        if (@SelectedPrimaryShortcuts.empty?)
+          if (@SelectedPrimaryTags.empty?)
+            rDescription = 'Empty'
+          elsif (@SelectedPrimaryTags.size == 1)
+            lTag = @Controller.findTag(@SelectedPrimaryTags[0])
+            if (lTag == nil)
+              puts "!!! Tag #{@SelectedPrimaryTags[0].join('/')} was selected, but does not exist in the data. Bug ?"
+              rDescription = 'Error'
+            else
+              rDescription = "Tag #{lTag.Name}"
+            end
+          else
+            rDescription = 'Multiple Tags'
+          end
+        elsif (@SelectedPrimaryTags.empty?)
+          if (@SelectedPrimaryShortcuts.size == 1)
+            lSC = @Controller.findShortcut(@SelectedPrimaryShortcuts[0][0])
+            if (lSC == nil)
+              puts "!!! Shortcut #{@SelectedPrimaryShortcuts[0][0]} was selected, but does not exist in the data. Bug ?"
+              rDescription = 'Error'
+            else
+              rDescription = "Shortcut #{lSC.Metadata['title']}"
+            end
+          else
+            rDescription = 'Multiple Shortcuts'
+          end
+        else
+          rDescription = 'Multiple'
+        end
+
+        return rDescription
+      end
+
+      # Get a description from 2 lists of serialized Shortcuts and Tags returned by this class
+      #
+      # Parameters:
+      # * *iSerializedTags* (<em>list<Object></em>): The list of serialized Tags, with their sub-Tags and Shortcuts
+      # * *iSerializedShortcuts* (<em>list<Object]></em>): The list of serialized Shortcuts
+      # Return:
+      # * _String_: The simple description
+      def self.getDescription(iSerializedTags, iSerializedShortcuts)
+        rDescription = nil
+
+        if (iSerializedShortcuts.empty?)
+          if (iSerializedTags.empty?)
+            rDescription = 'Empty'
+          elsif (iSerializedTags.size == 1)
+            rDescription = "Tag #{iSerializedTags[0].getName}"
+          else
+            rDescription = 'Multiple Tags'
+          end
+        elsif (iSerializedTags.empty?)
+          if (iSerializedShortcuts.size == 1)
+            rDescription = "Shortcut #{iSerializedShortcuts[0].getName}"
+          else
+            rDescription = 'Multiple Shortcuts'
+          end
+        else
+          rDescription = 'Multiple'
+        end
+
+        return rDescription
+      end
+
+      # Get the content of a single selected and serialized Tag or Shortcut, or nil otherwise.
+      # In fact this function is useful to give an alternate text representation of the data to be put in the clipboard.
+      #
+      # Parameters:
+      # * *iSerializedTags* (<em>list<Object></em>): The list of serialized Tags, with their sub-Tags and Shortcuts
+      # * *iSerializedShortcuts* (<em>list<Object></em>): The list of serialized Shortcuts
+      # Return:
+      # * _String_: The single content
+      def self.getSingleContent(iSerializedTags, iSerializedShortcuts)
+        rContent = nil
+
+        if (iSerializedShortcuts.empty?)
+          if (iSerializedTags.size == 1)
+            rContent = iSerializedTags[0].getSingleClipContent
+          end
+        elsif (iSerializedTags.empty?)
+          if (iSerializedShortcuts.size == 1)
+            rContent = iSerializedShortcuts[0].getSingleClipContent
+          end
+        end
+
+        return rContent
+      end
+
+      # Get the complete selected data in a serialized way (that is without any references to objects, ready to be marshalled)
+      #
+      # Return:
+      # * <em>list< Object ></em>: The list of serialized Tags, with their sub-Tags and Shortcuts
+      # * <em>list< Object ></em>: The list of serialized Shortcuts
+      def getSerializedSelection
+        if (@SerializedTags == nil)
+          computeSerializedTags
+        end
+        if (@SerializedShortcuts == nil)
+          computeSerializedShortcuts
+        end
+        return @SerializedTags, @SerializedShortcuts
+      end
+
+      # Create serialized Tags data
+      def computeSerializedTags
+        @SerializedTags = []
+        @SelectedPrimaryTags.each do |iTagID|
+          if (iTagID == [])
+            # Root Tag
+            @SerializedTags << @Controller.RootTag.getSerializedDataWithShortcuts(@Controller.ShortcutsList)
+          else
+            lTag = @Controller.findTag(iTagID)
+            if (lTag == nil)
+              puts "!!! Tag of ID #{iTagID.join('/')} should be part of the data, as it was marked as selected. Ignoring it. Bug ?"
+            else
+              @SerializedTags << lTag.getSerializedDataWithShortcuts(@Controller.ShortcutsList)
+            end
+          end
+        end
+      end
+
+      # Create serialized Shortcuts data
+      def computeSerializedShortcuts
+        @SerializedShortcuts = []
+        @SelectedPrimaryShortcuts.each do |iSCInfo|
+          iSCID, iParentTagID = iSCInfo
+          lSC = @Controller.findShortcut(iSCID)
+          if (lSC == nil)
+            puts "!!! Shortcut of ID #{iSCID} should be part of the data, as it was marked as selected. Ignoring it. Bug ?"
+          else
+            @SerializedShortcuts << lSC.getSerializedData(true)
+          end
+        end
       end
 
     end
@@ -140,11 +510,11 @@ module PBS
       lSerializedTags, lSerializedShortcuts = Marshal.load(lData)
       # Deserialize Tags
       lSerializedTags.each do |iSerializedTagData|
-        Tag.createTagFromSerializedData(rRootTag, iSerializedTagData)
+        iSerializedTagData.createTag(rRootTag, nil, nil)
       end
       # Deserialize Shortcuts
       lSerializedShortcuts.each do |iSerializedShortcutData|
-        lNewShortcut = Shortcut.createShortcutFromSerializedData(rRootTag, iTypes, iSerializedShortcutData, false)
+        lNewShortcut = iSerializedShortcutData.createShortcut(rRootTag, iTypes)
         if (lNewShortcut != nil)
           rShortcuts << lNewShortcut
         end
@@ -158,13 +528,14 @@ module PBS
     # Parameters:
     # * *iOldTags* (<em>map<Tag,nil></em>): The old Tags
     # * *ioNewTags* (<em>map<Tag,nil></em>): The new Tags
-    # * *iRootTag* (_Tag_): The root Tag to consider for new ones
-    def translateTags(iOldTags, ioNewTags, iRootTag)
+    # * *iNewRootTag* (_Tag_): The root Tag that is already merged into the model, and has been created as the root of the  to consider for new ones
+    def translateTags(iOldTags, ioNewTags, iNewRootTag)
       iOldTags.each do |iTag, iNil|
         lTagID = iTag.getUniqueID
-        lNewCorrespondingTag = iRootTag.searchTag(lTagID)
+        # And now we search for the real Tag
+        lNewCorrespondingTag = iNewRootTag.searchTag(lTagID)
         if (lNewCorrespondingTag == nil)
-          puts "!!! Normally Tag #{lTagID.join('/')} should have been merged, but it appears we can't retrieve it after the merge. Ignoring this Tag."
+          puts "!!! Normally Tag #{lTagID.join('/')} should have been merged in #{iNewRootTag.getUniqueID.join('/')}, but it appears we can't retrieve it after the merge. Ignoring this Tag."
         else
           ioNewTags[lNewCorrespondingTag] = nil
         end
@@ -193,6 +564,17 @@ module PBS
       end
 
       return rClonedRootTag, rClonedShortcutsList
+    end
+
+    # Get a new Unique ID for Copy/Paste operations
+    #
+    # Return:
+    # * _Integer_: The unique integer
+    def getNewCopyID
+      # Use a stupid generator, chances are quite thin to have the same results with a seed based on the current time (how can a user perform a cut simultaneously on 2 applications at the same time ?)
+      lNow = Time.now
+      srand(lNow.sec*1000000+lNow.usec)
+      return rand(Float::MAX)
     end
 
     # Get the string representation of an accelerator

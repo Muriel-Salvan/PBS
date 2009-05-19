@@ -43,7 +43,7 @@ module PBS
             lNewRootTag, lNewShortcutsList = openData(@TypesPlugins, lOpenDialog.path)
             # Merge with current data
             mergeTags(@RootTag, lNewRootTag)
-            mergeShortcuts(lNewShortcutsList)
+            mergeShortcuts(lNewShortcutsList, @RootTag)
             setCurrentFileModified
           end
         end

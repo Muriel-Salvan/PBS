@@ -16,6 +16,7 @@ module PBS
     # Parameters:
     # * *iOperationTitle* (_String_): Title of the operation to perform to display as undo
     def undoableOperation(iOperationTitle)
+      puts "= #{iOperationTitle} ..."
       # Create the current Undo context
       @CurrentUndoableOperation = Controller::UndoableOperation.new(iOperationTitle)
       # Call the command code
@@ -31,6 +32,7 @@ module PBS
       end
       # Clear the current transaction
       @CurrentUndoableOperation = nil
+      puts "= ... #{iOperationTitle}"
     end
 
     # Modify the shortcut based on new data.
@@ -152,7 +154,7 @@ module PBS
       end
     end
 
-    # Merge Tags with current ones
+    # Merge a Tag with a another one
     #
     # Parameters:
     # * *ioRootTag* (_Tag_): The root of Tags that will receive new ones. It is assumed that ioRootTag is a child (recursive) of @RootTag.
@@ -181,11 +183,12 @@ module PBS
     end
 
     # Merge a new list of Shortcuts into the main one.
-    # The new list has references to Tags that might not be part already of @RootTag, but it is assumed that the Tags were merged before. Therefore this method will only retrieve Tags based on IDs.
+    # The new list has references to Tags that "might" not be part already of @RootTag, but it is assumed that the Tags were merged before. Therefore this method will only retrieve Tags based on IDs.
     #
     # Parameters:
     # * *iNewShortcutsList* (<em>list<Shortcut></em>): The list of Shortcuts to be merged into ioShortcuts.
-    def mergeShortcuts(iNewShortcutsList)
+    # * *iNewRootTag* (_Tag_): The merged root Tag of the Shortcuts list. This the Tag in the current data model that has been created as a root to receive the new Shortcuts once merged.
+    def mergeShortcuts(iNewShortcutsList, iNewRootTag)
       ensureUndoableOperation('Merge Shortcuts') do
         # Check each Shortcut
         iNewShortcutsList.each do |iSC|
@@ -201,7 +204,7 @@ module PBS
           end
           # Translate its old Tags to the new ones.
           lNewTags = {}
-          translateTags(iSC.Tags, lNewTags, @RootTag)
+          translateTags(iSC.Tags, lNewTags, iNewRootTag)
           if (lInitialSC == nil)
             # A brand new Shortcut. Add it simply.
             # !!! Here we call replaceTags directly, as it concerns a Shortcut that exists only in this method yet. It is not among @ShortcutsList yet, so no GUI could have any reference on it yet. So it's safe.
@@ -216,6 +219,35 @@ module PBS
       end
     end
 
+    # Add and merge a complete set of Tags and Shortcuts into the main data model
+    #
+    # Parameters:
+    # * *iNewTag* (_Tag_): The Tag of the data we want to add and merge.
+    # * *iNewShortcutsList* (<em>list<Shortcut></em>): The Shortcuts list to merge, with Tags references to Tags from iNewTag only.
+    # * *iCurrentRootTag* (_Tag_): The current root Tag in which we want to add the new Tag. This is not forcefully the absolute root Tag, in the case we want to merge the data in another Tag (useful for Copy/Paste for example).
+    def addMergeTagsShortcuts(iNewTag, iNewShortcutsList, iCurrentRootTag)
+      # First check that this Tag does not exist already
+      lChildName = iNewTag.Name
+      lExistingTag = nil
+      iCurrentRootTag.Children.each do |iChildTag|
+        if (iChildTag.Name == lChildName)
+          lExistingTag = iChildTag
+          break
+        end
+      end
+      if (lExistingTag != nil)
+        puts "!!! A Tag named #{lChildName} already exists as a sub-Tag of #{iCurrentRootTag.Name}. Merging with existing data."
+        # We merge the tags
+        mergeTags(lExistingTag, iNewTag)
+      else
+        # We add the Tag
+        addNewTag(iCurrentRootTag, iNewTag)
+      end
+      # Retrieve the new Tag
+      lNewMergedTag = iCurrentRootTag.searchTag([lChildName])
+      # Now we merge the Shortcuts
+      mergeShortcuts(iNewShortcutsList, lNewMergedTag)
+    end
   end
 
 end
