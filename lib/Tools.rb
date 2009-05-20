@@ -427,6 +427,103 @@ module PBS
         end
       end
 
+      # Get the bitmap representing this selection
+      #
+      # Parameters:
+      # * *iFont* (<em>Wx::Font</em>): The font to be used to write
+      # Return:
+      # * <em>Wx::Bitmap</em>: The bitmap
+      def getBitmap(iFont)
+        # Paint the bitmap corresponding to the selection
+        lWidth = 0
+        lHeight = 0
+        # Arbitrary max size
+        lMaxWidth = 400
+        lMaxHeight = 400
+        lDragBitmap = Wx::Bitmap.new(lMaxWidth, lMaxHeight)
+        lDragBitmap.draw do |ioDC|
+          # White will be set as transparent afterwards
+          ioDC.brush = Wx::WHITE_BRUSH
+          ioDC.pen = Wx::WHITE_PEN
+          ioDC.draw_rectangle(0, 0, lMaxWidth, lMaxHeight)
+          lWidth, lHeight = draw(ioDC, iFont)
+        end
+        # Compute the alpha mask
+        lSelectionImage = Wx::Image.from_bitmap(lDragBitmap)
+        lSelectionImage.set_mask_colour(Wx::WHITE.red, Wx::WHITE.green, Wx::WHITE.blue)
+        lSelectionImage.init_alpha
+        lSelectionImage.convert_alpha_to_mask
+
+        return Wx::Bitmap.from_image(lSelectionImage.resize([lWidth, lHeight], Wx::Point.new(0, 0)))
+      end
+
+      # Draw the selection in a device context
+      #
+      # Parameters:
+      # * *ioDC* (<em>Wx::DC</em>): The device context to draw into
+      # * *iFont* (<em>Wx::Font</em>): The font to be used to write
+      # Return:
+      # * _Integer_: The final width used to draw
+      # * _Integer_: The final height used to draw
+      def draw(ioDC, iFont)
+        rFinalWidth = 0
+        rFinalHeight = 0
+
+        ioDC.font = iFont
+        # Draw Shortcuts
+        @SelectedPrimaryShortcuts.each do |iSCInfo|
+          iSCID, iParentTagID = iSCInfo
+          lSC = @Controller.findShortcut(iSCID)
+          if (lSC == nil)
+            puts "!!! Shortcut of ID #{iSCID} should be part of the data, as it was marked as selected. Ignoring it. Bug ?"
+          else
+            lTitle = lSC.Metadata['title']
+            lWidth, lHeight, lDescent, lLeading = ioDC.get_text_extent(lTitle)
+            if (lWidth > rFinalWidth)
+              rFinalWidth = lWidth
+            end
+            ioDC.draw_text(lTitle, 0, rFinalHeight)
+            rFinalHeight += lHeight + lLeading
+          end
+        end
+        # Draw Tags
+        @SelectedPrimaryTags.each do |iTagID|
+          lTag = @Controller.findTag(iTagID)
+          if (lTag == nil)
+            puts "!!! Tag of ID #{iTagID.join('/')} should be part of the data, as it was marked as selected. Ignoring it. Bug ?"
+          else
+            lTitle = "#{lTag.Name} ..."
+            lWidth, lHeight, lDescent, lLeading = ioDC.get_text_extent(lTitle)
+            ioDC.draw_text(lTitle, 0, rFinalHeight)
+            if (lWidth > rFinalWidth)
+              rFinalWidth = lWidth
+            end
+            rFinalHeight += lHeight + lLeading
+          end
+        end
+
+        return rFinalWidth, rFinalHeight
+      end
+
+      # Check if a Tag is part of the selection
+      #
+      # Parameters:
+      # * *iTagID* (<em>list<String></em>): The Tag ID
+      # Return:
+      # * _Boolean_: Is the Tag part of the selection ?
+      def tagSelected?(iTagID)
+        rFound = false
+
+        @SelectedPrimaryTags.each do |iSelectedTagID|
+          if (iTagID[0..iSelectedTagID.size - 1] == iSelectedTagID)
+            rFound = true
+            break
+          end
+        end
+
+        return rFound
+      end
+      
     end
 
     # Create an image list, considering the minimal size of every image given as input.

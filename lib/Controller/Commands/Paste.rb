@@ -43,15 +43,7 @@ module PBS
                 (lCopyID == @CopiedID))
               # We are cutting something from our own application.
               # Check that lSelectedTag is not part of any of the primary selected Tags' children (recursively).
-              lPasteIntoTagID = lSelectedTag.getUniqueID
-              lFound = false
-              @CopiedSelection.SelectedPrimaryTags.each do |iSelectedTagID|
-                if (lPasteIntoTagID[0..iSelectedTagID.size - 1] == iSelectedTagID)
-                  lFound = true
-                  break
-                end
-              end
-              if (lFound)
+              if (@CopiedSelection.tagSelected?(lSelectedTag.getUniqueID))
                 puts "The selected Tag for pasting data (#{lSelectedTag.Name}) is a sub-Tag of the data you are trying to move. Please select a Tag that is not part of the cut data."
                 lCancel = true
               end

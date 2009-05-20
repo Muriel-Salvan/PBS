@@ -42,6 +42,14 @@ module PBS
     #   map< String, Object >
     attr_reader :IntegrationPlugins
 
+    # The current type of copy (Wx::ID_COPY or Wx::ID_CUT)
+    #   Integer
+    attr_reader :CopiedMode
+
+    # The current copied selection
+    #   MultipleSelection
+    attr_reader :CopiedSelection
+
     # Find a Shortcut based on its unique ID
     #
     # Parameters:

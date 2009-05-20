@@ -611,6 +611,69 @@ module PBS
       end
     end
 
+    # Compute the drag image to use
+    #
+    # Parameters:
+    # * *iSelection* (_MultipleSelection_): The new selection for the new drag image
+    def computeDragImage(iSelection)
+      # 1. Create the bitmap
+      # Get the bitmap from the selection
+      lSelectionBitmap = iSelection.getBitmap(@TCMainTree.font)
+      # Depending on the copied mode, we add a little icon
+      case (@Controller.CopiedMode)
+      when Wx::ID_CUT
+        # Nothing
+      when Wx::ID_COPY
+        # Add a little +
+        lSelectionBitmap.draw do |ioDC|
+          ioDC.draw_bitmap(Wx::Bitmap.new("#{$PBSRootDir}/Graphics/CopyFlag.png"), 0, 0, true)
+        end
+      else
+        # Nothing
+      end
+      # 2. Cancel the previous drag image
+      if (@DragImage != nil)
+        @DragImage.end_drag
+      end
+      # 3. Create the new drag image
+      @DragImage = Wx::DragImage.new(lSelectionBitmap)
+      lScreenMainTreePos = @TCMainTree.client_to_screen(Wx::Point.new(0,0))
+      @DragImage.begin_drag(Wx::Point.new( lSelectionBitmap.width/2 - lScreenMainTreePos.x, lSelectionBitmap.height/2 - lScreenMainTreePos.y), @TCMainTree, true)
+      @DragImage.show
+    end
+
+    # Compute the selected tag for drop.
+    # This function should be used only while dragging items.
+    # This function also updates the cursor of the main tree based on its findings.
+    def computeSelectedTagForDrop
+      # Check which one we are hovering.
+      lItemID, lFlags = @TCMainTree.hit_test(@MainTreeMousePos)
+      if (lItemID != @OldMainTreeHoverNodeID)
+        # We may be have to update the hovering cursor depending if we are allowed to drop or not
+        @SelectedTagForDrop = nil
+        if (lItemID != 0)
+          # Check this is a Tag
+          lID, lObjectID = @TCMainTree.get_item_data(lItemID)
+          if (lID == ID_TAG)
+            # In case of Cut, check it is not selected
+            if ((@Controller.CopiedMode == Wx::ID_COPY) or
+                (!@Controller.CopiedSelection.tagSelected?(lObjectID)))
+              # OK, we can drop.
+              @SelectedTagForDrop = @Controller.findTag(lObjectID)
+            end
+          end
+        end
+        # Change the cursor bitmap accordingly
+        if (@SelectedTagForDrop != nil)
+          @TCMainTree.cursor = @CursorDropOK
+        else
+          @TCMainTree.cursor = @CursorNoDrop
+        end
+        # Remember the item being hovered, to not crawl under events
+        @OldMainTreeHoverNodeID = lItemID
+      end
+    end
+
     # Add a command to a menu belonging to this main frame
     #
     # Parameters:
@@ -643,16 +706,33 @@ module PBS
       @CopySelection = nil
       @CopyMode = nil
 
-      # Create the treeview
+      # Create the main treeview
       @TCMainTree = Wx::TreeCtrl.new(self,
         :style => Wx::TR_HAS_BUTTONS|Wx::TR_MULTIPLE
       )
+      # The last known selection
+      # MultipleSelection
       @OldMainTreeSelection = nil
+      # The last known mouse position
+      # Wx::Point
+      @MainTreeMousePos = nil
+      # The last known Tag selected to drop a dragged item
+      # Tag
+      @SelectedTagForDrop = nil
+      # Last known node ID that was hovered
+      # Integer
+      @OldMainTreeHoverNodeID = nil
+      # Cursors used for DragNDrop
+      @CursorNoDrop = Wx::Cursor.new(Wx::CURSOR_NO_ENTRY)
+      @CursorDropOK = Wx::Cursor.new(Wx::CURSOR_DEFAULT)
       # Create the image list for the tree
       lImageList = createImageList(['MiniCut.png', 'MiniCopy.png', 'MicroCut.png', 'MicroCopy.png'])
       @TCMainTree.image_list = lImageList
       # fill the tree view from scratch
       fillMainTree
+      # The drag image
+      # Wx::DragImage
+      @DragImage = nil
 
       # Create the menus
       # File menu
@@ -842,8 +922,94 @@ module PBS
       evt_tree_sel_changed(@TCMainTree) do |iEvent|
         onMainTreeSelectionUpdated
       end
-      evt_tree_get_info(@TCMainTree) do |iEvent|
+      @TCMainTree.evt_left_up do |iEvent|
         onMainTreeSelectionUpdated
+      end
+
+      # Handle Drag/Drop
+      lMainTreeDragging = false
+      @TCMainTree.evt_motion do |iEvent|
+        @MainTreeMousePos = iEvent.position
+        if (lMainTreeDragging)
+          # We are currently dragging an item.
+          computeSelectedTagForDrop
+        end
+      end
+      # Keep a state of the Ctrl key down (true) or up (false)
+      # Boolean
+      lLastCtrlDown = false
+      evt_tree_begin_drag(@TCMainTree) do |iEvent|
+        # We begin dragging with left mouse
+        lSelection = getCurrentTreeSelection
+        if (!lSelection.empty?)
+          iEvent.allow
+          computeDragImage(lSelection)
+          # Remember we are dragging something for future events
+          lMainTreeDragging = true
+          # Mark the selection to be cut
+          if (lLastCtrlDown)
+            @Controller.cmdCopy(:selection => lSelection)
+          else
+            @Controller.cmdCut(:selection => lSelection)
+          end
+          # Update the cursor
+          computeSelectedTagForDrop
+        else
+          iEvent.skip
+        end
+      end
+      evt_tree_begin_rdrag(@TCMainTree) do |iEvent|
+        # We begin dragging with right mouse
+        # TODO: Test with wxWidgets 2.9.0 (should be there May 2009)
+        lSelection = getCurrentTreeSelection
+        if (!lSelection.empty?)
+          iEvent.allow
+        else
+          iEvent.skip
+        end
+      end
+      evt_tree_end_drag(@TCMainTree) do |iEvent|
+        if (@SelectedTagForDrop != nil)
+          # Paste in the selected tag for drop
+          @Controller.cmdPaste(:tag => @SelectedTagForDrop)
+        end
+        # Remove the dragging image
+        @DragImage.end_drag
+        # Get the cursor back to normal
+        @TCMainTree.cursor = @CursorDropOK
+        # We end dragging
+        lMainTreeDragging = false
+        iEvent.skip
+      end
+      @TCMainTree.evt_key_up do |iEvent|
+        # If the key is Ctrl and we are dragging, it means we Cut instead of Copy
+        if (iEvent.key_code == Wx::K_CONTROL)
+          if (lLastCtrlDown)
+            # Changing Ctrl state
+            lLastCtrlDown = false
+            if (lMainTreeDragging)
+              lSelection = getCurrentTreeSelection
+              @Controller.cmdCut(:selection => lSelection)
+              # Update the drag image
+              computeDragImage(lSelection)
+            end
+          end
+        end
+      end
+      @TCMainTree.evt_key_down do |iEvent|
+        # If the key is Ctrl and we are dragging, it means we Copy instead of Cut
+        if (iEvent.key_code == Wx::K_CONTROL)
+          if (!lLastCtrlDown)
+            # Changing Ctrl state
+            lLastCtrlDown = true
+            if (lMainTreeDragging)
+              lSelection = getCurrentTreeSelection
+              @Controller.cmdCopy(:selection => lSelection)
+              # Update the drag image
+              computeDragImage(lSelection)
+            end
+          end
+        end
       end
 
     end
