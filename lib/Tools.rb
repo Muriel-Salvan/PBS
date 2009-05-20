@@ -431,6 +431,7 @@ module PBS
       #
       # Parameters:
       # * *iFont* (<em>Wx::Font</em>): The font to be used to write
+      # * *CodeBlock*: The code called once the bitmap has been created without alpha channel. This is used to put some modifications on it.
       # Return:
       # * <em>Wx::Bitmap</em>: The bitmap
       def getBitmap(iFont)
@@ -448,6 +449,8 @@ module PBS
           ioDC.draw_rectangle(0, 0, lMaxWidth, lMaxHeight)
           lWidth, lHeight = draw(ioDC, iFont)
         end
+        # Modify it before continuing
+        lWidth, lHeight = yield(lDragBitmap, lWidth, lHeight)
         # Compute the alpha mask
         lSelectionImage = Wx::Image.from_bitmap(lDragBitmap)
         lSelectionImage.set_mask_colour(Wx::WHITE.red, Wx::WHITE.green, Wx::WHITE.blue)

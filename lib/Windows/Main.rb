@@ -618,18 +618,30 @@ module PBS
     def computeDragImage(iSelection)
       # 1. Create the bitmap
       # Get the bitmap from the selection
-      lSelectionBitmap = iSelection.getBitmap(@TCMainTree.font)
-      # Depending on the copied mode, we add a little icon
-      case (@Controller.CopiedMode)
-      when Wx::ID_CUT
-        # Nothing
-      when Wx::ID_COPY
-        # Add a little +
-        lSelectionBitmap.draw do |ioDC|
-          ioDC.draw_bitmap(Wx::Bitmap.new("#{$PBSRootDir}/Graphics/CopyFlag.png"), 0, 0, true)
+      lSelectionBitmap = iSelection.getBitmap(@TCMainTree.font) do |ioBitmap, iWidth, iHeight|
+        rWidth = iWidth
+        rHeight = iHeight
+        # Depending on the copied mode, we add a little icon
+        case (@Controller.CopiedMode)
+        when Wx::ID_CUT
+          # Nothing
+        when Wx::ID_COPY
+          # Add a little +
+          ioBitmap.draw do |ioDC|
+            lAddedBitmap = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/CopyFlag.png")
+            if (iWidth/2 + 20 + lAddedBitmap.width > iWidth)
+              rWidth = iWidth/2 + 20 + lAddedBitmap.width
+            end
+            if (iHeight/2 + lAddedBitmap.height > iHeight)
+              rHeight = iHeight/2 + lAddedBitmap.height
+            end
+            ioDC.draw_bitmap(lAddedBitmap, rWidth/2 + 20, rHeight/2, true)
+          end
+        else
+          # Nothing
         end
-      else
-        # Nothing
+        # Return the new width and height if greater
+        next rWidth, rHeight
       end
       # 2. Cancel the previous drag image
       if (@DragImage != nil)
