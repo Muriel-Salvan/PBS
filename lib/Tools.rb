@@ -138,6 +138,61 @@ module PBS
 
     end
 
+    # Class that is used for drag'n'drop
+    class SelectionDropSource < Wx::DropSource
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iDragImage* (<em>Wx::DragImage</em>): The drag image to display
+      # * *iWindow* (<em>Wx::Window</em>): The window initiating the Drag'n'Drop
+      # * *iSelection* (_MultipleSelection_): The selection being dragged
+      # * *iController* (_Controller_): The data model controller
+      def initialize(iDragImage, iWindow, iSelection, iController)
+        super(iWindow)
+
+        @DragImage = iDragImage
+        @Selection = iSelection
+        @Controller = iController
+        @OldEffect = nil
+
+        # Create the serialized data
+        lSerializedTags, lSerializedShortcuts = @Selection.getSerializedSelection
+        lCopyID = @Controller.getNewCopyID
+        lData = Tools::DataObjectSelection.new
+        lData.setData(Wx::ID_CUT, lCopyID, lSerializedTags, lSerializedShortcuts)
+
+        # Set the DropSource internal data
+        self.data = lData
+      end
+
+      # Change appearance.
+      #
+      # Parameters:
+      # * *iEffect* (_Integer_): The effect to implement. One of DragCopy, DragMove, DragLink and DragNone.
+      # Return:
+      # * _Boolean_: false if you want default feedback, or true if you implement your own feedback. The return values is ignored under GTK.
+      def give_feedback(iEffect)
+        # Drag the image
+        @DragImage.move(Wx::get_mouse_position)
+        # Change icons of items to be moved if the sugggested result (Move/Copy) has changed
+        if (iEffect != @OldEffect)
+          case iEffect
+          when Wx::DRAG_MOVE
+            @Controller.notifyObjectsDragMove(@Selection)
+          when Wx::DRAG_COPY
+            @Controller.notifyObjectsDragCopy(@Selection)
+          else
+            @Controller.notifyObjectsDragNone(@Selection)
+          end
+          @OldEffect = iEffect
+        end
+        # Default feedback is ok
+        return false
+      end
+
+    end
+
     # Class that stores a selection of several Tags and Shortcuts alltogether
     class MultipleSelection
 

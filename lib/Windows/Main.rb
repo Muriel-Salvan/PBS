@@ -4,6 +4,7 @@
 #++
 
 require 'Tools.rb'
+require 'Windows/PBSTreeCtrl.rb'
 
 module PBS
 
@@ -11,180 +12,6 @@ module PBS
   class MainFrame < Wx::Frame
 
     include Tools
-
-    # Set one of tree's node attributes to fit its associated data (Tag or Shortcut).
-    # Only this method knows how to display tree nodes.
-    #
-    # Parameters:
-    # * *iItemID* (_Integer_): The item of the main tree that we want to update
-    def updateMainTreeNode(iItemID)
-      lID, lObjectID = @TCMainTree.get_item_data(iItemID)
-      case lID
-      when ID_TAG
-        # Get the corresponding Tag
-        lTag = @Controller.findTag(lObjectID)
-        if (lTag == nil)
-          puts "!!! Node #{iItemID} contains the Tag ID #{lObjectID.join('/')} but no Tag exists under this ID. The item will be marked as visible for error. Bug ?"
-          @TCMainTree.set_item_text(iItemID, "!!! Unknown Tag #{lObjectID.join('/')}")
-        else
-          @TCMainTree.set_item_text(iItemID, lTag.Name)
-          # Check the Copy/Cut markers
-          if (@CopySelection != nil)
-            if (@CopySelection.isTagPrimary?(lTag))
-              if (@CopyMode == Wx::ID_CUT)
-                @TCMainTree.set_item_image(iItemID, 0)
-              else
-                @TCMainTree.set_item_image(iItemID, 1)
-              end
-            elsif (@CopySelection.isTagSecondary?(lTag))
-              if (@CopyMode == Wx::ID_CUT)
-                @TCMainTree.set_item_image(iItemID, 2)
-              else
-                @TCMainTree.set_item_image(iItemID, 3)
-              end
-            else
-              @TCMainTree.set_item_image(iItemID, -1)
-            end
-          else
-            @TCMainTree.set_item_image(iItemID, -1)
-          end
-        end
-      when ID_SHORTCUT
-        # Retrieve the Shortcut
-        lShortcut = @Controller.findShortcut(lObjectID)
-        if (lShortcut == nil)
-          puts "!!! Node #{iItemID} contains the Shortcut ID #{lObjectID} but no Shortcut exists under this ID. The item will be marked as visible for error. Bug ?"
-          @TCMainTree.set_item_text(iItemID, "!!! Unknown Shortcut #{lObjectID}")
-        else
-          lTitle = lShortcut.Metadata['title']
-          if (lTitle == nil)
-            lTitle = '-- Unknown title --'
-          end
-          @TCMainTree.set_item_text(iItemID, lTitle)
-          # Check the Copy/Cut markers
-          if (@CopySelection != nil)
-            lParentTag = getParentTag(iItemID)
-            if (@CopySelection.isShortcutPrimary?(lShortcut, lParentTag))
-              if (@CopyMode == Wx::ID_CUT)
-                @TCMainTree.set_item_image(iItemID, 0)
-              else
-                @TCMainTree.set_item_image(iItemID, 1)
-              end
-            elsif (@CopySelection.isShortcutSecondary?(lShortcut, lParentTag))
-              if (@CopyMode == Wx::ID_CUT)
-                @TCMainTree.set_item_image(iItemID, 2)
-              else
-                @TCMainTree.set_item_image(iItemID, 3)
-              end
-            else
-              @TCMainTree.set_item_image(iItemID, -1)
-            end
-          else
-            @TCMainTree.set_item_image(iItemID, -1)
-          end
-        end
-      else
-        puts "!!! Tree node #{iItemID} has unknown ID (#{lID}). It will be marked in the tree. Bug ?"
-        @TCMainTree.set_item_text(iItemID, "!!! Unknown Data ID (Node ID: #{iItemID}, Data ID: #{lID}) !!!")
-      end
-      if ($PBS_DevDebug)
-        # Add some debugging info
-        @TCMainTree.set_item_text(iItemID, "#{@TCMainTree.get_item_text(iItemID)} (ID=#{lID}, ObjectID=#{lObjectID}, NodeID=#{iItemID})")
-      end
-    end
-
-    # Remove a branch of the main tree
-    #
-    # Parameters:
-    # * *iNodeID* (_Integer_): The node ID, root of the branch to remove
-    def removeTreeBranch(iNodeID)
-      # First remove children branches
-      @TCMainTree.children(iNodeID).each do |iChildID|
-        removeTreeBranch(iChildID)
-      end
-      # Then remove the root registered info
-      lID, lObjectID = @TCMainTree.get_item_data(iNodeID)
-      case lID
-      when ID_TAG
-        # Remove a Tag reference
-        lNodeID = @TagsToMainTree.delete(lObjectID)
-        if (lNodeID != iNodeID)
-          puts "!!! We are removing node ID #{iNodeID}, referenced for Tag #{lObjectID.join('/')}, but this Tag ID was registered for another node of ID #{lNodeID}."
-        end
-      when ID_SHORTCUT
-        # Remove a Shortcut reference
-        # Nothing to do
-      else
-        puts "!!! We are trying to remove a tree node (ID = #{iNodeID}) that is not registered as a Tag not a Shortcut (ID = #{lID}). Bug ?"
-      end
-      # And remove the node itself
-      @TCMainTree.delete(iNodeID)
-    end
-
-    # Insert a Tag in the main tree, and recursively all its children Tags and associated Shortcuts
-    #
-    # Parameters:
-    # * *iParentID* (_Integer_): The node ID where the Tag will be inserted
-    # * *iTag* (_Tag_): The Tag to insert
-    def insertTreeBranch(iParentID, iTag)
-      # Insert the new node
-      lTagNodeID = @TCMainTree.append_item(iParentID, '')
-      @TCMainTree.set_item_data(lTagNodeID, [ ID_TAG, iTag.getUniqueID ])
-      @TagsToMainTree[iTag.getUniqueID] = lTagNodeID
-      updateMainTreeNode(lTagNodeID)
-      # Insert its children Tags also
-      iTag.Children.each do |iChildTag|
-        insertTreeBranch(lTagNodeID, iChildTag)
-      end
-      # Insert its associated Shortcuts
-      @Controller.ShortcutsList.each do |iSC|
-        if (iSC.Tags.has_key?(iTag))
-          # Insert iSC as a child
-          lSCNodeID = @TCMainTree.append_item(lTagNodeID, '')
-          @TCMainTree.set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC.getUniqueID ])
-          updateMainTreeNode(lSCNodeID)
-        end
-      end
-    end
-
-    # Add information about a Shortcut into the main tree
-    #
-    # Parameters:
-    # * *iSC* (_Shortcut_): The Shortcut to add
-    def addShortcutInfoToMainTree(iSC)
-      if (iSC.Tags.empty?)
-        # Put at the root
-        lNewNodeID = @TCMainTree.append_item(@RootID, '')
-        @TCMainTree.set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC.getUniqueID ])
-        updateMainTreeNode(lNewNodeID)
-      else
-        iSC.Tags.each do |iTag, iNil|
-          lTagID = @TagsToMainTree[iTag.getUniqueID]
-          if (lTagID == nil)
-            puts "!!! Shortcut #{iSC.Metadata['title']} is tagged with #{iTag.Name}, which does not exist in the known tags."
-          else
-            lNewNodeID = @TCMainTree.append_item(lTagID, '')
-            @TCMainTree.set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC.getUniqueID ])
-            updateMainTreeNode(lNewNodeID)
-          end
-        end
-      end
-    end
-
-    # Securely update the main tree.
-    # This method freezes the tree and ensures it becomes unfrozen.
-    #
-    # Parameters:
-    # * *CodeBlock*: Code to execute while the tree is frozen
-    def updateMainTree
-      # First, freeze it for better performance during update
-      @TCMainTree.freeze
-      yield
-      # Unfreeze it
-      @TCMainTree.thaw
-      # Redraw it
-      @TCMainTree.refresh
-    end
 
     # Set the title of the application, depending on the context
     def setAppTitle
@@ -202,366 +29,15 @@ module PBS
       end
     end
 
-    # Delete an object (found in item_data) that is a direct child of a given Node ID
-    #
-    # Parameters:
-    # * *iParentNodeID* (_Integer_): The parent node ID
-    # * *iObject* (_Object_): The object to find
-    def deleteObjectFromTree(iParentNodeID, iObject)
-      # Find the node to delete
-      lFound = false
-      @TCMainTree.children(iParentNodeID).each do |iChildNodeID|
-        lID, lObjectID = @TCMainTree.get_item_data(iChildNodeID)
-        if (lObjectID == iObject.getUniqueID)
-          # Found it
-          @TCMainTree.delete(iChildNodeID)
-          lFound = true
-          break
-        end
-      end
-      # Just a little Bug detection mechanism ... never know.
-      if (!lFound)
-        puts "!!! Object #{iObject} should have been inserted under node #{iParentNodeID}). However no trace of this object in the children nodes. Bug ?"
-      end
-    end
-
-    # Fill the tree view by scratching it first.
-    def fillMainTree
-      updateMainTree do
-        # Update it
-        # Erase everything
-        @TCMainTree.delete_all_items
-        # Create root
-        @RootID = @TCMainTree.add_root('     ')
-        @TCMainTree.set_item_data(@RootID, [ ID_TAG, @Controller.RootTag.getUniqueID ] )
-        # Keep a correspondance of each Tag and its corresponding Tree ID
-        # map< Tag, Integer >
-        @TagsToMainTree = { @Controller.RootTag.getUniqueID => @RootID }
-        # Insert each tag
-        @Controller.RootTag.Children.each do |iTag|
-          insertTreeBranch(@RootID, iTag)
-        end
-        # Insert each Shortcut that does not have any tag
-        @Controller.ShortcutsList.each do |iSC|
-          if (iSC.Tags.empty?)
-            lSCNodeID = @TCMainTree.append_item(@RootID, '')
-            @TCMainTree.set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC.getUniqueID ])
-            updateMainTreeNode(lSCNodeID)
-          end
-        end
-        @TCMainTree.expand(@RootID)
-        if ($PBS_DevDebug)
-          @TCMainTree.expand_all
-        end
-      end
-    end
-
     # Notify the GUI that data on the currently opened file has been modified
     def onCurrentOpenedFileUpdate
       setAppTitle
     end
 
-    # Notify the GUI that an update has occured on a Tag
-    #
-    # Parameters:
-    # * *iTag* (_Tag_): The Tag that was modified
-    def onTagContentUpdate(iTag)
-      # We update the tree accordingly
-      updateMainTree do
-        lTagID = @TagsToMainTree[iTag.getUniqueID]
-        if (lTagID == nil)
-          puts '!!! The updated Tag was not inserted in the main tree. Bug ?'
-        else
-          updateMainTreeNode(lTagID)
-        end
-      end
-    end
-
-    # Notify that a given Tag's children list has changed
-    #
-    # Parameters:
-    # * *iParentTag* (_Tag_): The Tag whose children list has changed
-    # * *iOldChildrenList* (<em>list<Tag></em>): The old children list
-    def onTagChildrenUpdate(iParentTag, iOldChildrenList)
-      # We update the tree accordingly
-      updateMainTree do
-        lTagID = @TagsToMainTree[iParentTag.getUniqueID]
-        if (lTagID == nil)
-          puts '!!! The updated Tag was not inserted in the main tree. Bug ?'
-        else
-          # First remove Tags that are not part of the children anymore
-          @TCMainTree.children(lTagID).each do |iChildID|
-            lID, lObjectID = @TCMainTree.get_item_data(iChildID)
-            if (lID == ID_TAG)
-              # Check if lObjectID is part of the children of iParentTag
-              lFound = false
-              iParentTag.Children.each do |iChildTag|
-                if (iChildTag.getUniqueID == lObjectID)
-                  lFound = true
-                  break
-                end
-              end
-              if (!lFound)
-                # We have to remove iChildID from the tree, along with all its children
-                removeTreeBranch(iChildID)
-              end
-            end
-          end
-          # Then add new Tags
-          iParentTag.Children.each do |iChildTag|
-            lChildID = @TagsToMainTree[iChildTag.getUniqueID]
-            if (lChildID == nil)
-              # We have to insert iChildTag, and all Shortcuts and children Tags associated to it
-              insertTreeBranch(lTagID, iChildTag)
-            end
-          end
-        end
-      end
-    end
-
-    # A Shortcut has just been added
-    #
-    # Parameters:
-    # * *iSC* (_Shortcut_): The added Shortcut
-    def onShortcutAdd(iSC)
-      # We update the tree accordingly
-      updateMainTree do
-        addShortcutInfoToMainTree(iSC)
-      end
-    end
-
-    # A Shortcut has just been deleted
-    #
-    # Parameters:
-    # * *iSC* (_Shortcut_): The deleted Shortcut
-    def onShortcutDelete(iSC)
-      # We update the tree accordingly
-      updateMainTree do
-        if (iSC.Tags.empty?)
-          # Delete it from root
-          deleteObjectFromTree(@RootID, iSC)
-        else
-          # For each Tag this Shortcut was belonging to, we will delete its node
-          iSC.Tags.each do |iTag, iNil|
-            lTagNodeID = @TagsToMainTree[iTag.getUniqueID]
-            if (lTagNodeID == nil)
-              puts "!!! Tag #{iTag.getUniqueID.join('/')} should have been inserted in the main tree. However it is not registered. Bug ?"
-            else
-              deleteObjectFromTree(lTagNodeID, iSC)
-            end
-          end
-        end
-      end
-    end
-
-    # An update has occured on a Shortcut's data
-    #
-    # Parameters:
-    # * *iSC* (_Shortcut_): The Shortcut whose data was invalidated
-    # * *iOldSCID* (_Integer_): The Shortcut ID before data modification
-    # * *iOldContent* (_Object_): The previous content, or nil if it was not modified
-    # * *iOldMetadata* (_Object_): The previous metadata, or nil if it was not modified
-    def onShortcutDataUpdate(iSC, iOldSCID, iOldContent, iOldMetadata)
-      # We update the tree accordingly
-      updateMainTree do
-        # Just retrieve existing nodes and update them
-        @TCMainTree.traverse do |iItemID|
-          lID, lObjectID = @TCMainTree.get_item_data(iItemID)
-          if (lObjectID == iOldSCID)
-            # Update iItemID with the new info from iSC
-            updateMainTreeNode(iItemID)
-            # Store the new ID
-            @TCMainTree.set_item_data(iItemID, iSC.getUniqueID)
-          end
-        end
-      end
-    end
-
-    # An update has occured on a Shortcut's Tags
-    #
-    # Parameters:
-    # * *iSC* (_Shortcut_): The Shortcut whose Tags were invalidated
-    # * *iOldTags* (<em>map<Tag,nil></em>): The old Tags set
-    def onShortcutTagsUpdate(iSC, iOldTags)
-      # We update the tree accordingly
-      updateMainTree do
-        # First, delete any reference to iSC
-        lSCID = iSC.getUniqueID
-        lToBeDeleted = []
-        @TCMainTree.traverse do |iItemID|
-          lID, lObjectID = @TCMainTree.get_item_data(iItemID)
-          if (lObjectID == lSCID)
-            lToBeDeleted << iItemID
-          end
-        end
-        lToBeDeleted.each do |iItemID|
-          @TCMainTree.delete(iItemID)
-        end
-        # Then add iSC everywhere needed
-        addShortcutInfoToMainTree(iSC)
-      end
-    end
-
-    # All Shortcuts/Tags data has been replaced
-    def onReplaceAll
-      fillMainTree
-    end
-
-    # Update all items affected by a multiple selection
-    #
-    # Parameters:
-    # * *iSelection* (_MultipleSelection_): The selection
-    def refreshSelectedItems(iSelection)
-      # Update each item impacted by this selection
-      updateMainTree do
-        (iSelection.SelectedPrimaryShortcuts + iSelection.SelectedSecondaryShortcuts).each do |iSCInfo|
-          iSCID, iParentTagID = iSCInfo
-          # Find the node of the Tag
-          lParentNodeID = @TagsToMainTree[iParentTagID]
-          # Check each child, and update the one for our Shortcut
-          @TCMainTree.children(lParentNodeID).each do |iChildNodeID|
-            # If this child is for our SC, update it
-            lID, lObjectID = @TCMainTree.get_item_data(iChildNodeID)
-            if (lObjectID == iSCID)
-              updateMainTreeNode(iChildNodeID)
-            end
-          end
-        end
-        (iSelection.SelectedPrimaryTags + iSelection.SelectedSecondaryTags).each do |iTagID|
-          # Find the node of the Tag
-          lTagNodeID = @TagsToMainTree[iTagID]
-          updateMainTreeNode(lTagNodeID)
-        end
-      end
-    end
-
-    # A selection has been copied
-    #
-    # Parameters:
-    # * *iSelection* (_MultipleSelection_): The copied selection
-    def onObjectsCopied(iSelection)
-      @CopySelection = iSelection
-      @CopyMode = Wx::ID_COPY
-      refreshSelectedItems(@CopySelection)
-    end
-
-    # A selection has been cut
-    #
-    # Parameters:
-    # * *iSelection* (_MultipleSelection_): The copied selection
-    def onObjectsCut(iSelection)
-      @CopySelection = iSelection
-      @CopyMode = Wx::ID_CUT
-      refreshSelectedItems(@CopySelection)
-    end
-
-    # A marked to be copied/cut object has been cancelled
-    #
-    # Parameters:
-    # * *iSelection* (_MultipleSelection_): The copied selection
-    def onCancelCopy(iSelection)
-      lOldSelection = @CopySelection
-      @CopySelection = nil
-      @CopyMode = nil
-      refreshSelectedItems(lOldSelection)
-    end
-
-    # A marked to be cut selection has been effecively cut.
-    # This notifications comes after having deleted the object already. So its goal is to only remove some context the GUI could have stored regarding the Cut operation.
-    #
-    # Parameters:
-    # * *iSelection* (_MultipleSelection_): The copied selection
-    def onCutPerformed(iSelection)
-      @CopySelection = nil
-      @CopyMode = nil
-    end
-
-    # Display some debugging info
-    def onDevDebug
-      puts '=== Correspondace between Tag IDs and Node IDs:'
-      @TagsToMainTree.each do |iTagID, iNodeID|
-        puts "#{iTagID.join('/')} => #{iNodeID}"
-      end
-    end
-
-    # Get the Tag corresponding to the parent of a node
-    #
-    # Parameters:
-    # * *iNodeID* (_Integer_): The node whose parent we want
-    # Return:
-    # * _Tag_: The Tag corresponding to the parent node (nil for the Root Tag)
-    def getParentTag(iNodeID)
-      rParentTag = nil
-
-      lParentNodeID = @TCMainTree.get_item_parent(iNodeID)
-      lParentID, lParentTagID = @TCMainTree.get_item_data(lParentNodeID)
-      if (lParentID != ID_TAG)
-        puts "Parent node #{lParentNodeID} should be flagged as a Tag, but is flagged as #{lParentID}. Bug ?"
-      else
-        rParentTag = @Controller.findTag(lParentTagID)
-        if (rParentTag == nil)
-          puts "!!! Tag #{lParentTagID.join('/')} should be present in the data. Bug ?"
-        end
-      end
-
-      return rParentTag
-    end
-
-    # Return if the main tree selection has effectively changed compared to last time
-    #
-    # Return:
-    # * _Boolean_: Has main tree selection changed ?
-    def mainTreeSelectionChanged?
-      rResult = false
-
-      lSelection = @TCMainTree.selections
-      if (lSelection != @OldMainTreeSelection)
-        @OldMainTreeSelection = lSelection
-        rResult = true
-      end
-
-      return rResult
-    end
-
-    # Get the currently selected object and its ID from the main tree
-    #
-    # Return:
-    # * _MultipleSelection_: The selection
-    def getCurrentTreeSelection
-      rSelection = MultipleSelection.new(@Controller)
-
-      # Get the selection from the main tree
-      @TCMainTree.selections.each do |iSelectionID|
-        lID, lObjectID = @TCMainTree.get_item_data(iSelectionID)
-        case lID
-        when ID_TAG
-          lTag = @Controller.findTag(lObjectID)
-          if (lTag == nil)
-            puts "!!! The main tree has a selection of the Tag ID #{lObjectID.join('/')}, but we can't find it in the data. Bug ?"
-          else
-            rSelection.selectTag(lTag)
-          end
-        when ID_SHORTCUT
-          lSC = @Controller.findShortcut(lObjectID)
-          if (lSC == nil)
-            puts "!!! The main tree has a selection of the Shortcut ID #{lObjectID}, but we can't find it in the data. Bug ?"
-          else
-            # Get the parent Tag
-            lParentTag = getParentTag(iSelectionID)
-            rSelection.selectShortcut(lSC, lParentTag)
-          end
-        else
-          puts "!!! One of the selected items has an unknown ID (#{lID}). Bug ?"
-        end
-      end
-
-      return rSelection
-    end
-
     # Method called when the selection of the main tree has changed
     def onMainTreeSelectionUpdated
-      if (mainTreeSelectionChanged?)
-        lSelection = getCurrentTreeSelection
+      if (@TCMainTree.selectionChanged?)
+        lSelection = @TCMainTree.getCurrentSelection
         lName = lSelection.getDescription
         # Enable and change titles of Cut/Copy/Delete
         [ [ Wx::ID_CUT, 'Cut' ],
@@ -611,81 +87,6 @@ module PBS
       end
     end
 
-    # Compute the drag image to use
-    #
-    # Parameters:
-    # * *iSelection* (_MultipleSelection_): The new selection for the new drag image
-    def computeDragImage(iSelection)
-      # 1. Create the bitmap
-      # Get the bitmap from the selection
-      lSelectionBitmap = iSelection.getBitmap(@TCMainTree.font) do |ioBitmap, iWidth, iHeight|
-        rWidth = iWidth
-        rHeight = iHeight
-        # Depending on the copied mode, we add a little icon
-        case (@Controller.CopiedMode)
-        when Wx::ID_CUT
-          # Nothing
-        when Wx::ID_COPY
-          # Add a little +
-          ioBitmap.draw do |ioDC|
-            lAddedBitmap = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/CopyFlag.png")
-            if (iWidth/2 + 20 + lAddedBitmap.width > iWidth)
-              rWidth = iWidth/2 + 20 + lAddedBitmap.width
-            end
-            if (iHeight/2 + lAddedBitmap.height > iHeight)
-              rHeight = iHeight/2 + lAddedBitmap.height
-            end
-            ioDC.draw_bitmap(lAddedBitmap, rWidth/2 + 20, rHeight/2, true)
-          end
-        else
-          # Nothing
-        end
-        # Return the new width and height if greater
-        next rWidth, rHeight
-      end
-      # 2. Cancel the previous drag image
-      if (@DragImage != nil)
-        @DragImage.end_drag
-      end
-      # 3. Create the new drag image
-      @DragImage = Wx::DragImage.new(lSelectionBitmap)
-      lScreenMainTreePos = @TCMainTree.client_to_screen(Wx::Point.new(0,0))
-      @DragImage.begin_drag(Wx::Point.new( lSelectionBitmap.width/2 - lScreenMainTreePos.x, lSelectionBitmap.height/2 - lScreenMainTreePos.y), @TCMainTree, true)
-      @DragImage.show
-    end
-
-    # Compute the selected tag for drop.
-    # This function should be used only while dragging items.
-    # This function also updates the cursor of the main tree based on its findings.
-    def computeSelectedTagForDrop
-      # Check which one we are hovering.
-      lItemID, lFlags = @TCMainTree.hit_test(@MainTreeMousePos)
-      if (lItemID != @OldMainTreeHoverNodeID)
-        # We may be have to update the hovering cursor depending if we are allowed to drop or not
-        @SelectedTagForDrop = nil
-        if (lItemID != 0)
-          # Check this is a Tag
-          lID, lObjectID = @TCMainTree.get_item_data(lItemID)
-          if (lID == ID_TAG)
-            # In case of Cut, check it is not selected
-            if ((@Controller.CopiedMode == Wx::ID_COPY) or
-                (!@Controller.CopiedSelection.tagSelected?(lObjectID)))
-              # OK, we can drop.
-              @SelectedTagForDrop = @Controller.findTag(lObjectID)
-            end
-          end
-        end
-        # Change the cursor bitmap accordingly
-        if (@SelectedTagForDrop != nil)
-          @TCMainTree.cursor = @CursorDropOK
-        else
-          @TCMainTree.cursor = @CursorNoDrop
-        end
-        # Remember the item being hovered, to not crawl under events
-        @OldMainTreeHoverNodeID = lItemID
-      end
-    end
-
     # Add a command to a menu belonging to this main frame
     #
     # Parameters:
@@ -705,46 +106,18 @@ module PBS
       super(iParent)
       @Controller = iController
 
-      # Register this Event as otherwise moving the mouse over the TreeCtrl component generates tons of warnings. Bug ?
-      Wx::EvtHandler::EVENT_TYPE_CLASS_MAP[10000] = Wx::Event
-
       # The close event
       evt_close do |iEvent|
         @Controller.notifyFinal
         self.destroy
       end
 
-      # Cut/Copy markers
-      @CopySelection = nil
-      @CopyMode = nil
-
       # Create the main treeview
-      @TCMainTree = Wx::TreeCtrl.new(self,
+      @TCMainTree = PBSTreeCtrl.new(@Controller, self,
         :style => Wx::TR_HAS_BUTTONS|Wx::TR_MULTIPLE
       )
-      # The last known selection
-      # MultipleSelection
-      @OldMainTreeSelection = nil
-      # The last known mouse position
-      # Wx::Point
-      @MainTreeMousePos = nil
-      # The last known Tag selected to drop a dragged item
-      # Tag
-      @SelectedTagForDrop = nil
-      # Last known node ID that was hovered
-      # Integer
-      @OldMainTreeHoverNodeID = nil
-      # Cursors used for DragNDrop
-      @CursorNoDrop = Wx::Cursor.new(Wx::CURSOR_NO_ENTRY)
-      @CursorDropOK = Wx::Cursor.new(Wx::CURSOR_DEFAULT)
-      # Create the image list for the tree
-      lImageList = createImageList(['MiniCut.png', 'MiniCopy.png', 'MicroCut.png', 'MicroCopy.png'])
-      @TCMainTree.image_list = lImageList
-      # fill the tree view from scratch
-      fillMainTree
-      # The drag image
-      # Wx::DragImage
-      @DragImage = nil
+      # We register the tree controller itself, as it contains plenty of onXxxx methods.
+      @Controller.registerGUI(@TCMainTree)
 
       # Create the menus
       # File menu
@@ -790,19 +163,19 @@ module PBS
       @EditMenu.append_separator
       addMenuCommand(@EditMenu, Wx::ID_CUT) do |iEvent, oValidator|
         oValidator.authorizeCmd(
-          :selection => getCurrentTreeSelection
+          :selection => @TCMainTree.getCurrentSelection
         )
       end
       addMenuCommand(@EditMenu, Wx::ID_COPY) do |iEvent, oValidator|
         oValidator.authorizeCmd(
-          :selection => getCurrentTreeSelection
+          :selection => @TCMainTree.getCurrentSelection
         )
       end
       addMenuCommand(@EditMenu, Wx::ID_PASTE) do |iEvent, oValidator|
         # Here, we are sure the selection is on 1 Tag only
-        lSelectedTag = @Controller.findTag(getCurrentTreeSelection.SelectedPrimaryTags[0])
+        lSelectedTag = @Controller.findTag(@TCMainTree.getCurrentSelection.SelectedPrimaryTags[0])
         if (lSelectedTag == nil)
-          oValidator.setError("Normally a single Tag was selected: #{getCurrentTreeSelection.getDescription}. However we are unable to retrieve it. Bug ?")
+          oValidator.setError("Normally a single Tag was selected: #{@TCMainTree.getCurrentSelection.getDescription}. However we are unable to retrieve it. Bug ?")
         else
           oValidator.authorizeCmd(
             :tag => lSelectedTag
@@ -811,7 +184,7 @@ module PBS
       end
       addMenuCommand(@EditMenu, Wx::ID_DELETE) do |iEvent, oValidator|
         oValidator.authorizeCmd(
-          :selection => getCurrentTreeSelection,
+          :selection => @TCMainTree.getCurrentSelection,
           :parentWindow => self
         )
       end
@@ -825,7 +198,7 @@ module PBS
       @EditMenu.append_sub_menu(lNewSCsMenu, 'New Shortcut')
       addMenuCommand(@EditMenu, Wx::ID_EDIT) do |iEvent, oValidator|
         # We are sure a single Tag or a single Shortcut are selected
-        lSelection = getCurrentTreeSelection
+        lSelection = @TCMainTree.getCurrentSelection
         if (lSelection.singleTag?)
           # A Tag is selected
           lSelectedTag = @Controller.findTag(lSelection.SelectedPrimaryTags[0])
@@ -937,93 +310,6 @@ module PBS
       @TCMainTree.evt_left_up do |iEvent|
         onMainTreeSelectionUpdated
       end
-
-      # Handle Drag/Drop
-      lMainTreeDragging = false
-      @TCMainTree.evt_motion do |iEvent|
-        @MainTreeMousePos = iEvent.position
-        if (lMainTreeDragging)
-          # We are currently dragging an item.
-          computeSelectedTagForDrop
-        end
-      end
-      # Keep a state of the Ctrl key down (true) or up (false)
-      # Boolean
-      lLastCtrlDown = false
-      evt_tree_begin_drag(@TCMainTree) do |iEvent|
-        # We begin dragging with left mouse
-        lSelection = getCurrentTreeSelection
-        if (!lSelection.empty?)
-          iEvent.allow
-          computeDragImage(lSelection)
-          # Remember we are dragging something for future events
-          lMainTreeDragging = true
-          # Mark the selection to be cut
-          if (lLastCtrlDown)
-            @Controller.cmdCopy(:selection => lSelection)
-          else
-            @Controller.cmdCut(:selection => lSelection)
-          end
-          # Update the cursor
-          computeSelectedTagForDrop
-        else
-          iEvent.skip
-        end
-      end
-      evt_tree_begin_rdrag(@TCMainTree) do |iEvent|
-        # We begin dragging with right mouse
-        # TODO: Test with wxWidgets 2.9.0 (should be there May 2009)
-        lSelection = getCurrentTreeSelection
-        if (!lSelection.empty?)
-          iEvent.allow
-        else
-          iEvent.skip
-        end
-      end
-      evt_tree_end_drag(@TCMainTree) do |iEvent|
-        if (@SelectedTagForDrop != nil)
-          # Paste in the selected tag for drop
-          @Controller.cmdPaste(:tag => @SelectedTagForDrop)
-        end
-        # Remove the dragging image
-        @DragImage.end_drag
-        # Get the cursor back to normal
-        @TCMainTree.cursor = @CursorDropOK
-        # We end dragging
-        lMainTreeDragging = false
-        iEvent.skip
-      end
-      @TCMainTree.evt_key_up do |iEvent|
-        # If the key is Ctrl and we are dragging, it means we Cut instead of Copy
-        if (iEvent.key_code == Wx::K_CONTROL)
-          if (lLastCtrlDown)
-            # Changing Ctrl state
-            lLastCtrlDown = false
-            if (lMainTreeDragging)
-              lSelection = getCurrentTreeSelection
-              @Controller.cmdCut(:selection => lSelection)
-              # Update the drag image
-              computeDragImage(lSelection)
-            end
-          end
-        end
-      end
-      @TCMainTree.evt_key_down do |iEvent|
-        # If the key is Ctrl and we are dragging, it means we Copy instead of Cut
-        if (iEvent.key_code == Wx::K_CONTROL)
-          if (!lLastCtrlDown)
-            # Changing Ctrl state
-            lLastCtrlDown = true
-            if (lMainTreeDragging)
-              lSelection = getCurrentTreeSelection
-              @Controller.cmdCopy(:selection => lSelection)
-              # Update the drag image
-              computeDragImage(lSelection)
-            end
-          end
-        end
-      end
-
     end
 
   end

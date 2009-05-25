@@ -766,6 +766,7 @@ end
     def dumpShortcutsList(iShortcutsList)
       iShortcutsList.each do |iSC|
         puts "=== #{iSC.Metadata['title']} (@#{iSC.object_id})"
+        puts "  = ID: #{iSC.getUniqueID}"
         puts "  = Type: #{iSC.Type.inspect}"
         puts "  = Metadata: #{iSC.Metadata.inspect}"
         puts "  = Content: #{iSC.Content.inspect}"

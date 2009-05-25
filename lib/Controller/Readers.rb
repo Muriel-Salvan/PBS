@@ -50,6 +50,14 @@ module PBS
     #   MultipleSelection
     attr_reader :CopiedSelection
 
+    # The current type of drag (Wx::DRAG_COPY or Wx::DRAG_MOVE)
+    #   Integer
+    attr_reader :DragMode
+
+    # The current dragged selection
+    #   MultipleSelection
+    attr_reader :DragSelection
+
     # Find a Shortcut based on its unique ID
     #
     # Parameters:

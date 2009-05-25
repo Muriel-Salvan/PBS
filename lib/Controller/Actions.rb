@@ -248,6 +248,52 @@ module PBS
       # Now we merge the Shortcuts
       mergeShortcuts(iNewShortcutsList, lNewMergedTag)
     end
+
+    # Merge serialized Tags and Shortcuts in an existing Tag
+    #
+    # Parameters:
+    # * *iParentTag* (_Tag_): The Tag in which we merge serialized data
+    # * *iSerializedTags* (<em>list<Object></em>): The list of serialized Tags, with their sub-Tags and Shortcuts (can be nil for acks)
+    # * *iSerializedShortcuts* (<em>list<[Object,String]></em>): The list of serialized Shortcuts, with their parent Tag's ID (can be nil for acks)
+    def mergeSerializedTagsShortcuts(iParentTag, iSerializedTags, iSerializedShortcuts)
+      # First check each selected Tag
+      iSerializedTags.each do |iSerializedTag|
+        # Deserialize data in separate objects, ready to be merged after.
+        lNewShortcutsList = []
+        lNewRootTag = iSerializedTag.createTag(nil, @TypesPlugins, lNewShortcutsList)
+        addMergeTagsShortcuts(lNewRootTag, lNewShortcutsList, iParentTag)
+      end
+      # Then check selected Shortcuts
+      if (!iSerializedShortcuts.empty?)
+        # Put them in a brand new list first
+        lNewShortcuts = []
+        iSerializedShortcuts.each do |iSerializedData|
+          # Check for already created Shortcuts (in case we selected twice the same Shortcut from different Tags)
+          lExistingSC = nil
+          lNewID = iSerializedData.getUniqueID
+          lNewShortcuts.each do |iExistingSC|
+            if (iExistingSC.getUniqueID == lNewID)
+              lExistingSC = iExistingSC
+              break
+            end
+          end
+          if (lExistingSC != nil)
+            # Add lSelectedTag to the list of Tags already part of lExistingSC
+            lExistingSC.Tags[iParentTag] = nil
+          else
+            # A new Shortcut
+            lNewShortcut = iSerializedData.createShortcut(nil, @TypesPlugins)
+            # Set the Tag
+            lNewShortcut.Tags[iParentTag] = nil
+            # Add it
+            lNewShortcuts << lNewShortcut
+          end
+        end
+        # Then merge Shortcuts
+        mergeShortcuts(lNewShortcuts, @RootTag)
+      end
+    end
+
   end
 
 end

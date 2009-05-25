@@ -30,17 +30,6 @@ module PBS
               lClipboardData = Tools::DataObjectSelection.new
               iClipboard.get_data(lClipboardData)
               lCopyType, lCopyID, lSerializedTags, lSerializedShortcuts = lClipboardData.getData
-              lCopyName = nil
-              case lCopyType
-              when Wx::ID_CUT
-                lCopyName = 'Move'
-              when Wx::ID_COPY
-                lCopyName = 'Copy'
-              when Wx::ID_DELETE
-                # Nothing
-              else
-                puts "!!! Unsupported copy type: #{lCopyType}. This will be treated as a normal Copy/Paste operation. Bug ?"
-              end
               if (lCopyType == Wx::ID_DELETE)
                 # Check that this message is adressed to us for real (if many instances of PBS are running, it is possible that some other instance was cutting things)
                 if (@CopiedID == lCopyID)
@@ -72,6 +61,15 @@ module PBS
                 ioCommand[:enabled] = false
                 ioCommand[:title] = 'Paste'
               else
+                lCopyName = nil
+                case lCopyType
+                when Wx::ID_CUT
+                  lCopyName = 'Move'
+                when Wx::ID_COPY
+                  lCopyName = 'Copy'
+                else
+                  puts "!!! Unsupported copy type: #{lCopyType}. Bug ?"
+                end
                 if (lCopyID != @CopiedID)
                   # Here, we have another application of PBS that has put data in the clipboard. It is not us anymore.
                   notifyCancelCopy
@@ -233,6 +231,46 @@ module PBS
         @CopiedMode = nil
         @CopiedID = nil
       end
+    end
+
+    # Notify the GUI that a selection is being moved using Drag'n'Drop
+    #
+    # Parameters:
+    # * *iSelection* (_MultipleSelection_): The copied selection
+    def notifyObjectsDragMove(iSelection)
+      @DragSelection = iSelection
+      @DragMode = Wx::DRAG_MOVE
+      notifyRegisteredGUIs(:onObjectsDragMove, @DragSelection)
+    end
+
+    # Notify the GUI that a selection is being copied using Drag'n'Drop
+    #
+    # Parameters:
+    # * *iSelection* (_MultipleSelection_): The copied selection
+    def notifyObjectsDragCopy(iSelection)
+      @DragSelection = iSelection
+      @DragMode = Wx::DRAG_COPY
+      notifyRegisteredGUIs(:onObjectsDragCopy, @DragSelection)
+    end
+
+    # Notify the GUI that a selection is being invalidated using Drag'n'Drop
+    #
+    # Parameters:
+    # * *iSelection* (_MultipleSelection_): The copied selection
+    def notifyObjectsDragNone(iSelection)
+      @DragSelection = iSelection
+      @DragMode = Wx::DRAG_NONE
+      notifyRegisteredGUIs(:onObjectsDragNone, @DragSelection)
+    end
+
+    # Notify the GUI that a Drag'n'Drop operation has ended
+    #
+    # Parameters:
+    # * *iDragResult* (_Integer_): The result of the Drag'n'Drop operation
+    def notifyObjectsDragEnd(iDragResult)
+      notifyRegisteredGUIs(:onObjectsDragEnd, @DragSelection, iDragResult)
+      @DragSelection = nil
+      @DragMode = nil
     end
 
   end
