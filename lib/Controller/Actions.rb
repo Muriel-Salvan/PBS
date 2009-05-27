@@ -294,6 +294,52 @@ module PBS
       end
     end
 
+    # Method that check current work is saved, asks the user if not, and scratches the whole data.
+    # In merge context, it does nothing.
+    #
+    # Parameters:
+    # * *iParentWindow* (<em>Wx::Window</em>): The parent window
+    # Return:
+    # * _Boolean_: Has current work been saved (true also if user decides to continue without saving deliberately) ?
+    def checkSavedWorkAndScratch(iParentWindow)
+      rSaved = true
+
+      # First check
+      if (!@Merging)
+        rSaved = checkSavedWork(iParentWindow)
+        # Then scratch
+        if (rSaved)
+          replaceCompleteData(Tag.new('Root', nil), [])
+        end
+      end
+
+      return rSaved
+    end
+
+    # Method that check current work is saved, asks the user if not.
+    #
+    # Parameters:
+    # * *iParentWindow* (<em>Wx::Window</em>): The parent window
+    # Return:
+    # * _Boolean_: Has current work been saved (true also if user decides to continue without saving deliberately) ?
+    def checkSavedWork(iParentWindow)
+      rSaved = true
+
+      # First check if we haven't saved current work
+      if (@CurrentOpenedFileModified)
+        case Wx::MessageDialog.new(iParentWindow,
+            "Current Shortcuts are not saved.\nAre you sure you want to discard current Shortcuts to load new ones ?\nYou will still be able to undo the operation in case of mistake.",
+            :caption => 'Confirm discard',
+            :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
+          ).show_modal
+        when Wx::ID_NO
+          rSaved = false
+        end
+      end
+
+      return rSaved
+    end
+
   end
 
 end

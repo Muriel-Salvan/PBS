@@ -62,9 +62,10 @@ module PBS
     #
     # Parameters:
     # * *iSCID* (_Integer_): The Shortcut's unique id
+    # * *iHasToExist* (_Boolean_): Has the Shortcut to exist ? [optional = true]
     # Return:
     # * _Shortcut_: The retrieved Shortcut, or nil if none found
-    def findShortcut(iSCID)
+    def findShortcut(iSCID, iHasToExist = true)
       rShortcut = nil
 
       @ShortcutsList.each do |iSC|
@@ -73,7 +74,8 @@ module PBS
           break
         end
       end
-      if (rShortcut == nil)
+      if ((rShortcut == nil) and
+          (iHasToExist))
         puts "!!! Unable to retrieve Shortcut with internal ID #{iSCID}. Bug ?"
       end
 

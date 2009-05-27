@@ -377,11 +377,37 @@ module PBS
       end
     end
 
+    # Command that launches the import plugin
+    #
+    # Parameters:
+    # * *iImportID* (_String_): The import plugin ID
+    # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
+    # ** *iParentWindow* (<em>Wx::Window</em>): The parent window
+    def cmdImport(iImportID, iParams)
+      # Get the plugin
+      @ImportPlugins[iImportID].execute(self, iParams[:parentWindow])
+    end
+
+    # Command that launches the import plugin and merges its result
+    #
+    # Parameters:
+    # * *iImportID* (_String_): The import plugin ID
+    # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
+    # ** *iParentWindow* (<em>Wx::Window</em>): The parent window
+    def cmdImportMerge(iImportID, iParams)
+      # Note that it will be useless to ask for discard confirmation, as we will not discard anything
+      @Merging = true
+      # Get the plugin
+      @ImportPlugins[iImportID].execute(self, iParams[:parentWindow])
+      @Merging = false
+    end
+
     # Constructor
     def initialize
       # Opened file context
       @CurrentOpenedFileName = nil
       @CurrentOpenedFileModified = false
+      @Merging = false
 
       # Undo/Redo management
       @CurrentUndoableOperation = nil
@@ -403,7 +429,6 @@ module PBS
       # Create the commands info
       # This variable will contain every possible command that is then translated into menu items, toolbars, accelerators ...
       @Commands = {}
-
       # Controller Plugins: those plugins define modules that are included in the Controller.
       readControllerPlugins('Commands').each do |iCommandPluginName|
         eval("registerCmd#{iCommandPluginName}(@Commands)")
@@ -497,20 +522,29 @@ module PBS
       })
       # Create commands for each import plugin
       @ImportPlugins.each do |iImportID, iImport|
+        lTitle = iImport.getTitle
         @Commands[ID_IMPORT_BASE + iImport.index] = {
-          :title => iImportID,
+          :title => lTitle,
           :help => "Import Shortcuts from #{iImportID}",
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdImport, # TODO
+          :method => "cmdImport#{iImportID}".to_sym,
           :accelerator => nil
         }
         @Commands[ID_IMPORT_MERGE_BASE + iImport.index] = {
-          :title => iImportID,
+          :title => lTitle,
           :help => "Import Shortcuts from #{iImportID} and merge with existing",
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdImportMerge, # TODO
+          :method => "cmdImportMerge#{iImportID}".to_sym,
           :accelerator => nil
         }
+        eval("
+def cmdImport#{iImportID}(iParams)
+  cmdImport('#{iImportID}', iParams)
+end
+def cmdImportMerge#{iImportID}(iParams)
+  cmdImportMerge('#{iImportID}', iParams)
+end
+")
       end
       # Create commands for each export plugin
       @ExportPlugins.each do |iExportID, iExport|

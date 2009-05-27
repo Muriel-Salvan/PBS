@@ -141,12 +141,20 @@ module PBS
       lFileMenu.append_separator
       lImportMenu = Wx::Menu.new
       @Controller.ImportPlugins.each do |iImportID, iImport|
-        addMenuCommand(lImportMenu, ID_IMPORT_BASE + iImport.index)
+        addMenuCommand(lImportMenu, ID_IMPORT_BASE + iImport.index) do |iEvent, oValidator|
+          oValidator.authorizeCmd(
+            :parentWindow => self
+          )
+        end
       end
       lFileMenu.append_sub_menu(lImportMenu, 'Import')
       lImportMergeMenu = Wx::Menu.new
       @Controller.ImportPlugins.each do |iImportID, iImport|
-        addMenuCommand(lImportMergeMenu, ID_IMPORT_MERGE_BASE + iImport.index)
+        addMenuCommand(lImportMergeMenu, ID_IMPORT_MERGE_BASE + iImport.index) do |iEvent, oValidator|
+          oValidator.authorizeCmd(
+            :parentWindow => self
+          )
+        end
       end
       lFileMenu.append_sub_menu(lImportMergeMenu, 'Import and Merge')
       lExportMenu = Wx::Menu.new

@@ -484,13 +484,13 @@ module PBS
     def onTagChildrenUpdate(iParentTag, iOldChildrenList)
       # We update the tree accordingly
       updateTree do
-        lTagID = @TagsToMainTree[iParentTag.getUniqueID]
-        if (lTagID == nil)
+        lTagNodeID = @TagsToMainTree[iParentTag.getUniqueID]
+        if (lTagNodeID == nil)
           puts '!!! The updated Tag was not inserted in the main tree. Bug ?'
         else
           # First remove Tags that are not part of the children anymore
-          children(lTagID).each do |iChildID|
-            lID, lObjectID = get_item_data(iChildID)
+          children(lTagNodeID).each do |iChildNodeID|
+            lID, lObjectID = get_item_data(iChildNodeID)
             if (lID == ID_TAG)
               # Check if lObjectID is part of the children of iParentTag
               lFound = false
@@ -511,10 +511,14 @@ module PBS
             lChildID = @TagsToMainTree[iChildTag.getUniqueID]
             if (lChildID == nil)
               # We have to insert iChildTag, and all Shortcuts and children Tags associated to it
-              insertTreeBranch(lTagID, iChildTag)
+              insertTreeBranch(lTagNodeID, iChildTag)
             end
           end
         end
+      end
+      # If it was the root Tag, expand it (otherwise it can looks like a bug as root Tag does not have the + button.
+      if (iParentTag.Parent == nil)
+        expand(@RootID)
       end
     end
 

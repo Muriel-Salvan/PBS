@@ -523,7 +523,7 @@ module PBS
     # * *iIgnoreTags* (_Boolean_): Do we ignore Tags ? [optional = false]
     # Return:
     # * <em>Shortcut::Serialized</em>: Data serialized
-    def getSerializedData(iIgnoreTags)
+    def getSerializedData(iIgnoreTags = false)
       lTagIDs = []
       if (!iIgnoreTags)
         @Tags.each do |iTag, iNil|
@@ -595,6 +595,20 @@ module PBS
     # * *iNewTags* (<em>map<Tag,nil></em>): The new tags
     def setTags_UNDO(iNewTags)
       replaceTags(iNewTags)
+    end
+
+    # Dump the Shortcut's info
+    def dump
+      puts "+-ID: #{getUniqueID}"
+      puts "+-Content: #{@Content.inspect}"
+      puts '+-Metadata:'
+      @Metadata.each do |iKey, iValue|
+        puts "| +-#{iKey}: #{iValue}"
+      end
+      puts '+-Tags:'
+      @Tags.each do |iTag, iNil|
+        puts "  +-#{iTag.getUniqueID.join('/')}"
+      end
     end
 
   end
