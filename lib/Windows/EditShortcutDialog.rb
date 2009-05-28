@@ -3,6 +3,8 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
+require 'Windows/ChooseIconDialog.rb'
+
 module PBS
 
   # Dialog that edits a Shortcut
@@ -10,6 +12,15 @@ module PBS
 
     include Tools
 
+    # Set the BitmapButton icon
+    #
+    # Parameters:
+    # * *iIcon* (<em>Wx::Bitmap</em>): The icon
+    def setBBIcon(iIcon)
+      @BBIcon.bitmap_label = iIcon
+      @BBIcon.size = [ iIcon.width + 4, iIcon.height + 4 ]
+    end
+    
     # Create the metadata panel
     #
     # Parameters:
@@ -22,6 +33,21 @@ module PBS
       lSTTitle = Wx::StaticText.new(@MetadataPanel, -1, 'Title')
       @TCTitle = Wx::TextCtrl.new(@MetadataPanel, :value => iSC.Metadata['title'])
       @TCTitle.min_size = [300, @TCTitle.min_size.height]
+      lSTIcon = Wx::StaticText.new(@MetadataPanel, -1, 'Icon')
+      if (iSC.Metadata['icon'] != nil)
+        lIconBitmap = iSC.Metadata['icon']
+      else
+        lIconBitmap = iSC.Type.getIcon
+      end
+      @BBIcon = Wx::BitmapButton.new(@MetadataPanel, -1, lIconBitmap)
+      evt_button(@BBIcon) do |iEvent|
+        # display the icon chooser dialog
+        lIconDialog = ChooseIconDialog.new(self, @BBIcon.bitmap_label)
+        case lIconDialog.show_modal
+        when Wx::ID_OK
+          setBBIcon(lIconDialog.getSelectedBitmap)
+        end
+      end
 
       # Put them in sizers
       lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
@@ -29,7 +55,17 @@ module PBS
       lMainSizer.add_item([0,0], :proportion => 1)
       lMainSizer.add_item(lSTTitle, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
       lMainSizer.add_item(@TCTitle, :flag => Wx::GROW, :proportion => 0)
+      lIconSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
+      lIconSizer.add_item(lSTIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+      lIconSizer.add_item([8,0], :proportion => 0)
+      lIconSizer.add_item(@BBIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+      lMainSizer.add_item([0,8], :proportion => 0)
+      lMainSizer.add_item(lIconSizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
       lMainSizer.add_item([0,0], :proportion => 1)
+
+      # Fit correctly depending on icon's size
+      setBBIcon(lIconBitmap)
+      
     end
 
     # Create the metadata corresponding to the metadata panel
@@ -40,6 +76,7 @@ module PBS
       rMetadata = {}
 
       rMetadata['title'] = @TCTitle.value
+      rMetadata['icon'] = @BBIcon.bitmap_label
 
       return rMetadata
     end

@@ -9,6 +9,25 @@ module PBS
   ID_TAG = 0
   ID_SHORTCUT = 1
 
+  # This class defines common methods for every type.
+  # Every Shortcut type should inherit from it.
+  class ShortcutType
+
+    # Get the associated icon
+    #
+    # Return:
+    # * <em>Wx::Bitmap</em>: The icon
+    def getIcon
+      if (!defined?(@Icon))
+        # Create it: it is the first time we ask for it
+        @Icon = Wx::Bitmap.new("#{$PBSRootDir}/#{getIconFileName}")
+      end
+
+      return @Icon
+    end
+
+  end
+
   # This module define methods that are useful to several functions in PBS, but are not GUI related.
   # They could be used in a command-line mode.
   # No reference to Wx should present in here

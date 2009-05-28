@@ -3,6 +3,52 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
+require 'tempfile'
+
+# We want to serialize Wx::Bitmaps with the Marshaller
+module Wx
+
+  class Bitmap
+
+    # Dump marshalled data
+    #
+    # Return:
+    # * _String_: The marshalled data
+    def marshal_dump
+      rData = ''
+
+      # Require a temporary file
+      lTmpFile = Tempfile.new(object_id)
+      lTmpFile.close
+      if (save_file(lTmpFile.path, Wx::BITMAP_TYPE_PNG))
+        lTmpFile.open
+        rData = lTmpFile.read
+        lTmpFile.close
+      else
+        puts "!!! Error while loading data from temporary file: #{lTmpFile.path}."
+      end
+
+      return rData
+    end
+
+    # Load marshalled data
+    #
+    # Parameters:
+    # * *iData* (_String_): The marshalled data
+    def marshal_load(iData)
+      # Require a temporary file
+      lTmpFile = Tempfile.new(object_id)
+      lTmpFile.write(iData)
+      lTmpFile.close
+      if (!load_file(lTmpFile.path, Wx::BITMAP_TYPE_PNG))
+        puts "!!! Error while loading data from temporary file: #{lTmpFile.path}."
+      end
+    end
+
+  end
+
+end
+
 module PBS
 
   # Classes representing the model

@@ -7,7 +7,7 @@ module PBS
 
   module Types
 
-    class Shell
+    class Shell < ShortcutType
 
       TCCmd_ID = 1000
 
@@ -47,6 +47,14 @@ module PBS
         rContent = iPanel.find_window_by_id(TCCmd_ID).value
 
         return rContent
+      end
+
+      # Get the default icon file name associated to this type
+      #
+      # Return:
+      # * _String_: The icon file name, relative to PBS root dir
+      def getIconFileName
+        return 'Graphics/Run.png'
       end
 
     end

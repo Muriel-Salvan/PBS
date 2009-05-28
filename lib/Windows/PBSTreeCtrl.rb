@@ -3,13 +3,98 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
+# We cannot call the draw method on Wx::Bitmap objects that have been cloned. Bug ?
+# Therefore we define a new one.
+module Wx
+
+  class Bitmap
+
+    # Clone method
+    #
+    # Return:
+    # * <em>Wx::Bitmap</em>: The clone
+    def clone
+      return Wx::Bitmap.from_image(convert_to_image)
+    end
+
+  end
+
+end
+
 module PBS
+
+  # The class that assign dynamically images to a given TreeCtrl items
+  class ImageListManager
+
+    # Constructor
+    #
+    # Parameters:
+    # * *ioTree* (<em>Wx::TreeCtrl</em>): The TreeCtrl component this class will manage
+    # * *iWidth* (_Integer_): Width for images
+    # * *iHeight* (_Integer_): Height for images
+    def initialize(ioTree, iWidth, iHeight)
+      @Tree = ioTree
+      @Width = iWidth
+      @Height = iHeight
+      # The internal map of image IDs => tree indexes
+      # map< Object, Integer >
+      @Id2Idx = {}
+      # The minimal width and height
+      # The image list used with the tree
+      @TreeImageList = Wx::ImageList.new(@Width, @Height)
+      @Tree.set_image_list(@TreeImageList)
+    end
+
+    # Get the Tree's image index for a given image ID
+    #
+    # Parameters:
+    # * *iID* (_Object_): Id of the image
+    # * *CodeBlock*: The code that will be called if the image ID is unknown. This code has to return a Wx::Bitmap object, representing the bitmap for the given image ID.
+    def getTreeImageIndex(iID)
+      if (@Id2Idx[iID] == nil)
+        # Bitmap unknown.
+        # First create it.
+        lBitmap = yield
+        # Then check if we need to resize it
+        if ((lBitmap.width != @Width) or
+            (lBitmap.height != @Height))
+          # We have to resize the bitmap to @Width/@Height
+          lBitmap = Wx::Bitmap.from_image(lBitmap.convert_to_image.scale(@Width, @Height))
+        end
+        # Then add it to the image list, and register it
+        @Id2Idx[iID] = @TreeImageList.add(lBitmap)
+      end
+
+      return @Id2Idx[iID]
+    end
+
+  end
+
 
   # The main tree view, as a separate component.
   # This component can then be reused in other GUIs.
   class PBSTreeCtrl < Wx::TreeCtrl
 
     include Tools
+
+    # Define flags that will then be used to identify which icons have to be drawn upon an item icon (ex. for Copy/Cut/Drag)
+    # Those flags can then be combined into a bit mask.
+    FLAG_PRIMARY_COPY = 1
+    FLAG_PRIMARY_CUT = 2
+    FLAG_SECONDARY_COPY = 4
+    FLAG_SECONDARY_CUT = 8
+    FLAG_DRAG = 16
+
+    # Define bitmaps used for layers in the tree
+    BITMAPLAYER_PRIMARY_COPY = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MiniCopy.png")
+    BITMAPLAYER_PRIMARY_CUT = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MiniCut.png")
+    BITMAPLAYER_SECONDARY_COPY = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MicroCopy.png")
+    BITMAPLAYER_SECONDARY_CUT = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MicroCut.png")
+    BITMAPLAYER_DRAG = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/DragNDrop.png")
+
+    # Define default Tag and Shortcuts icons
+    ICON_DEFAULT_TAG = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Tag.png")
+    ICON_DEFAULT_SHORTCUT = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Shortcut.png")
 
     # The class defining the behaviour of the main tree for drop operations
     class SelectionDropTarget < Wx::DropTarget
@@ -128,8 +213,7 @@ module PBS
       # Wx::DragImage
       @DragImage = nil
       # Create the image list for the tree
-      lImageList = createImageList(['MiniCut.png', 'MiniCopy.png', 'MicroCut.png', 'MicroCopy.png'])
-      set_image_list(lImageList)
+      @ImageListManager = ImageListManager.new(self, 16, 16)
       # Accept incoming drops of things
       # Keep a reference to the DropTarget, as otherwise it results in a core dump when dragging over the tree (another way to avoid this reference is to use drop_target= instead of set_drop_target). Bug ?
       self.drop_target = SelectionDropTarget.new(@Controller, self)
@@ -193,6 +277,76 @@ module PBS
       @DragImage.show
     end
 
+    # Merge a bitmap on a DeviceContext.
+    # It resizes the image to merge to the DC dimensions.
+    # It makes a logical or between the 2 masks.
+    #
+    # Parameters:
+    # * *ioDC* (<em>Wx::DC</em>): The device context on which it is merged
+    # * *ioMaskDC* (<em>Wx::DC</em>): The device context on which the mask is merged
+    # * *iBitmap* (<em>Wx::Bitmap</em>): The bitmap to merge
+    def mergeBitmapOnDC(ioDC, ioMaskDC, iBitmap)
+      lBitmapToMerge = iBitmap
+      if ((iBitmap.width != ioDC.size.width) or
+          (iBitmap.height != ioDC.size.height))
+        # First we resize the bitmap
+        lBitmapToMerge = Wx::Bitmap.from_image(iBitmap.convert_to_image.scale(ioDC.size.width, ioDC.size.height))
+      end
+      # Then we draw on the bitmap itself
+      lBitmapToMerge.draw do |iMergeDC|
+        ioDC.blit(0, 0, iBitmap.width, iBitmap.height, iMergeDC, 0, 0, Wx::COPY, false)
+      end
+      # And then we draw the mask, once converted to monochrome (painting a coloured bitmap containing Alpha channel to a monochrome DC gives strange results. Bug ?)
+      lMonoImageToMerge = lBitmapToMerge.convert_to_image
+      lMonoImageToMerge = lMonoImageToMerge.convert_to_mono(lMonoImageToMerge.mask_red, lMonoImageToMerge.mask_green, lMonoImageToMerge.mask_blue)
+      Wx::Bitmap.from_image(lMonoImageToMerge).draw do |iMergeDC|
+        ioMaskDC.blit(0, 0, iBitmap.width, iBitmap.height, iMergeDC, 0, 0, Wx::OR_INVERT, true)
+      end
+    end
+
+    # Apply bitmap layers based on flags on a given bitmap
+    #
+    # Parameters:
+    # * *ioBitmap* (<em>Wx::Bitmap</em>): The bitmap to modify
+    # * *iFlags* (_Integer_): The flags used for modification
+    def applyBitmapLayers(ioBitmap, iFlags)
+      # 1. Create the bitmap that will be used as a mask
+      lMaskBitmap = Wx::Bitmap.new(ioBitmap.width, ioBitmap.height, 1)
+      lMaskBitmap.draw do |ioMaskDC|
+        ioBitmap.draw do |iBitmapDC|
+          ioMaskDC.blit(0, 0, ioBitmap.width, ioBitmap.height, iBitmapDC, 0, 0, Wx::SET, true)
+        end
+      end
+      # 2. Remove the mask from the original bitmap
+      lNoMaskBitmap = Wx::Bitmap.new(ioBitmap.width, ioBitmap.height, 1)
+      lNoMaskBitmap.draw do |ioNoMaskDC|
+        ioNoMaskDC.draw_rectangle(0, 0, ioBitmap.width, ioBitmap.height)
+      end
+      ioBitmap.mask = Wx::Mask.new(lNoMaskBitmap)
+      # 3. Draw on the original bitmap and its mask
+      ioBitmap.draw do |ioDC|
+        lMaskBitmap.draw do |ioMaskDC|
+          if (iFlags & FLAG_PRIMARY_COPY != 0)
+            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_PRIMARY_COPY)
+          end
+          if (iFlags & FLAG_PRIMARY_CUT != 0)
+            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_PRIMARY_CUT)
+          end
+          if (iFlags & FLAG_SECONDARY_COPY != 0)
+            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_SECONDARY_COPY)
+          end
+          if (iFlags & FLAG_SECONDARY_CUT != 0)
+            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_SECONDARY_CUT)
+          end
+          if (iFlags & FLAG_DRAG != 0)
+            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_DRAG)
+          end
+        end
+      end
+      # 4. Set the mask correctly
+      ioBitmap.mask = Wx::Mask.new(lMaskBitmap)
+    end
+
     # Set one of tree's node attributes to fit its associated data (Tag or Shortcut).
     # Only this method knows how to display tree nodes.
     #
@@ -209,45 +363,60 @@ module PBS
           set_item_text(iItemID, "!!! Unknown Tag #{lObjectID.join('/')}")
         else
           set_item_text(iItemID, lTag.Name)
-          # TODO: Set the DragNDrop icon in case of @DragSelection != nil also
+          # Compute the flags to put on the icon
+          # Integer
+          lFlags = 0
           # Check the Copy/Cut markers
           if (@CopySelection != nil)
             if (@CopySelection.isTagPrimary?(lTag))
               if (@CopyMode == Wx::ID_CUT)
-                set_item_image(iItemID, 0)
+                lFlags |= FLAG_PRIMARY_CUT
               else
-                set_item_image(iItemID, 1)
+                lFlags |= FLAG_PRIMARY_COPY
               end
-            elsif (@CopySelection.isTagSecondary?(lTag))
-              if (@CopyMode == Wx::ID_CUT)
-                set_item_image(iItemID, 2)
-              else
-                set_item_image(iItemID, 3)
-              end
-            else
-              set_item_image(iItemID, -1)
             end
-          else
-            if (@DragSelection != nil)
-              if (@DragSelection.isTagPrimary?(lTag))
-                if (@DragMode == Wx::DRAG_MOVE)
-                  set_item_image(iItemID, 0)
-                else
-                  set_item_image(iItemID, 1)
-                end
-              elsif (@DragSelection.isTagSecondary?(lTag))
-                if (@DragMode == Wx::DRAG_MOVE)
-                  set_item_image(iItemID, 2)
-                else
-                  set_item_image(iItemID, 3)
-                end
+            if (@CopySelection.isTagSecondary?(lTag))
+              if (@CopyMode == Wx::ID_CUT)
+                lFlags |= FLAG_SECONDARY_CUT
               else
-                set_item_image(iItemID, -1)
+                lFlags |= FLAG_SECONDARY_COPY
               end
-            else
-              set_item_image(iItemID, -1)
+            end
+          elsif (@DragSelection != nil)
+            if (@DragSelection.isTagPrimary?(lTag))
+              if (@DragMode == Wx::DRAG_MOVE)
+                lFlags |= FLAG_PRIMARY_CUT
+              else
+                lFlags |= FLAG_PRIMARY_COPY
+              end
+              lFlags |= FLAG_DRAG
+            end
+            if (@DragSelection.isTagSecondary?(lTag))
+              if (@DragMode == Wx::DRAG_MOVE)
+                lFlags |= FLAG_SECONDARY_CUT
+              else
+                lFlags |= FLAG_SECONDARY_COPY
+              end
+              lFlags |= FLAG_DRAG
             end
           end
+          # Now compute the image ID
+          # TODO: When Tags will have associated icons, give a different ID per Tag having an icon
+          # This is the ID for Tags having no icon.
+          lImageID = [ @Controller.RootTag.getUniqueID, lFlags ]
+          # Now compute the image based on lFlags and the object ID
+          lIdxImage = @ImageListManager.getTreeImageIndex(lImageID) do
+            if (lFlags == 0)
+              # Just return the original icon, without modifications
+              next ICON_DEFAULT_TAG
+            else
+              # We will apply some layers, so clone the original bitmap
+              rBitmap = ICON_DEFAULT_TAG.clone
+              applyBitmapLayers(rBitmap, lFlags)
+              next rBitmap
+            end
+          end
+          set_item_image(iItemID, lIdxImage)
         end
       when ID_SHORTCUT
         # Retrieve the Shortcut
@@ -261,47 +430,76 @@ module PBS
             lTitle = '-- Unknown title --'
           end
           set_item_text(iItemID, lTitle)
-          # TODO: Set the DragNDrop icon in case of @DragSelection != nil also
+          # Compute the flags to put on the icon
+          # Integer
+          lFlags = 0
           # Check the Copy/Cut markers
           if (@CopySelection != nil)
             lParentTag = getParentTag(iItemID)
             if (@CopySelection.isShortcutPrimary?(lShortcut, lParentTag))
               if (@CopyMode == Wx::ID_CUT)
-                set_item_image(iItemID, 0)
+                lFlags |= FLAG_PRIMARY_CUT
               else
-                set_item_image(iItemID, 1)
+                lFlags |= FLAG_PRIMARY_COPY
               end
-            elsif (@CopySelection.isShortcutSecondary?(lShortcut, lParentTag))
-              if (@CopyMode == Wx::ID_CUT)
-                set_item_image(iItemID, 2)
-              else
-                set_item_image(iItemID, 3)
-              end
-            else
-              set_item_image(iItemID, -1)
             end
-          else
-            if (@DragSelection != nil)
-              lParentTag = getParentTag(iItemID)
-              if (@DragSelection.isShortcutPrimary?(lShortcut, lParentTag))
-                if (@DragMode == Wx::DRAG_MOVE)
-                  set_item_image(iItemID, 0)
-                else
-                  set_item_image(iItemID, 1)
-                end
-              elsif (@DragSelection.isShortcutSecondary?(lShortcut, lParentTag))
-                if (@DragMode == Wx::DRAG_MOVE)
-                  set_item_image(iItemID, 2)
-                else
-                  set_item_image(iItemID, 3)
-                end
+            if (@CopySelection.isShortcutSecondary?(lShortcut, lParentTag))
+              if (@CopyMode == Wx::ID_CUT)
+                lFlags |= FLAG_SECONDARY_CUT
               else
-                set_item_image(iItemID, -1)
+                lFlags |= FLAG_SECONDARY_COPY
               end
-            else
-              set_item_image(iItemID, -1)
+            end
+          elsif (@DragSelection != nil)
+            lParentTag = getParentTag(iItemID)
+            if (@DragSelection.isShortcutPrimary?(lShortcut, lParentTag))
+              if (@DragMode == Wx::DRAG_MOVE)
+                lFlags |= FLAG_PRIMARY_CUT
+              else
+                lFlags |= FLAG_PRIMARY_COPY
+              end
+              lFlags |= FLAG_DRAG
+            end
+            if (@DragSelection.isShortcutSecondary?(lShortcut, lParentTag))
+              if (@DragMode == Wx::DRAG_MOVE)
+                lFlags |= FLAG_SECONDARY_CUT
+              else
+                lFlags |= FLAG_SECONDARY_COPY
+              end
+              lFlags |= FLAG_DRAG
             end
           end
+          # Now compute the image ID
+          lImageID = nil
+          if (lShortcut.Metadata['icon'] != nil)
+            # This image is unique to this Shortcut
+            lImageID = [ lObjectID, lFlags ]
+          else
+            # Get the ID based on the Type
+            lImageID = [ lShortcut.Type.pluginName, lFlags ]
+          end
+          # Now compute the image based on lFlags and the object ID
+          lIdxImage = @ImageListManager.getTreeImageIndex(lImageID) do
+            if (lFlags == 0)
+              # Just return the original icon, without modifications
+              if (lShortcut.Metadata['icon'] != nil)
+                next lShortcut.Metadata['icon']
+              else
+                next lShortcut.Type.getIcon
+              end
+            else
+              # We will apply some layers, so clone it first
+              rBitmap = nil
+              if (lShortcut.Metadata['icon'] != nil)
+                rBitmap = lShortcut.Metadata['icon'].clone
+              else
+                rBitmap = lShortcut.Type.getIcon.clone
+              end
+              applyBitmapLayers(rBitmap, lFlags)
+              next rBitmap
+            end
+          end
+          set_item_image(iItemID, lIdxImage)
         end
       else
         puts "!!! Tree node #{iItemID} has unknown ID (#{lID}). It will be marked in the tree. Bug ?"
@@ -502,7 +700,7 @@ module PBS
               end
               if (!lFound)
                 # We have to remove iChildID from the tree, along with all its children
-                removeTreeBranch(iChildID)
+                removeTreeBranch(iChildNodeID)
               end
             end
           end

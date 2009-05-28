@@ -526,14 +526,14 @@ module PBS
         @Commands[ID_IMPORT_BASE + iImport.index] = {
           :title => lTitle,
           :help => "Import Shortcuts from #{iImportID}",
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
+          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/#{iImport.getIconSubPath}"),
           :method => "cmdImport#{iImportID}".to_sym,
           :accelerator => nil
         }
         @Commands[ID_IMPORT_MERGE_BASE + iImport.index] = {
           :title => lTitle,
           :help => "Import Shortcuts from #{iImportID} and merge with existing",
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
+          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/#{iImport.getIconSubPath}"),
           :method => "cmdImportMerge#{iImportID}".to_sym,
           :accelerator => nil
         }

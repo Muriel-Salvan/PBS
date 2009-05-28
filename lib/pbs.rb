@@ -10,9 +10,6 @@ require 'wx'
 # Add this path to the load path. This allows anybody to execute PBS from any directory, even not the current one.
 $LOAD_PATH << File.dirname(__FILE__)
 
-require 'Controller/Controller.rb'
-require 'Windows/Main.rb'
-
 module PBS
 
   # Program version
@@ -65,6 +62,10 @@ module PBS
   end
 
 end
+
+# Require those files after having defined $PBSRootDir, as it will be used during require
+require 'Controller/Controller.rb'
+require 'Windows/Main.rb'
 
 # Be prepared to be just a library: don't do anything unless called explicitly
 if (__FILE__ == $0)

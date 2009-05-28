@@ -7,7 +7,7 @@ module PBS
 
   module Types
 
-    class URL
+    class URL < ShortcutType
 
       TCURL_ID = 1000
 
@@ -47,6 +47,14 @@ module PBS
         rContent = iPanel.find_window_by_id(TCURL_ID).value
 
         return rContent
+      end
+
+      # Get the default icon file name associated to this type
+      #
+      # Return:
+      # * _String_: The icon file name, relative to PBS root dir
+      def getIconFileName
+        return 'Graphics/Bookmark.png'
       end
 
     end

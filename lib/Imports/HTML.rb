@@ -14,7 +14,9 @@ module PBS
       # Here we list all the HTML tags that do not add any indentation in the level of a HTML file.
       # That is HTML tags that will not change the level of links compared with the headers: even if such HTML tags are absent from the file, the resulting Shortcuts/Tags associations would be exactly the same.
       NO_INDENT_HTML_TAGS = [
-        'dt', 'p', 'body', 'li', 'head', 'text', 'hr', 'meta', 'title', 'dd', 'link', 'script', 'small'
+        'dt', 'p', 'body', 'li', 'head', 'text', 'hr', 'meta', 'title', 'dd',
+        'link', 'script', 'small', 'center', 'b', 'br', 'table', 'font', 'tr',
+        'td', 'i'
       ]
       # Here we list the HTML tags that add some indentation.
       # This means that when encountering such an HTML tag, we will consider the last HTML header to be the parent Tag of following items (Shortcuts/Tags), unless this HTML tag is closed.
@@ -32,6 +34,14 @@ module PBS
       # * _String_: The title
       def getTitle
         return 'HTML file'
+      end
+
+      # Get the icon sub-path, relative to PBS root directory
+      #
+      # Return:
+      # * _String_: The icon sub-path
+      def getIconSubPath
+        return 'Graphics/HTML.png'
       end
 
       # Execute the import
@@ -160,37 +170,43 @@ module PBS
               rCurrentStack.pop
             end
           when 'a'
-            lCurrentTag = rCurrentStack[-1][1]
-            # We have a Shortcut, belonging to lCurrentTag
-            lURL = iChildElement.attributes['href'].to_s
-            lIconURL = iChildElement.attributes['icon_uri'].to_s
-            lIconData = iChildElement.attributes['icon'].to_s
-            lTitle = iChildElement.content
-            # Create the new Shortcut
-            # Tags
-            lNewTags = {}
-            # Beware the root Tag
-            if (lCurrentTag.getUniqueID != [])
-              lNewTags[lCurrentTag] = nil
+            # Check that it is not just an anchor
+            if (iChildElement.attributes['href'] != nil)
+              lCurrentTag = rCurrentStack[-1][1]
+              # We have a Shortcut, belonging to lCurrentTag
+              lURL = iChildElement.attributes['href'].to_s
+              lIconURL = iChildElement.attributes['icon_uri'].to_s
+              lIconData = iChildElement.attributes['icon'].to_s
+              lTitle = iChildElement.content
+              if (lTitle.strip.empty?)
+                lTitle = 'Unnamed Shortcut'
+              end
+              # Create the new Shortcut
+              # Tags
+              lNewTags = {}
+              # Beware the root Tag
+              if (lCurrentTag.getUniqueID != [])
+                lNewTags[lCurrentTag] = nil
+              end
+              # Content
+              lContent = lURL
+              # Metadata
+              lMetadata = {'title' => lTitle}
+              # Compute its ID
+              lSCID = Shortcut.getUniqueID(lContent, lMetadata)
+              # Check if it exists already
+              lSC = ioController.findShortcut(lSCID, false)
+              if (lSC != nil)
+                # Already exists: just merge Tags
+                lNewTags.merge!(lSC.Tags)
+                ioController.modifyShortcut(lSC, lSC.Content, lSC.Metadata, lNewTags)
+              else
+                # A new one
+                ioController.addNewShortcut(Shortcut.new(ioController.TypesPlugins['URL'], lNewTags, lContent, lMetadata))
+              end
+              # The last header is not just defined: a shortcut was defined before the next group
+              rHeaderJustDefined = false
             end
-            # Content
-            lContent = lURL
-            # Metadata
-            lMetadata = {'title' => lTitle}
-            # Compute its ID
-            lSCID = Shortcut.getUniqueID(lContent, lMetadata)
-            # Check if it exists already
-            lSC = ioController.findShortcut(lSCID, false)
-            if (lSC != nil)
-              # Already exists: just merge Tags
-              lNewTags.merge!(lSC.Tags)
-              ioController.modifyShortcut(lSC, lSC.Content, lSC.Metadata, lNewTags)
-            else
-              # A new one
-              ioController.addNewShortcut(Shortcut.new(ioController.TypesPlugins['URL'], lNewTags, lContent, lMetadata))
-            end
-            # The last header is not just defined: a shortcut was defined before the next group
-            rHeaderJustDefined = false
           else
             p "!!! Unknown Tag: #{iChildElement.name}. Content: #{iChildElement.content}"
           end
