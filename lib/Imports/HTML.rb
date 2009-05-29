@@ -177,6 +177,29 @@ module PBS
               lURL = iChildElement.attributes['href'].to_s
               lIconURL = iChildElement.attributes['icon_uri'].to_s
               lIconData = iChildElement.attributes['icon'].to_s
+              # See if we can read the icon
+              lIconBitmap = nil
+              lMatchData = lIconData.match(/data:image\/(.*);base64,(.*)/)
+              if (lMatchData != nil)
+                lImageExt = lMatchData[1]
+                # Here we unpack the string in a base64 encoding.
+                lIconInternalData = lMatchData[2].unpack('m')[0]
+                # Require a temporary file
+                lFileName = "#{Dir.tmpdir}/#{object_id}.#{lImageExt}"
+                File.open(lFileName, 'wb') do |oFile|
+                  oFile.write(lIconInternalData)
+                end
+                # Read it
+                begin
+                  lIconBitmap = Wx::Bitmap.new(lFileName)
+                rescue Exception
+                  puts "!!! Unable to read icon data of format #{lImageExt}: #{$!}. Ignoring this icon."
+                  lIconBitmap = nil
+                end
+                # Delete the temporary file
+                File.unlink(lFileName)
+              end
+              # Get the title
               lTitle = iChildElement.content
               if (lTitle.strip.empty?)
                 lTitle = 'Unnamed Shortcut'
@@ -192,6 +215,9 @@ module PBS
               lContent = lURL
               # Metadata
               lMetadata = {'title' => lTitle}
+              if (lIconBitmap != nil)
+                lMetadata['icon'] = lIconBitmap
+              end
               # Compute its ID
               lSCID = Shortcut.getUniqueID(lContent, lMetadata)
               # Check if it exists already
