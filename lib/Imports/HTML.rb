@@ -182,6 +182,9 @@ module PBS
               lMatchData = lIconData.match(/data:image\/(.*);base64,(.*)/)
               if (lMatchData != nil)
                 lImageExt = lMatchData[1]
+                if (lImageExt == 'x-icon')
+                  lImageExt = 'ico'
+                end
                 # Here we unpack the string in a base64 encoding.
                 lIconInternalData = lMatchData[2].unpack('m')[0]
                 # Require a temporary file
