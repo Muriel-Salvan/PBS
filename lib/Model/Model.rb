@@ -53,6 +53,25 @@ module PBS
 
   # Classes representing the model
   
+  # This class defines common methods for every type.
+  # Every Shortcut type should inherit from it.
+  class ShortcutType
+
+    # Get the associated icon
+    #
+    # Return:
+    # * <em>Wx::Bitmap</em>: The icon
+    def getIcon
+      if (!defined?(@Icon))
+        # Create it: it is the first time we ask for it
+        @Icon = Wx::Bitmap.new("#{$PBSRootDir}/#{getIconFileName}")
+      end
+
+      return @Icon
+    end
+
+  end
+
   # Tags
   class Tag
 

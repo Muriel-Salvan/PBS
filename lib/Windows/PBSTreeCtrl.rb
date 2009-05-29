@@ -23,54 +23,6 @@ end
 
 module PBS
 
-  # The class that assign dynamically images to a given TreeCtrl items
-  class ImageListManager
-
-    # Constructor
-    #
-    # Parameters:
-    # * *ioTree* (<em>Wx::TreeCtrl</em>): The TreeCtrl component this class will manage
-    # * *iWidth* (_Integer_): Width for images
-    # * *iHeight* (_Integer_): Height for images
-    def initialize(ioTree, iWidth, iHeight)
-      @Tree = ioTree
-      @Width = iWidth
-      @Height = iHeight
-      # The internal map of image IDs => tree indexes
-      # map< Object, Integer >
-      @Id2Idx = {}
-      # The minimal width and height
-      # The image list used with the tree
-      @TreeImageList = Wx::ImageList.new(@Width, @Height)
-      @Tree.set_image_list(@TreeImageList)
-    end
-
-    # Get the Tree's image index for a given image ID
-    #
-    # Parameters:
-    # * *iID* (_Object_): Id of the image
-    # * *CodeBlock*: The code that will be called if the image ID is unknown. This code has to return a Wx::Bitmap object, representing the bitmap for the given image ID.
-    def getTreeImageIndex(iID)
-      if (@Id2Idx[iID] == nil)
-        # Bitmap unknown.
-        # First create it.
-        lBitmap = yield
-        # Then check if we need to resize it
-        if ((lBitmap.width != @Width) or
-            (lBitmap.height != @Height))
-          # We have to resize the bitmap to @Width/@Height
-          lBitmap = Wx::Bitmap.from_image(lBitmap.convert_to_image.scale(@Width, @Height))
-        end
-        # Then add it to the image list, and register it
-        @Id2Idx[iID] = @TreeImageList.add(lBitmap)
-      end
-
-      return @Id2Idx[iID]
-    end
-
-  end
-
-
   # The main tree view, as a separate component.
   # This component can then be reused in other GUIs.
   class PBSTreeCtrl < Wx::TreeCtrl
@@ -86,6 +38,7 @@ module PBS
     FLAG_DRAG = 16
 
     # Define bitmaps used for layers in the tree
+    # !!! Be careful that all of these images MUST have a semi-transparent pixel in their data, otherwise drawing the bitmap on a DC completely ignores the mask. Bug ?
     BITMAPLAYER_PRIMARY_COPY = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MiniCopy.png")
     BITMAPLAYER_PRIMARY_CUT = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MiniCut.png")
     BITMAPLAYER_SECONDARY_COPY = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MicroCopy.png")
@@ -320,6 +273,8 @@ module PBS
       # 2. Remove the mask from the original bitmap
       lNoMaskBitmap = Wx::Bitmap.new(ioBitmap.width, ioBitmap.height, 1)
       lNoMaskBitmap.draw do |ioNoMaskDC|
+        ioNoMaskDC.brush = Wx::WHITE_BRUSH
+        ioNoMaskDC.pen = Wx::WHITE_PEN
         ioNoMaskDC.draw_rectangle(0, 0, ioBitmap.width, ioBitmap.height)
       end
       ioBitmap.mask = Wx::Mask.new(lNoMaskBitmap)

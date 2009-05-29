@@ -9,29 +9,57 @@ module PBS
   ID_TAG = 0
   ID_SHORTCUT = 1
 
-  # This class defines common methods for every type.
-  # Every Shortcut type should inherit from it.
-  class ShortcutType
-
-    # Get the associated icon
-    #
-    # Return:
-    # * <em>Wx::Bitmap</em>: The icon
-    def getIcon
-      if (!defined?(@Icon))
-        # Create it: it is the first time we ask for it
-        @Icon = Wx::Bitmap.new("#{$PBSRootDir}/#{getIconFileName}")
-      end
-
-      return @Icon
-    end
-
-  end
-
   # This module define methods that are useful to several functions in PBS, but are not GUI related.
   # They could be used in a command-line mode.
   # No reference to Wx should present in here
   module Tools
+
+    # The class that assign dynamically images to a given TreeCtrl items
+    class ImageListManager
+
+      # Constructor
+      #
+      # Parameters:
+      # * *ioTree* (<em>Wx::TreeCtrl</em>): The TreeCtrl component this class will manage
+      # * *iWidth* (_Integer_): Width for images
+      # * *iHeight* (_Integer_): Height for images
+      def initialize(ioTree, iWidth, iHeight)
+        @Tree = ioTree
+        @Width = iWidth
+        @Height = iHeight
+        # The internal map of image IDs => tree indexes
+        # map< Object, Integer >
+        @Id2Idx = {}
+        # The minimal width and height
+        # The image list used with the tree
+        @TreeImageList = Wx::ImageList.new(@Width, @Height)
+        @Tree.set_image_list(@TreeImageList)
+      end
+
+      # Get the Tree's image index for a given image ID
+      #
+      # Parameters:
+      # * *iID* (_Object_): Id of the image
+      # * *CodeBlock*: The code that will be called if the image ID is unknown. This code has to return a Wx::Bitmap object, representing the bitmap for the given image ID.
+      def getTreeImageIndex(iID)
+        if (@Id2Idx[iID] == nil)
+          # Bitmap unknown.
+          # First create it.
+          lBitmap = yield
+          # Then check if we need to resize it
+          if ((lBitmap.width != @Width) or
+              (lBitmap.height != @Height))
+            # We have to resize the bitmap to @Width/@Height
+            lBitmap = Wx::Bitmap.from_image(lBitmap.convert_to_image.scale(@Width, @Height))
+          end
+          # Then add it to the image list, and register it
+          @Id2Idx[iID] = @TreeImageList.add(lBitmap)
+        end
+
+        return @Id2Idx[iID]
+      end
+
+    end
 
     # Object that is used with the clipboard
     class DataObjectSelection < Wx::DataObject
