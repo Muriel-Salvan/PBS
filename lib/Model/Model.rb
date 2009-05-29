@@ -3,45 +3,54 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'tempfile'
+require 'tmpdir'
 
-# We want to serialize Wx::Bitmaps with the Marshaller
+# It is impossible to marshal_load a Wx::Bitmap using load_file, as the C-type is checked during load_file call and the Marshaller does not create exactly the same C-type between 2 executions.
+# Therefore we have 2 alternatives:
+# 1. give an external way (no more marshal_dump/marshal_load) to serialize a bitmap with load_file (the one we are doing here)
+# 2. don't use load_file to get the content back during marshal_load. Unfortunately Wx::Bitmap does not have any other method (or maybe using Wx::Image ?).
+# TODO (WxRuby): Implement Wx::Bitmap::marshal_dump and Wx::Bitmap::marshal_load
 module Wx
 
   class Bitmap
 
-    # Dump marshalled data
+    # Get the serialized content.
+    # Equivalent to marshal_dump (could be renamed if only load_file could work)
     #
     # Return:
-    # * _String_: The marshalled data
-    def marshal_dump
+    # * _String_: The serialized content
+    def getSerialized
       rData = ''
 
       # Require a temporary file
-      lTmpFile = Tempfile.new(object_id)
-      lTmpFile.close
-      if (save_file(lTmpFile.path, Wx::BITMAP_TYPE_PNG))
-        lTmpFile.open
-        rData = lTmpFile.read
-        lTmpFile.close
+      lFileName = "#{Dir.tmpdir}/#{object_id}.png"
+      if (save_file(lFileName, Wx::BITMAP_TYPE_PNG))
+        File.open(lFileName, 'rb') do |iFile|
+          rData = iFile.read
+        end
+        File.unlink(lFileName)
       else
-        puts "!!! Error while loading data from temporary file: #{lTmpFile.path}."
+        puts "!!! Error while loading data from temporary file: #{lFileName}."
       end
 
       return rData
     end
 
-    # Load marshalled data
+    # Set the content based on a serialized one
+    # Equivalent to marshal_load (could be renamed if only load_file could work)
     #
     # Parameters:
-    # * *iData* (_String_): The marshalled data
-    def marshal_load(iData)
+    # * *iData* (_String_): The serialized content
+    def setSerialized(iData)
       # Require a temporary file
-      lTmpFile = Tempfile.new(object_id)
-      lTmpFile.write(iData)
-      lTmpFile.close
-      if (!load_file(lTmpFile.path, Wx::BITMAP_TYPE_PNG))
-        puts "!!! Error while loading data from temporary file: #{lTmpFile.path}."
+      lFileName = "#{Dir.tmpdir}/#{object_id}.png"
+      File.open(lFileName, 'wb') do |oFile|
+        oFile.write(iData)
+      end
+      if (load_file(lFileName, Wx::BITMAP_TYPE_PNG))
+        File.unlink(lFileName)
+      else
+        puts "!!! Error while loading data from temporary file: #{lFileName}."
       end
     end
 
@@ -528,7 +537,9 @@ module PBS
               end
             end
           end
-          rNewShortcut = Shortcut.new(lType, lTags, @Content, @Metadata)
+          # TODO (WxRuby): Once marshal_dump and marshal_load are set correctly for Wx::Bitmap, uncomment next line and remove remaining ones.
+          #rNewShortcut = Shortcut.new(lType, lTags, @Content, @Metadata)
+          rNewShortcut = Shortcut.new(lType, lTags, @Content, Shortcut.setSerializableMetadata(@Metadata))
         end
 
         return rNewShortcut
@@ -595,7 +606,9 @@ module PBS
           lTagIDs << iTag.getUniqueID
         end
       end
-      return Serialized.new(@Type.pluginName, lTagIDs, @Content, @Metadata)
+      # TODO (WxRuby): Once marshal_dump and marshal_load are set correctly for Wx::Bitmap, uncomment next line and remove remaining ones.
+      #return Serialized.new(@Type.pluginName, lTagIDs, @Content, @Metadata)
+      return Serialized.new(@Type.pluginName, lTagIDs, @Content, Shortcut.getSerializableMetadata(@Metadata))
     end
 
     # Replace Tags with new ones.
@@ -621,8 +634,51 @@ module PBS
       return @UniqueID
     end
 
+    # Return the serializable Metadata
+    # It converts any Wx::Bitmap to its string representation.
+    # TODO (WxRuby): Remove this method once marshal_dump and marshal_load have been implemented in Wx::Bitmap.
+    #
+    # Parameters:
+    # * *iMetadata* (<em>map<String,Object></em>): The metadata
+    # Return:
+    # * <em>map<String,Object></em>: The serializable metadata
+    def self.getSerializableMetadata(iMetadata)
+      rSerializableMetadata = {}
+
+      iMetadata.each do |iKey, iValue|
+        if (iValue.is_a?(Wx::Bitmap))
+          rSerializableMetadata[iKey] = [ Wx::Bitmap, iValue.getSerialized ]
+        else
+          rSerializableMetadata[iKey] = iValue
+        end
+      end
+
+      return rSerializableMetadata
+    end
+
+    # Return a Metadata from a serialized one.
+    # TODO (WxRuby): Remove this method once marshal_dump and marshal_load have been implemented in Wx::Bitmap.
+    def self.setSerializableMetadata(iSerializedMetadata)
+      rMetadata = {}
+
+      iSerializedMetadata.each do |iKey, iValue|
+        if ((iValue.is_a?(Array)) and
+            (iValue.size == 2) and
+            (iValue[0] == Wx::Bitmap))
+          lBitmap = Wx::Bitmap.new
+          lBitmap.setSerialized(iValue[1])
+          rMetadata[iKey] = lBitmap
+        else
+          rMetadata[iKey] = iValue
+        end
+      end
+
+      return rMetadata
+    end
+
     # Compute a Unique ID based on Content and Metadata.
-    # This Unique ID has to depend ONLY on the data of the content and metadata, as it will be used to retrieve different content and metadata cloned.
+    # !!! This Unique ID has to depend ONLY on the data of the content and metadata, as it will be used to retrieve different content and metadata cloned.
+    # !!! It HAS TO depend on BOTH the complete content and complete metadata also, as otherwise we will find doublons everywhere.
     #
     # Parameters:
     # * *iContent* (_Content_): The content
@@ -630,7 +686,10 @@ module PBS
     # Return:
     # * _Integer_: The unique ID
     def self.getUniqueID(iContent, iMetadata)
-      return Marshal.dump([iContent,iMetadata]).hash
+      # TODO (WxRuby): Once marshal_dump and marshal_load are set correctly for Wx::Bitmap, uncomment next line and remove remaining ones.
+      #return Marshal.dump( [ iContent, iMetadata ] ).hash
+      # Now we have to convert every Wx::Bitmap data from the metadata before.
+      return Marshal.dump( [ iContent, Shortcut.getSerializableMetadata(iMetadata) ] ).hash
     end
 
     # Set the content of the Shortcut. This is used only for Undo purposes.

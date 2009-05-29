@@ -686,7 +686,7 @@ module PBS
       # Then, marshall this data
       lData = Marshal.dump([ lSerializedTags, lSerializedShortcuts ])
       # The write everything in the file
-      File.open(iFileName, 'w') do |iFile|
+      File.open(iFileName, 'wb') do |iFile|
         iFile.write(lData)
       end
     end
@@ -705,7 +705,7 @@ module PBS
 
       # First read the file
       lData = nil
-      File.open(iFileName, 'r') do |iFile|
+      File.open(iFileName, 'rb') do |iFile|
         lData = iFile.read
       end
       # Unmarshal it
