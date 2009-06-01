@@ -165,6 +165,9 @@ module PBS
       # The drag image
       # Wx::DragImage
       @DragImage = nil
+      # The context menu
+      # Wx::Menu
+      @ContextMenu = nil
       # Create the image list for the tree
       @ImageListManager = ImageListManager.new(self, 16, 16)
       # Accept incoming drops of things
@@ -205,6 +208,17 @@ module PBS
         # TODO: Test with wxWidgets 2.9.0 (should be there May 2009)
         iEvent.skip
       end
+      evt_tree_item_menu(self) do |iEvent|
+        popup_menu(@ContextMenu)
+      end
+    end
+
+    # Set the context menu
+    #
+    # Parameters:
+    # * *iContextMenu* (<em>Wx::Menu</em>): The context menu to display on item right-click
+    def setContextMenu(iContextMenu)
+      @ContextMenu = iContextMenu
     end
 
     # Compute the drag image to use

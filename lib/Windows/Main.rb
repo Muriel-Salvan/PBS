@@ -305,6 +305,9 @@ module PBS
       # Set the Accelerator table for this frame
       @Controller.setAcceleratorTableForFrame(self)
 
+      # Set the main tree context menu
+      @TCMainTree.setContextMenu(@EditMenu)
+
       # Don't forget the main icon
       self.icon = Wx::Icon.new("#{$PBSRootDir}/Graphics/Icon.png")
 
