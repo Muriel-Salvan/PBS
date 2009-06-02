@@ -442,13 +442,6 @@ module PBS
           :method => :cmdSave, # TODO
           :accelerator => [ Wx::MOD_CMD, 's'[0] ]
         },
-        Wx::ID_EXIT => {
-          :title => 'Exit',
-          :help => 'Quit PBS',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Exit.png"),
-          :method => :cmdExit, # TODO
-          :accelerator => nil
-        },
         Wx::ID_FIND => {
           :title => 'Find',
           :help => 'Find a Shortcut',

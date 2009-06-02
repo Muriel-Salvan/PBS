@@ -34,6 +34,11 @@ module PBS
       setAppTitle
     end
 
+    # Notify that we are exiting
+    def onExit
+      self.destroy
+    end
+
     # Method called when the selection of the main tree has changed
     def onMainTreeSelectionUpdated
       if (@TCMainTree.selectionChanged?)
@@ -108,8 +113,9 @@ module PBS
 
       # The close event
       evt_close do |iEvent|
-        @Controller.notifyFinal
-        self.destroy
+        cmdExit(
+          :parentWindow => self
+        )
       end
 
       # Create the main treeview
@@ -163,7 +169,11 @@ module PBS
       end
       lFileMenu.append_sub_menu(lExportMenu, 'Export')
       lFileMenu.append_separator
-      addMenuCommand(lFileMenu, Wx::ID_EXIT)
+      addMenuCommand(lFileMenu, Wx::ID_EXIT) do |iEvent, oValidator|
+        oValidator.authorizeCmd(
+          :parentWindow => self
+        )
+      end
       # Edit menu
       @EditMenu = Wx::Menu.new
       addMenuCommand(@EditMenu, Wx::ID_UNDO)

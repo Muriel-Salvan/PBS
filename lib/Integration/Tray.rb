@@ -80,7 +80,7 @@ module PBS
       end
 
       # Finalize the integration plugin
-      def onFinal
+      def onExit
         @Icon.remove_icon
         @Icon.destroy
       end

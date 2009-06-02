@@ -98,11 +98,16 @@ module PBS
     end
 
     # Notify the GUI that we are quitting
-    def notifyFinal
-      notifyRegisteredGUIs(:onFinal)
+    def notifyExit
+      notifyRegisteredGUIs(:onExit)
     end
 
     # Notify the GUI that data on the current opened file has been modified
+    def notifyCurrentOpenedFileUpdate
+      notifyRegisteredGUIs(:onCurrentOpenedFileUpdate)
+    end
+
+    # Notify the GUI that we exit
     def notifyCurrentOpenedFileUpdate
       notifyRegisteredGUIs(:onCurrentOpenedFileUpdate)
     end
