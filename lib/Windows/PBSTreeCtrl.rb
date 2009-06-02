@@ -36,6 +36,7 @@ module PBS
     FLAG_SECONDARY_COPY = 4
     FLAG_SECONDARY_CUT = 8
     FLAG_DRAG = 16
+    FLAG_DRAG_NONE = 32
 
     # Define bitmaps used for layers in the tree
     # !!! Be careful that all of these images MUST have a semi-transparent pixel in their data, otherwise drawing the bitmap on a DC completely ignores the mask. Bug ?
@@ -44,6 +45,7 @@ module PBS
     BITMAPLAYER_SECONDARY_COPY = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MicroCopy.png")
     BITMAPLAYER_SECONDARY_CUT = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MicroCut.png")
     BITMAPLAYER_DRAG = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/DragNDrop.png")
+    BITMAPLAYER_DRAG_NONE = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/DragNDropCancel.png")
 
     # Define default Tag and Shortcuts icons
     ICON_DEFAULT_TAG = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Tag.png")
@@ -310,6 +312,9 @@ module PBS
           if (iFlags & FLAG_DRAG != 0)
             mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_DRAG)
           end
+          if (iFlags & FLAG_DRAG_NONE != 0)
+            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_DRAG_NONE)
+          end
         end
       end
       # 4. Set the mask correctly
@@ -355,18 +360,24 @@ module PBS
             if (@DragSelection.isTagPrimary?(lTag))
               if (@DragMode == Wx::DRAG_MOVE)
                 lFlags |= FLAG_PRIMARY_CUT
-              else
+                lFlags |= FLAG_DRAG
+              elsif (@DragMode == Wx::DRAG_COPY)
                 lFlags |= FLAG_PRIMARY_COPY
+                lFlags |= FLAG_DRAG
+              else
+                lFlags |= FLAG_DRAG_NONE
               end
-              lFlags |= FLAG_DRAG
             end
             if (@DragSelection.isTagSecondary?(lTag))
               if (@DragMode == Wx::DRAG_MOVE)
                 lFlags |= FLAG_SECONDARY_CUT
-              else
+                lFlags |= FLAG_DRAG
+              elsif (@DragMode == Wx::DRAG_COPY)
                 lFlags |= FLAG_SECONDARY_COPY
+                lFlags |= FLAG_DRAG
+              else
+                lFlags |= FLAG_DRAG_NONE
               end
-              lFlags |= FLAG_DRAG
             end
           end
           # Now compute the image ID
@@ -424,18 +435,24 @@ module PBS
             if (@DragSelection.isShortcutPrimary?(lShortcut, lParentTag))
               if (@DragMode == Wx::DRAG_MOVE)
                 lFlags |= FLAG_PRIMARY_CUT
-              else
+                lFlags |= FLAG_DRAG
+              elsif (@DragMode == Wx::DRAG_COPY)
                 lFlags |= FLAG_PRIMARY_COPY
+                lFlags |= FLAG_DRAG
+              else
+                lFlags |= FLAG_DRAG_NONE
               end
-              lFlags |= FLAG_DRAG
             end
             if (@DragSelection.isShortcutSecondary?(lShortcut, lParentTag))
               if (@DragMode == Wx::DRAG_MOVE)
                 lFlags |= FLAG_SECONDARY_CUT
-              else
+                lFlags |= FLAG_DRAG
+              elsif (@DragMode == Wx::DRAG_COPY)
                 lFlags |= FLAG_SECONDARY_COPY
+                lFlags |= FLAG_DRAG
+              else
+                lFlags |= FLAG_DRAG_NONE
               end
-              lFlags |= FLAG_DRAG
             end
           end
           # Now compute the image ID
