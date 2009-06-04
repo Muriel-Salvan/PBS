@@ -3,6 +3,11 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
+# Those 3 requires are needed to download temporary favicons
+require 'tmpdir'
+require 'net/http'
+require 'net/ftp'
+
 module PBS
 
   # Define general constants
@@ -673,22 +678,69 @@ module PBS
           lBitmapType = Wx::BITMAP_TYPE_ICO
         end
       end
-      # Special case for the ICO type
-      if (lBitmapType == Wx::BITMAP_TYPE_ICO)
-        lIconID = iFileName
-        if ((iIconIndex != nil) and
-            (iIconIndex != 0))
-          lIconID += ";#{iIconIndex}"
-        end
-        rBitmap = Wx::Bitmap.new
+      # If the file is from a URL, we download it first to a temporary file
+      lCancel = false
+      lTempFileToDelete = false
+      lFileName = iFileName
+      lHTTPMatch = iFileName.match(/^http:\/\/([^\/]*)\/(.*)$/)
+      if (lHTTPMatch != nil)
+        lHTTPServer, lHTTPPath = lHTTPMatch[1..2]
+        lFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}_#{lHTTPServer}#{File.extname(iFileName)}"
+        # Download iFileName to lFileName
         begin
-          rBitmap.copy_from_icon(Wx::Icon.new(lIconID, Wx::BITMAP_TYPE_ICO))
+          Net::HTTP.start(lHTTPServer) do |iHTTPConnection|
+            lResponse = iHTTPConnection.get("/#{lHTTPPath}")
+            File.open(lFileName, 'wb') do |oFile|
+              oFile.write(lResponse.body)
+            end
+            lTempFileToDelete = true
+          end
         rescue Exception
-          puts "!!! Error while loading icon from #{lIconID}: #{$!}. Ignoring it."
-          rBitmap = nil
+          puts "!!! Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
+          lCancel = true
         end
       else
-        rBitmap = Wx::Bitmap.new(iFileName, lBitmapType)
+        lFTPMatch = iFileName.match(/^ftp:\/\/([^\/]*)\/(.*)$/)
+        if (lFTPMatch != nil)
+          lFTPServer, lFTPPath = lFTPMatch[1..2]
+          lFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}_#{lFTPServer}#{File.extname(iFileName)}"
+          # Download iFileName to lFileName
+          begin
+            lFTPConnection = Net::FTP.new(lFTPServer)
+            lFTPConnection.login
+            lFTPConnection.chdir(File.dirname(lFTPPath))
+            lFTPConnection.getbinaryfile(File.basename(lFTPPath), lFileName)
+            lFTPConnection.close
+            lTempFileToDelete = true
+          rescue Exception
+            puts "!!! Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
+            lCancel = true
+          end
+        end
+      end
+      if (!lCancel)
+        # Special case for the ICO type
+        if (lBitmapType == Wx::BITMAP_TYPE_ICO)
+          lIconID = lFileName
+          if ((iIconIndex != nil) and
+              (iIconIndex != 0))
+            # TODO: Currently this implementation does not work. Uncomment when ok.
+            #lIconID += ";#{iIconIndex}"
+          end
+          rBitmap = Wx::Bitmap.new
+          begin
+            rBitmap.copy_from_icon(Wx::Icon.new(lIconID, Wx::BITMAP_TYPE_ICO))
+          rescue Exception
+            puts "!!! Error while loading icon from #{lIconID}: #{$!}. Ignoring it."
+            rBitmap = nil
+          end
+        else
+          rBitmap = Wx::Bitmap.new(lFileName, lBitmapType)
+        end
+      end
+      # Remove temporary file if needed
+      if (lTempFileToDelete)
+        File.unlink(lFileName)
       end
 
       return rBitmap

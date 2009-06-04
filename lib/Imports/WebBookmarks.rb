@@ -3,11 +3,17 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
+# This is necessary to convert file names (used as Shortcut/Tags titles) into UTF-8, as this is necessary for them to be displayed correctly in WxRuby.
+require 'iconv'
+
 module PBS
 
   module Imports
 
     class WebBookmarks
+
+      # The file names to UTF-8 converter
+      UTF8_CONVERTER = Iconv.new('UTF-8', 'CP1252')
 
       include Tools
 
@@ -106,7 +112,8 @@ module PBS
             'URL',
             lURL,
             {
-              'title' => File.basename(iFileName),
+              # Convert the file name in UTF-8
+              'title' => UTF8_CONVERTER.iconv(File.basename(iFileName)),
               'icon' => lIconBitmap
             },
             lNewTags
@@ -128,7 +135,7 @@ module PBS
             if ((iFileName != '.') and
                 (iFileName != '..'))
               # A new Tag
-              lNewTag = ioController.createTag(iTag, File.basename(iFileName), nil)
+              lNewTag = ioController.createTag(iTag, UTF8_CONVERTER.iconv(File.basename(iFileName)), nil)
               importWebBookmarks(ioController, iFileName, lNewTag)
             end
           elsif (POSSIBLE_EXTENSIONS.include?(File.extname(iFileName).upcase))
