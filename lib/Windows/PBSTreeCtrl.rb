@@ -71,12 +71,32 @@ module PBS
         # We include the flag about the Locally Dragged Selection in the key of the cache, because the DropSource.give_feedback is called after the first call to DropTarget.on_drag_over: therefore @Controller.DragSelection is still nil when on_drag_over fills the cache for the first time.
         # map< [ Tag, Integer, Boolean ], [ Integer, list< String > ] >
         @Cache_LastHoveredTags = {}
+        # The old cache key. Used to determine when the state has been changed during on_drag_over.
+        @Cache_OldCacheKey = nil
+        # The last displayed Tip Window
+        # Wx::TipWindow
+        @LastTipWindow = nil
+        # The last change time. Used to determine if the user keeps hovering the same Tag, waiting for it to expand in order to drop on collapsed sub-Tags.
+        # Time
+        @LastChangeTime = Time.now
+        # The last scroll time. Used to determine when it is needed to scroll a line while dragging near the borders.
+        @LastScrollTime = Time.now
         # Cache of the last given result for the last hovered Tag and
         super(@Data)
       end
 
+      # Mouse is leaving the drop target.
+      # This is also called when the drop ends on a vetoed area.
+      def on_leave
+        if (@LastTipWindow != nil)
+          @LastTipWindow.destroy
+          @LastTipWindow = nil
+        end
+      end
+
       # Called when the mouse is being dragged over the drop target. By default, this calls functions return the suggested return value def.
       # Use a cache of the last hovered item (otherwise it would be far too much CPU consuming as on_drag_over is always repeatedly called even if the mous does not move).
+      # Expand Tag items on which the mouse stays hovering.
       #
       # Parameters:
       # * *iMouseX* (_Integer_): The x coordinate of the mouse.
@@ -85,10 +105,10 @@ module PBS
       # Return:
       # * _Integer_: Returns the desired operation or Wx::DragNone. This is used for optical feedback from the side of the drop source, typically in form of changing the icon.
       def on_drag_over(iMouseX, iMouseY, iSuggestedResult)
+        rResult = Wx::DRAG_NONE
+
         lHoveredTag = @PBSTreeCtrl.getHoveredTag(Wx::Point.new(iMouseX, iMouseY))
-        if (lHoveredTag == nil)
-          return Wx::DRAG_NONE
-        else
+        if (lHoveredTag != nil)
           lCacheKey = [ lHoveredTag, iSuggestedResult, @Controller.DragSelection != nil ]
           if (@Cache_LastHoveredTags[lCacheKey] == nil)
             # Compute the result we want to give for lHoveredTag, iSuggestedResult
@@ -123,9 +143,51 @@ module PBS
             end
           end
           rResult, lErrors = @Cache_LastHoveredTags[lCacheKey]
-          # TODO: Use lErrors in the DragImage
-          return rResult
+          if (@Cache_OldCacheKey != lCacheKey)
+            # Here we have changed states. Consider displaying the reasons for error.
+            if (@LastTipWindow != nil)
+              @LastTipWindow.destroy
+              @LastTipWindow = nil
+            end
+            @Cache_OldCacheKey = lCacheKey
+            if (lErrors != nil)
+              # Display the errors in a hint for explanations
+              @LastTipWindow = Wx::TipWindow.new(@PBSTreeCtrl, lErrors.join("\n"))
+              @LastTipWindow.show
+            end
+            @LastChangeTime = Time.now
+          else
+            # Here, we might want to expand lHoveredTag in @PBSTreeCtrl to show the content after some delay.
+            # 1 second is ok
+            if (Time.now - @LastChangeTime > 1)
+              # Expand the Tag if not already the case
+              lItemID, lFlags = @PBSTreeCtrl.hit_test(Wx::Point.new(iMouseX, iMouseY))
+              if (!@PBSTreeCtrl.is_expanded(lItemID))
+                @PBSTreeCtrl.expand(lItemID)
+              end
+            end
+          end
         end
+        # Here we scroll vertically if the mouse is close to the borders
+        if (Time.now - @LastScrollTime > 0.2)
+          if (iMouseY < @PBSTreeCtrl.client_rect.y + 8)
+            # Scroll up
+            lTopItemID = @PBSTreeCtrl.get_prev_visible(@PBSTreeCtrl.first_visible_item)
+            if (lTopItemID != 0)
+              @PBSTreeCtrl.scroll_to(lTopItemID)
+              @LastScrollTime = Time.now
+            end
+          elsif (iMouseY > @PBSTreeCtrl.client_rect.y + @PBSTreeCtrl.client_rect.height - 8)
+            # Scroll down
+            lTopItemID = @PBSTreeCtrl.get_next_visible(@PBSTreeCtrl.first_visible_item)
+            if (lTopItemID != 0)
+              @PBSTreeCtrl.scroll_to(lTopItemID)
+              @LastScrollTime = Time.now
+            end
+          end
+        end
+
+        return rResult
       end
 
       # Called after on_drop returns true. By default this will usually get_data and will return the suggested default value.
@@ -214,6 +276,9 @@ module PBS
       # TODO (WxRuby): Bug correction
       # Register this Event as otherwise moving the mouse over the TreeCtrl component generates tons of warnings. Bug ?
       Wx::EvtHandler::EVENT_TYPE_CLASS_MAP[10000] = Wx::Event
+      # TODO (WxRuby): Bug correction
+      # Register this Event as otherwise destroy ToolTips during drag generate tons of warnings. Bug ?
+      Wx::EvtHandler::EVENT_TYPE_CLASS_MAP[10131] = Wx::Event
 
       @Controller = iController
       # Selection in the clipboard
@@ -253,7 +318,7 @@ module PBS
       self.drop_target = SelectionDropTarget.new(@Controller, self)
       # fill the tree view from scratch
       fillTree
-
+      
       # Begin drag event
       evt_tree_begin_drag(self) do |iEvent|
         # We begin dragging with left mouse
