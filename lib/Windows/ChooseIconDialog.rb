@@ -8,6 +8,8 @@ module PBS
   # Dialog that chooses an icon
   class ChooseIconDialog < Wx::Dialog
 
+    include Tools
+
     COLOUR_BTNFACE = Wx::SystemSettings::get_colour(Wx::SYS_COLOUR_BTNFACE)
     COLOUR_BTNSHADOW = Wx::SystemSettings::get_colour(Wx::SYS_COLOUR_BTNSHADOW)
 
@@ -152,22 +154,24 @@ module PBS
     # Parameters:
     # * *iFileName* (_String_): The file name
     # Return:
-    # * <em>Wx::Bitmap</em>: The Bitmap
+    # * <em>Wx::Bitmap</em>: The Bitmap, or nil if error
     def createBitmapFromFile(iFileName)
-      rBitmap = Wx::Bitmap.new(iFileName)
+      rBitmap = getBitmapFromFile(iFileName)
 
-      lNewWidth = rBitmap.width
-      if (rBitmap.width > MAX_ICON_WIDTH)
-        lNewWidth = MAX_ICON_WIDTH
-      end
-      lNewHeight = rBitmap.height
-      if (rBitmap.height > MAX_ICON_HEIGHT)
-        lNewHeight = MAX_ICON_HEIGHT
-      end
-      if ((rBitmap.width > lNewWidth) or
-          (rBitmap.height > lNewHeight))
-        # We have to resize the bitmap to lNewWidth/lNewHeight
-        rBitmap = Wx::Bitmap.from_image(rBitmap.convert_to_image.scale(lNewWidth, lNewHeight))
+      if (rBitmap != nil)
+        lNewWidth = rBitmap.width
+        if (rBitmap.width > MAX_ICON_WIDTH)
+          lNewWidth = MAX_ICON_WIDTH
+        end
+        lNewHeight = rBitmap.height
+        if (rBitmap.height > MAX_ICON_HEIGHT)
+          lNewHeight = MAX_ICON_HEIGHT
+        end
+        if ((rBitmap.width > lNewWidth) or
+            (rBitmap.height > lNewHeight))
+          # We have to resize the bitmap to lNewWidth/lNewHeight
+          rBitmap = Wx::Bitmap.from_image(rBitmap.convert_to_image.scale(lNewWidth, lNewHeight))
+        end
       end
 
       return rBitmap
@@ -206,8 +210,13 @@ module PBS
         case lOpenDialog.show_modal
         when Wx::ID_OK
           begin
-            @BitmapsList << createBitmapFromFile(lOpenDialog.path)
-            notifyBitmapsListChanged
+            lBitmap = createBitmapFromFile(lOpenDialog.path)
+            if (lBitmap != nil)
+              @BitmapsList << lBitmap
+              notifyBitmapsListChanged
+            else
+              puts "!!! Error while reading file #{lOpenDialog.path}: #{$!}. Ignoring this file."
+            end
           rescue
             puts "!!! Error while reading file #{lOpenDialog.path}: #{$!}. Ignoring this file."
           end

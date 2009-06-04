@@ -9,6 +9,8 @@ module PBS
 
     class WebBookmarks
 
+      include Tools
+
       # All extensions we try to read (uppercase only)
       POSSIBLE_EXTENSIONS = [ '.URL' ]
 
@@ -91,17 +93,7 @@ module PBS
           # Get the icon
           lIconBitmap = nil
           if (lIconFile != nil)
-            if (lIconIndex == nil)
-              lIconIndex = 0
-            end
-            lIconBitmap = Wx::Bitmap.new
-            lIconID = "#{lIconFile},#{lIconIndex}"
-            begin
-              lIconBitmap.copy_from_icon(Wx::Icon.new(lIconID, Wx::BITMAP_TYPE_ICO))
-            rescue Exception
-              puts "!!! Error while loading icon from #{lIconID}: #{$!}. Ignoring it. Shortcut from file #{iFileName} will not have an icon."
-              lIconBitmap = nil
-            end
+            lIconBitmap = getBitmapFromFile(lIconFile, lIconIndex)
           end
           # Tags
           lNewTags = {}

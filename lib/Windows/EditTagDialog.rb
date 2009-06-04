@@ -21,8 +21,12 @@ module PBS
       if (lIconBitmap == nil)
         lIconBitmap = DEFAULT_TAG_ICON
       end
-      @BBIcon.bitmap_label = lIconBitmap
-      @BBIcon.size = [ lIconBitmap.width + 4, lIconBitmap.height + 4 ]
+      if (lIconBitmap.is_ok)
+        @BBIcon.bitmap_label = lIconBitmap
+      else
+        @BBIcon.bitmap_label = INVALID_ICON
+      end
+      @BBIcon.size = [ @BBIcon.bitmap_label.width + 4, @BBIcon.bitmap_label.height + 4 ]
     end
 
     # Create the metadata panel

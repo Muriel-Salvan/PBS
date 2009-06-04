@@ -9,6 +9,9 @@ module PBS
   ID_TAG = 0
   ID_SHORTCUT = 1
 
+  # An invalid icon
+  INVALID_ICON = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/InvalidIcon.png")
+
   # This module define methods that are useful to several functions in PBS, but are not GUI related.
   # They could be used in a command-line mode.
   # No reference to Wx should present in here
@@ -629,6 +632,66 @@ module PBS
         return rFound
       end
       
+    end
+
+    # Get a bitmap/icon from a file.
+    # If no type has been provided, it detects the type of icon based on the file extension.
+    #
+    # Parameters:
+    # * *iFileName* (_String_): The file name
+    # * *iIconIndex* (_Integer_): Specify the icon index (used by Windows for EXE/DLL/ICO...) [optional = nil]
+    # * *iBitmapType* (_Integer_): Bitmap/Icon type. Can be nil for autodetection. [optional = nil]
+    # Return:
+    # * <em>Wx::Bitmap</em>: The bitmap, or nil in case of failure
+    def getBitmapFromFile(iFileName, iIconIndex = nil, iBitmapType = nil)
+      rBitmap = nil
+
+      lBitmapType = iBitmapType
+      if (iBitmapType == nil)
+        # Autodetect
+        case File.extname(iFileName).upcase
+        when '.PNG'
+          lBitmapType = Wx::BITMAP_TYPE_PNG
+        when '.GIF'
+          lBitmapType = Wx::BITMAP_TYPE_GIF
+        when '.JPG', '.JPEG'
+          lBitmapType = Wx::BITMAP_TYPE_JPEG
+        when '.PCX'
+          lBitmapType = Wx::BITMAP_TYPE_PCX
+        when '.PNM'
+          lBitmapType = Wx::BITMAP_TYPE_PNM
+        when '.XBM'
+          lBitmapType = Wx::BITMAP_TYPE_XBM
+        when '.XPM'
+          lBitmapType = Wx::BITMAP_TYPE_XPM
+        when '.BMP'
+          lBitmapType = Wx::BITMAP_TYPE_BMP
+        when '.ICO', '.CUR', '.ANI', '.EXE', '.DLL'
+          lBitmapType = Wx::BITMAP_TYPE_ICO
+        else
+          puts "!!! Unable to determine the bitmap type corresponding to extension #{File.extname(iFileName).upcase}. Assuming ICO."
+          lBitmapType = Wx::BITMAP_TYPE_ICO
+        end
+      end
+      # Special case for the ICO type
+      if (lBitmapType == Wx::BITMAP_TYPE_ICO)
+        lIconID = iFileName
+        if ((iIconIndex != nil) and
+            (iIconIndex != 0))
+          lIconID += ";#{iIconIndex}"
+        end
+        rBitmap = Wx::Bitmap.new
+        begin
+          rBitmap.copy_from_icon(Wx::Icon.new(lIconID, Wx::BITMAP_TYPE_ICO))
+        rescue Exception
+          puts "!!! Error while loading icon from #{lIconID}: #{$!}. Ignoring it."
+          rBitmap = nil
+        end
+      else
+        rBitmap = Wx::Bitmap.new(iFileName, lBitmapType)
+      end
+
+      return rBitmap
     end
 
     # Can we paste a given selection (ex. from clipboard) in the Root Tag ?
