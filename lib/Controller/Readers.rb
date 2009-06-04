@@ -46,6 +46,10 @@ module PBS
     #   Integer
     attr_reader :CopiedMode
 
+    # The current ID of what we have copied
+    #   Integer
+    attr_reader :CopiedID
+
     # The current copied selection
     #   MultipleSelection
     attr_reader :CopiedSelection
@@ -57,6 +61,22 @@ module PBS
     # The current dragged selection
     #   MultipleSelection
     attr_reader :DragSelection
+
+    # Mode of Copy of the clipboard's content
+    #   Integer
+    attr_reader :Clipboard_CopyMode
+
+    # ID of the clipboard's content
+    #   Integer
+    attr_reader :Clipboard_CopyID
+
+    # Serialized Shortcuts in the clipboard, with their parent Tag's ID
+    #   list< Object, list< String > >
+    attr_reader :Clipboard_SerializedShortcuts
+
+    # Serialized Tags in the clipboard
+    #   list< Object >
+    attr_reader :Clipboard_SerializedTags
 
     # Find a Shortcut based on its unique ID
     #

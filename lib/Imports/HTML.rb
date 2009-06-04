@@ -88,9 +88,6 @@ module PBS
           case (iChildElement.name)
           when *HEADER_HTML_TAGS
             # The following Shortcuts belong to this header, seen as a Tag
-            # Create the Tag
-            lTagName = iChildElement.content
-            lNewTag = Tag.new(lTagName, nil)
             # To know which parent Tag is the correct one, we have to check the header level.
             # Find at which place of the stack it would fit
             lIdxStack = 0
@@ -133,15 +130,10 @@ module PBS
             # Get the parent Tag
             lParentTag = rCurrentStack[-1][1]
             # Add it if it does not exist already, and get it back once inserted
-            lTagID = lParentTag.getUniqueID + [lTagName]
-            lNewInsertedTag = ioController.findTag(lTagID)
-            if (lNewInsertedTag == nil)
-              ioController.addNewTag(lParentTag, lNewTag)
-              lNewInsertedTag = ioController.findTag(lTagID)
-            end
+            lNewTag = ioController.createTag(lParentTag, iChildElement.content, nil)
             # Add ourselves to the stack
-            rTagIDsDefinedInThisGroup << lTagID
-            rCurrentStack << [ iChildElement.name, lNewInsertedTag ]
+            rTagIDsDefinedInThisGroup << lNewTag.getUniqueID
+            rCurrentStack << [ iChildElement.name, lNewTag ]
             rHeaderJustDefined = true
           when *NO_INDENT_HTML_TAGS
             # Here, we stay at the same level of Tag, but the content to parse is considered as an XML sub-tag.
@@ -214,25 +206,12 @@ module PBS
               if (lCurrentTag.getUniqueID != [])
                 lNewTags[lCurrentTag] = nil
               end
-              # Content
-              lContent = lURL
-              # Metadata
-              lMetadata = {'title' => lTitle}
-              if (lIconBitmap != nil)
-                lMetadata['icon'] = lIconBitmap
-              end
-              # Compute its ID
-              lSCID = Shortcut.getUniqueID(lContent, lMetadata)
-              # Check if it exists already
-              lSC = ioController.findShortcut(lSCID, false)
-              if (lSC != nil)
-                # Already exists: just merge Tags
-                lNewTags.merge!(lSC.Tags)
-                ioController.modifyShortcut(lSC, lSC.Content, lSC.Metadata, lNewTags)
-              else
-                # A new one
-                ioController.addNewShortcut(Shortcut.new(ioController.TypesPlugins['URL'], lNewTags, lContent, lMetadata))
-              end
+              ioController.createShortcut(
+                'URL',
+                lURL,
+                {'title' => lTitle, 'icon' => lIconBitmap},
+                lNewTags
+              )
               # The last header is not just defined: a shortcut was defined before the next group
               rHeaderJustDefined = false
             end

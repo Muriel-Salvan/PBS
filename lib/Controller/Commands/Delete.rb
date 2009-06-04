@@ -17,7 +17,7 @@ module PBS
         iCommands[Wx::ID_DELETE] = {
           :title => 'Delete',
           :help => 'Delete selection',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
+          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Delete.png"),
           :method => :cmdDelete,
           :accelerator => [ Wx::MOD_NONE, Wx::K_DELETE ]
         }

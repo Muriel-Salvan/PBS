@@ -34,6 +34,15 @@ module PBS
       setAppTitle
     end
 
+    # Clipboard's selection has changed
+    def onClipboardContentChanged
+      if (@TCMainTree.isRootTagOnlySelected?)
+        refreshPaste(nil)
+      else
+        refreshPaste(@TCMainTree.getCurrentSelection)
+      end
+    end
+
     # Notify that we are exiting
     def onExit
       self.destroy
@@ -44,7 +53,8 @@ module PBS
       if (@TCMainTree.selectionChanged?)
         lSelection = @TCMainTree.getCurrentSelection
         lName = lSelection.getDescription
-        # Enable and change titles of Cut/Copy/Delete
+        # Group Cut/Copy/Delete:
+        # Enabled only if the selection is not empty
         [ [ Wx::ID_CUT, 'Cut' ],
           [ Wx::ID_COPY, 'Copy' ],
           [ Wx::ID_DELETE, 'Delete' ] ].each do |iCommandInfo|
@@ -65,7 +75,8 @@ module PBS
             end
           end
         end
-        # Enable and change title of Edit
+        # Group Edit:
+        # Enabled only if the selection contains a single Tag or a single Shortcut
         lEditEnabled = ((lSelection.singleTag?) or
                         (lSelection.singleShortcut?))
         @Controller.setMenuItemGUIEnabled(@EditMenu, Wx::ID_EDIT, lEditEnabled)
@@ -83,11 +94,65 @@ module PBS
             @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_EDIT, nil)
           end
         end
-        # Enable and change title of Paste
-        @Controller.setMenuItemGUIEnabled(@EditMenu, Wx::ID_PASTE, lSelection.singleTag?)
-        lButton = @ToolBar.find_by_id(Wx::ID_PASTE)
+        # Group New Tag/New Shortcut:
+        # Enabled only if the selection contains a single Tag or the Root Tag
+        lTagOpEnabled = ((@TCMainTree.isRootTagOnlySelected?) or
+                         (lSelection.singleTag?))
+        @Controller.setMenuItemGUIEnabled(@EditMenu, ID_NEW_TAG, lTagOpEnabled)
+        lButton = @ToolBar.find_by_id(ID_NEW_TAG)
         if (lButton != nil)
-          @Controller.setToolbarButtonGUIEnabled(lButton, Wx::ID_PASTE, lSelection.singleTag?)
+          @Controller.setToolbarButtonGUIEnabled(lButton, ID_NEW_TAG, lTagOpEnabled)
+        end
+        @Controller.TypesPlugins.each do |iTypeID, iType|
+          @Controller.setMenuItemGUIEnabled(@NewShortcutMenu, ID_NEW_SHORTCUT_BASE + iType.index, lTagOpEnabled)
+          lButton = @ToolBar.find_by_id(ID_NEW_SHORTCUT_BASE + iType.index)
+          if (lButton != nil)
+            @Controller.setToolbarButtonGUIEnabled(lButton, ID_NEW_SHORTCUT_BASE + iType.index, lTagOpEnabled)
+          end
+        end
+        # Group Paste:
+        if (@TCMainTree.isRootTagOnlySelected?)
+          refreshPaste(nil)
+        else
+          refreshPaste(lSelection)
+        end
+      end
+    end
+
+    # Refresh the Paste GUI items (enabling + title), based on the clipboard content and the current selection
+    #
+    # Parameters:
+    # * *iSelection* (_MultipleSelection_): The selection (nil for the Root Tag)
+    def refreshPaste(iSelection)
+      lPasteEnabled = false
+      lError = nil
+      if (@Controller.Clipboard_CopyMode != nil)
+        lLocalSelection = nil
+        if (@Controller.Clipboard_CopyID == @Controller.CopiedID)
+          lLocalSelection = @Controller.CopiedSelection
+        end
+        lPasteEnabled, lErrors = isPasteAuthorized?(
+          @Controller,
+          iSelection,
+          @Controller.Clipboard_CopyMode,
+          lLocalSelection,
+          @Controller.Clipboard_SerializedTags,
+          @Controller.Clipboard_SerializedShortcuts
+        )
+      end
+      @Controller.setMenuItemGUIEnabled(@EditMenu, Wx::ID_PASTE, lPasteEnabled)
+      if (lError != nil)
+        @Controller.setMenuItemGUITitle(@EditMenu, Wx::ID_PASTE, "Unable to paste: #{lErrors.join(' & ')}")
+      else
+        @Controller.setMenuItemGUITitle(@EditMenu, Wx::ID_PASTE, nil)
+      end
+      lButton = @ToolBar.find_by_id(Wx::ID_PASTE)
+      if (lButton != nil)
+        @Controller.setToolbarButtonGUIEnabled(lButton, Wx::ID_PASTE, lPasteEnabled)
+        if (lError != nil)
+          @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_PASTE, "Unable to paste: #{lErrors.join(' & ')}")
+        else
+          @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_PASTE, nil)
         end
       end
     end
@@ -113,15 +178,13 @@ module PBS
 
       # The close event
       evt_close do |iEvent|
-        cmdExit(
+        @Controller.cmdExit(
           :parentWindow => self
         )
       end
 
       # Create the main treeview
-      @TCMainTree = PBSTreeCtrl.new(@Controller, self,
-        :style => Wx::TR_HAS_BUTTONS|Wx::TR_MULTIPLE
-      )
+      @TCMainTree = PBSTreeCtrl.new(@Controller, self)
       # We register the tree controller itself, as it contains plenty of onXxxx methods.
       @Controller.registerGUI(@TCMainTree)
 
@@ -190,14 +253,20 @@ module PBS
         )
       end
       addMenuCommand(@EditMenu, Wx::ID_PASTE) do |iEvent, oValidator|
-        # Here, we are sure the selection is on 1 Tag only
-        lSelectedTag = @Controller.findTag(@TCMainTree.getCurrentSelection.SelectedPrimaryTags[0])
-        if (lSelectedTag == nil)
-          oValidator.setError("Normally a single Tag was selected: #{@TCMainTree.getCurrentSelection.getDescription}. However we are unable to retrieve it. Bug ?")
-        else
+        # Here, we are sure the selection is on 1 Tag only, or the root Tag
+        if (@TCMainTree.isRootTagOnlySelected?)
           oValidator.authorizeCmd(
-            :tag => lSelectedTag
+            :tag => @Controller.RootTag
           )
+        else
+          lSelectedTag = @Controller.findTag(@TCMainTree.getCurrentSelection.SelectedPrimaryTags[0])
+          if (lSelectedTag == nil)
+            oValidator.setError("Normally a single Tag was selected: #{@TCMainTree.getCurrentSelection.getDescription}. However we are unable to retrieve it. Bug ?")
+          else
+            oValidator.authorizeCmd(
+              :tag => lSelectedTag
+            )
+          end
         end
       end
       addMenuCommand(@EditMenu, Wx::ID_DELETE) do |iEvent, oValidator|
@@ -209,11 +278,6 @@ module PBS
       @EditMenu.append_separator
       addMenuCommand(@EditMenu, Wx::ID_FIND)
       @EditMenu.append_separator
-      lNewSCsMenu = Wx::Menu.new
-      @Controller.TypesPlugins.each do |iTypeID, iType|
-        addMenuCommand(lNewSCsMenu, ID_NEW_SHORTCUT_BASE + iType.index)
-      end
-      @EditMenu.append_sub_menu(lNewSCsMenu, 'New Shortcut')
       addMenuCommand(@EditMenu, Wx::ID_EDIT) do |iEvent, oValidator|
         # We are sure a single Tag or a single Shortcut are selected
         lSelection = @TCMainTree.getCurrentSelection
@@ -246,7 +310,48 @@ module PBS
         end
       end
       @EditMenu.append_separator
-      addMenuCommand(@EditMenu, ID_NEW_TAG)
+      addMenuCommand(@EditMenu, ID_NEW_TAG) do |iEvent, oValidator|
+        # Here, we are sure the selection is on 1 Tag only (maybe the root)
+        if (@TCMainTree.isRootTagOnlySelected?)
+          oValidator.authorizeCmd(
+            :tag => @Controller.RootTag,
+            :parentWindow => self
+          )
+        else
+          lSelectedTag = @Controller.findTag(@TCMainTree.getCurrentSelection.SelectedPrimaryTags[0])
+          if (lSelectedTag == nil)
+            oValidator.setError("Normally a single Tag was selected: #{@TCMainTree.getCurrentSelection.getDescription}. However we are unable to retrieve it. Bug ?")
+          else
+            oValidator.authorizeCmd(
+              :tag => lSelectedTag,
+              :parentWindow => self
+            )
+          end
+        end
+      end
+      @NewShortcutMenu = Wx::Menu.new
+      @Controller.TypesPlugins.each do |iTypeID, iType|
+        addMenuCommand(@NewShortcutMenu, ID_NEW_SHORTCUT_BASE + iType.index) do |iEvent, oValidator|
+          # Here, we are sure the selection is on 1 Tag only (maybe the root)
+          if (@TCMainTree.isRootTagOnlySelected?)
+            oValidator.authorizeCmd(
+              :tag => nil,
+              :parentWindow => self
+            )
+          else
+            lSelectedTag = @Controller.findTag(@TCMainTree.getCurrentSelection.SelectedPrimaryTags[0])
+            if (lSelectedTag == nil)
+              oValidator.setError("Normally a single Tag was selected: #{@TCMainTree.getCurrentSelection.getDescription}. However we are unable to retrieve it. Bug ?")
+            else
+              oValidator.authorizeCmd(
+                :tag => lSelectedTag,
+                :parentWindow => self
+              )
+            end
+          end
+        end
+      end
+      @EditMenu.append_sub_menu(@NewShortcutMenu, 'New Shortcut')
       # Setup menu
       lSetupMenu = Wx::Menu.new
       addMenuCommand(lSetupMenu, ID_TAGS_EDITOR)

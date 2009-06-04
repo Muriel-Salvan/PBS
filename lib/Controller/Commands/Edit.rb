@@ -4,6 +4,7 @@
 #++
 
 require 'Windows/EditShortcutDialog.rb'
+require 'Windows/EditTagDialog.rb'
 
 module PBS
 
@@ -19,7 +20,7 @@ module PBS
         iCommands[Wx::ID_EDIT] = {
           :title => 'Edit',
           :help => 'Edit the selection',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
+          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Edit.png"),
           :method => :cmdEdit,
           :accelerator => nil
         }
@@ -38,10 +39,29 @@ module PBS
         lObject = iParams[:object]
         case lObjectID
         when ID_TAG
-          # TODO
+          undoableOperation("Edit Tag #{lObject.Name}") do
+            # Now we edit lObject
+            lEditTagDialog = EditTagDialog.new(lWindow, lObject)
+            case lEditTagDialog.show_modal
+            when Wx::ID_OK
+              lNewName, lNewIcon = lEditTagDialog.getNewData
+              lModified = ((lObject.Name != lNewName) or
+                           (lObject.Icon != lNewIcon))
+              if (lModified)
+                # First check that we are not going over an already existing Tag
+                if ((lObject.Parent != nil) and
+                    (lObject.Parent.searchTag([lNewName]) != nil))
+                  puts "!!! Tag #{lObject.Parent.Name} has already a sub-Tag named #{lNewName}. Ignoring modifications."
+                else
+                  modifyTag(lObject, lNewName, lNewIcon)
+                  setCurrentFileModified
+                end
+              end
+            end
+          end
         when ID_SHORTCUT
           undoableOperation("Edit Shortcut #{lObject.Metadata['title']}") do
-            # Now we edit lSelectedSC
+            # Now we edit lObject
             lEditSCDialog = EditShortcutDialog.new(lWindow, lObject, @RootTag)
             case lEditSCDialog.show_modal
             when Wx::ID_OK

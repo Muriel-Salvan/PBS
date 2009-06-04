@@ -10,6 +10,7 @@ require 'tmpdir'
 # 1. give an external way (no more marshal_dump/marshal_load) to serialize a bitmap with load_file (the one we are doing here)
 # 2. don't use load_file to get the content back during marshal_load. Unfortunately Wx::Bitmap does not have any other method (or maybe using Wx::Image ?).
 # TODO (WxRuby): Implement Wx::Bitmap::marshal_dump and Wx::Bitmap::marshal_load
+# TODO (WxRuby): Implement Wx::Bitmap::<=> and Wx::Bitmap.eql? and remove current home-made implementation
 module Wx
 
   class Bitmap
@@ -54,6 +55,39 @@ module Wx
       end
     end
 
+    # Compares 2 different bitmaps
+    # It stores results in a cache to speed up comparisons
+    #
+    # Parameters:
+    # * *iOtherBitmap* (<em>Wx::Bitmap</em>): The other bitmap to compare
+    # Return:
+    # * _Integer_: The comparison (self - iOtherBitmap)
+    def <=>(iOtherBitmap)
+      if (!defined?(@CacheDataCompare))
+        # The cache: For each bitmap's object id, the comparison
+        # map< Integer, Integer >
+        @CacheDataCompare = {}
+      end
+      if (@CacheDataCompare[iOtherBitmap.object_id] == nil)
+        # Perform the comparison of the data
+        @CacheDataCompare[iOtherBitmap.object_id] = self.convert_to_image.data.<=>(iOtherBitmap.convert_to_image.data)
+      end
+
+      return @CacheDataCompare[iOtherBitmap.object_id]
+    end
+
+    # Is the given bitmap equal to ourselves ?
+    #
+    # Parameters:
+    # * *iOtherBitmap* (<em>Wx::Bitmap</em>): The other bitmap to compare
+    # Return:
+    # * _Boolean_: Is the given bitmap equal to ourselves ?
+    def ==(iOtherBitmap)
+      return ((self.object_id == iOtherBitmap.object_id) or
+              ((self.class == iOtherBitmap.class) and
+               (self.<=>(iOtherBitmap) == 0)))
+    end
+
   end
 
 end
@@ -92,6 +126,11 @@ module PBS
       #    String
       attr_reader :Name
 
+      # The serialized icon of the Tag (or nil if none)
+      # TODO (WxRuby): When Wx::Bitmap will have marshal_dump and marshal_load defined, replace the String with a Wx::Bitmap
+      #    String
+      attr_reader :Icon
+
       # The list of serialized sub-Tags
       #   list< Serialized >
       attr_reader :Children
@@ -104,10 +143,12 @@ module PBS
       #
       # Parameters:
       # * *iName* (_String_): The name
+      # * *iIcon* (_String_): The icon (or nil if none)
       # * *iChildren* (<em>list<Serialized></em>): The list of serialized sub-Tags
       # * *iShortcuts* (<em>list<Object></em>): The list of serialized Shortcuts
-      def initialize(iName, iChildren, iShortcuts)
+      def initialize(iName, iIcon, iChildren, iShortcuts)
         @Name = iName
+        @Icon = iIcon
         @Children = iChildren
         @Shortcuts = iShortcuts
       end
@@ -140,11 +181,17 @@ module PBS
       def createTag(iParentTag, iShortcutTypes, ioShortcutsList)
         rNewTag = nil
 
+        # Unserialize the icon
+        lIcon = nil
+        if (@Icon != nil)
+          lIcon = Wx::Bitmap.new
+          lIcon.setSerialized(@Icon)
+        end
         # Create the Tag for real
         if (iParentTag != nil)
-          rNewTag = iParentTag.createSubTag(@Name)
+          rNewTag = iParentTag.createSubTag(@Name, lIcon)
         else
-          rNewTag = Tag.new(@Name, nil)
+          rNewTag = Tag.new(@Name, lIcon, nil)
         end
         # Create its children
         @Children.each do |iChildSerializedData|
@@ -187,6 +234,10 @@ module PBS
     #   String
     attr_reader :Name
 
+    # Its icon (can be nil if none)
+    #   Wx::Bitmap
+    attr_reader :Icon
+
     # Its parent tag
     #   Tag
     attr_reader :Parent
@@ -195,9 +246,11 @@ module PBS
     #
     # Parameters:
     # * *iName* (_String_): The name
+    # * *iIcon* (<em>Wx::Bitmap</em>): The icon (can be nil if none)
     # * *iParent* (_Tag_): The parent Tag
-    def initialize(iName, iParent)
+    def initialize(iName, iIcon, iParent)
       @Name = iName
+      @Icon = iIcon
       @Parent = iParent
       @UniqueID = nil
       @Children = []
@@ -214,8 +267,11 @@ module PBS
     # Return:
     # * _Tag_: The clone
     def clone(iParentTag)
-      rTag = Tag.new(@Name.clone, iParentTag)
-
+      lIconClone = nil
+      if (@Icon != nil)
+        lIconClone = @Icon.clone
+      end
+      rTag = Tag.new(@Name.clone, lIconClone, iParentTag)
       @Children.each do |iChildTag|
         iChildTag.clone(rTag)
       end
@@ -292,7 +348,11 @@ module PBS
       @Children.each do |iChildTag|
         lSerializedChildren << iChildTag.getSerializedData
       end
-      return Serialized.new(@Name, lSerializedChildren, nil)
+      lSerializedIcon = nil
+      if (@Icon != nil)
+        lSerializedIcon = @Icon.getSerialized
+      end
+      return Serialized.new(@Name, lSerializedIcon, lSerializedChildren, nil)
     end
 
     # Get the list of sub-Tags and Shortcuts that belong recursively to us.
@@ -337,7 +397,11 @@ module PBS
           lSerializedSCs << iSC.getSerializedData(true)
         end
       end
-      return Serialized.new(@Name, lSerializedChildren, lSerializedSCs)
+      lSerializedIcon = nil
+      if (@Icon != nil)
+        lSerializedIcon = @Icon.getSerialized
+      end
+      return Serialized.new(@Name, lSerializedIcon, lSerializedChildren, lSerializedSCs)
     end
 
     # Create a new Tag as a sub-Tag.
@@ -345,9 +409,10 @@ module PBS
     #
     # Parameters:
     # * *iName* (_String_): Name of the sub-Tag
+    # * *iIcon* (<em>Wx::Bitmap</em>): Icon of the sub-Tag (can be nil if none)
     # Return:
     # * _Tag_: The newly created Tag, or nil if it already existed before
-    def createSubTag(iName)
+    def createSubTag(iName, iIcon)
       rTag = nil
 
       # First check that it does not exist already
@@ -359,7 +424,7 @@ module PBS
         end
       end
       if (!lFound)
-        rTag = Tag.new(iName, self)
+        rTag = Tag.new(iName, iIcon, self)
       else
         puts "!!! Tag #{iName}, child of #{getUniqueID.join('/')} was already created. Ignoring its new definition."
       end
@@ -427,6 +492,25 @@ module PBS
           false
         end
       end
+    end
+
+    # Set the name. This is used only for Undo purposes.
+    # !!! This method has to be called ONLY inside protected AtomicOperation classes
+    #
+    # Parameters:
+    # * *iNewName* (_String_): The new name
+    def setName_UNDO(iNewName)
+      @Name = iNewName
+      resetUniqueIDs
+    end
+
+    # Set the icon. This is used only for Undo purposes.
+    # !!! This method has to be called ONLY inside protected AtomicOperation classes
+    #
+    # Parameters:
+    # * *iNewIcon* (<em>Wx::Bitmap</em>): The new icon (can be nil)
+    def setIcon_UNDO(iNewIcon)
+      @Icon = iNewIcon
     end
 
   end
@@ -575,6 +659,13 @@ module PBS
       @Tags = iTags
       @Content = iContent
       @Metadata = iMetadata
+      # Initialize attributes of Metadata that are not set, as it will be useful to compare them.
+      # In short terms, we want to have { 'title' => 'ok' } == { 'title' => 'ok', 'icon' => nil }
+      [ 'title', 'icon' ].each do |iKey|
+        if (!@Metadata.has_key?(iKey))
+          @Metadata[iKey] = nil
+        end
+      end
       computeUniqueID
     end
 

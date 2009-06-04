@@ -10,6 +10,7 @@ module Wx
   class Bitmap
 
     # Clone method
+    # TODO (WxRuby): Delete when Wx::Bitmap.clone will exist
     #
     # Return:
     # * <em>Wx::Bitmap</em>: The clone
@@ -50,9 +51,12 @@ module PBS
     # Define default Tag and Shortcuts icons
     ICON_DEFAULT_TAG = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Tag.png")
     ICON_DEFAULT_SHORTCUT = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Shortcut.png")
+    ICON_ROOT_TAG = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MiniIcon.png")
 
     # The class defining the behaviour of the main tree for drop operations
     class SelectionDropTarget < Wx::DropTarget
+
+      include Tools
 
       # Constructor
       #
@@ -63,10 +67,16 @@ module PBS
         @Controller = iController
         @PBSTreeCtrl = iPBSTreeCtrl
         @Data = Tools::DataObjectSelection.new
+        # Cache of the last [ hovered Tags / Suggested results / Locally Dragged Selection flag ] => Given result, Errors list (nil if no error)
+        # We include the flag about the Locally Dragged Selection in the key of the cache, because the DropSource.give_feedback is called after the first call to DropTarget.on_drag_over: therefore @Controller.DragSelection is still nil when on_drag_over fills the cache for the first time.
+        # map< [ Tag, Integer, Boolean ], [ Integer, list< String > ] >
+        @Cache_LastHoveredTags = {}
+        # Cache of the last given result for the last hovered Tag and
         super(@Data)
       end
 
       # Called when the mouse is being dragged over the drop target. By default, this calls functions return the suggested return value def.
+      # Use a cache of the last hovered item (otherwise it would be far too much CPU consuming as on_drag_over is always repeatedly called even if the mous does not move).
       #
       # Parameters:
       # * *iMouseX* (_Integer_): The x coordinate of the mouse.
@@ -76,18 +86,45 @@ module PBS
       # * _Integer_: Returns the desired operation or Wx::DragNone. This is used for optical feedback from the side of the drop source, typically in form of changing the icon.
       def on_drag_over(iMouseX, iMouseY, iSuggestedResult)
         lHoveredTag = @PBSTreeCtrl.getHoveredTag(Wx::Point.new(iMouseX, iMouseY))
-        # In case of a move, we also want to ensure that the Tag is not part of the selected ones
-        if ((lHoveredTag != nil) and
-            (iSuggestedResult == Wx::DRAG_MOVE) and
-            (@Controller.DragSelection != nil) and
-            (@Controller.DragSelection.tagSelected?(lHoveredTag.getUniqueID)))
-          lHoveredTag = nil
-        end
-        # Answer correctly
-        if (lHoveredTag != nil)
-          return iSuggestedResult
-        else
+        if (lHoveredTag == nil)
           return Wx::DRAG_NONE
+        else
+          lCacheKey = [ lHoveredTag, iSuggestedResult, @Controller.DragSelection != nil ]
+          if (@Cache_LastHoveredTags[lCacheKey] == nil)
+            # Compute the result we want to give for lHoveredTag, iSuggestedResult
+            # Use a temporary MultipleSelection object
+            lSelection = nil
+            if (lHoveredTag != @Controller.RootTag)
+              # Create a MultipleSelection to call isPasteAuthorized?
+              lSelection = MultipleSelection.new(@Controller)
+              lSelection.selectTag(lHoveredTag)
+            end
+            lCopyMode = nil
+            case iSuggestedResult
+            when Wx::DRAG_MOVE
+              lCopyMode = Wx::ID_CUT
+            when Wx::DRAG_COPY
+              lCopyMode = Wx::ID_COPY
+            else
+              put "!!! Unknown suggested result: #{iSuggestedResult}"
+            end
+            lPasteOK, lErrors = isPasteAuthorized?(
+              @Controller,
+              lSelection,
+              lCopyMode,
+              @Controller.DragSelection,
+              nil,
+              nil
+            )
+            if (lPasteOK)
+              @Cache_LastHoveredTags[lCacheKey] = [ iSuggestedResult, nil ]
+            else
+              @Cache_LastHoveredTags[lCacheKey] = [ Wx::DRAG_NONE, lErrors ]
+            end
+          end
+          rResult, lErrors = @Cache_LastHoveredTags[lCacheKey]
+          # TODO: Use lErrors in the DragImage
+          return rResult
         end
       end
 
@@ -105,12 +142,46 @@ module PBS
         lCopyType, lCopyID, lSerializedTags, lSerializedShortcuts = @Data.getData
         # Get the selected Tag to paste into
         lSelectedTag = @PBSTreeCtrl.getHoveredTag(Wx::Point.new(iMouseX, iMouseY))
-        @Controller.undoableOperation("Paste #{Tools::MultipleSelection.getDescription(lSerializedTags, lSerializedShortcuts)} in #{lSelectedTag.Name}") do
-          @Controller.mergeSerializedTagsShortcuts(lSelectedTag, lSerializedTags, lSerializedShortcuts)
-          # Mark as modified
-          @Controller.setCurrentFileModified
+        # Check that we can effectively drop here.
+        # Problem is that we can't check it completely during on_drag_over, as it is impossible to get the data at that time.
+        # Use a temporary MultipleSelection object
+        lSelection = nil
+        if (lSelectedTag != @Controller.RootTag)
+          # Create a MultipleSelection to call isPasteAuthorized?
+          lSelection = MultipleSelection.new(@Controller)
+          lSelection.selectTag(lSelectedTag)
         end
-        return iSuggestedResult
+        lCopyMode = nil
+        case iSuggestedResult
+        when Wx::DRAG_MOVE
+          lCopyMode = Wx::ID_CUT
+        when Wx::DRAG_COPY
+          lCopyMode = Wx::ID_COPY
+        else
+          put "!!! Unknown suggested result: #{iSuggestedResult}"
+        end
+        lPasteOK, lErrors = isPasteAuthorized?(
+          @Controller,
+          lSelection,
+          lCopyMode,
+          @Controller.DragSelection,
+          lSerializedTags,
+          lSerializedShortcuts
+        )
+        if (lPasteOK)
+          @Controller.undoableOperation("Paste #{Tools::MultipleSelection.getDescription(lSerializedTags, lSerializedShortcuts)} in #{lSelectedTag.Name}") do
+            @Controller.mergeSerializedTagsShortcuts(lSelectedTag, lSerializedTags, lSerializedShortcuts)
+            # Mark as modified
+            @Controller.setCurrentFileModified
+          end
+          return iSuggestedResult
+        else
+          puts "!!! Can't drop because of #{lErrors.size} errors:"
+          lErrors.each do |iError|
+            puts "!!! #{iError}"
+          end
+          return Wx::DRAG_NONE
+        end
       end
 
       # Called when the user drops a data object on the target. Return false to veto the operation.
@@ -132,10 +203,15 @@ module PBS
     # Parameters:
     # * *iController* (_Controller_): The data model controller
     # * *iWindow* (<em>Wx::Window</em>): The parent window
-    # * *iParams* (<em>map<Symbol,Object></em>): Additional parameters (see Wx::TreeCtrl documentation)
-    def initialize(iController, iWindow, iParams)
-      super(iWindow, iParams)
+    def initialize(iController, iWindow)
+      # We can edit labels, we will forward modifications to either Tag.Name or Shortcut.Metadata['title']
+      # We have little + buttons to collapse/expand
+      # We have multiple selection
+      super(iWindow,
+        :style => Wx::TR_EDIT_LABELS|Wx::TR_HAS_BUTTONS|Wx::TR_MULTIPLE
+      )
 
+      # TODO (WxRuby): Bug correction
       # Register this Event as otherwise moving the mouse over the TreeCtrl component generates tons of warnings. Bug ?
       Wx::EvtHandler::EVENT_TYPE_CLASS_MAP[10000] = Wx::Event
 
@@ -207,11 +283,57 @@ module PBS
       end
       evt_tree_begin_rdrag(self) do |iEvent|
         # We begin dragging with right mouse
-        # TODO: Test with wxWidgets 2.9.0 (should be there May 2009)
+        # TODO: Implement it with wxWidgets 2.9.0 (should be there May 2009)
         iEvent.skip
       end
+      # The context menu
       evt_tree_item_menu(self) do |iEvent|
         popup_menu(@ContextMenu)
+      end
+      # Editing a label of a Tag or Shortcut
+      evt_tree_begin_label_edit(self) do |iEvent|
+        # We can't edit the Root
+        if (iEvent.item == @RootID)
+          iEvent.veto
+        else
+          iEvent.skip
+        end
+      end
+      evt_tree_end_label_edit(self) do |iEvent|
+        # First, retrieve who we are editing (we are sure it can't be the root)
+        lID, lObjectID = get_item_data(iEvent.item)
+        lNewName = iEvent.label
+        if (lNewName.strip != '')
+          case lID
+          when ID_TAG
+            lTag = @Controller.findTag(lObjectID)
+            if (lNewName != lTag.Name)
+              # We first check that an existing Tag does not already get the name
+              if ((lTag.Parent != nil) and
+                  (lTag.Parent.searchTag([lNewName]) != nil))
+                puts "!!! Tag #{lTag.Parent.Name} has already a sub-Tag named #{lNewName}. Ignoring modifications."
+                iEvent.veto
+              else
+                @Controller.undoableOperation("Edit Tag's name #{lTag.Name}") do
+                  @Controller.modifyTag(lTag, lNewName, lTag.Icon)
+                  @Controller.setCurrentFileModified
+                end
+              end
+            end
+          when ID_SHORTCUT
+            lSC = @Controller.findShortcut(lObjectID)
+            if (lNewName != lSC.Metadata['title'])
+              @Controller.undoableOperation("Edit Shortcut's name #{lSC.Metadata['title']}") do
+                lNewMetadata = lSC.Metadata.clone
+                lNewMetadata['title'] = lNewName
+                @Controller.modifyShortcut(lSC, lSC.Content, lNewMetadata, lSC.Tags)
+                @Controller.setCurrentFileModified
+              end
+            end
+          else
+            puts "!!! We are editing an item of unknown ID: #{lID}. Bug ?"
+          end
+        end
       end
     end
 
@@ -244,33 +366,6 @@ module PBS
       lScreenMainTreePos = client_to_screen(Wx::Point.new(0,0))
       @DragImage.begin_drag(Wx::Point.new( lSelectionBitmap.width/2 + lScreenMainTreePos.x, lSelectionBitmap.height/2 + lScreenMainTreePos.y), self, true)
       @DragImage.show
-    end
-
-    # Merge a bitmap on a DeviceContext.
-    # It resizes the image to merge to the DC dimensions.
-    # It makes a logical or between the 2 masks.
-    #
-    # Parameters:
-    # * *ioDC* (<em>Wx::DC</em>): The device context on which it is merged
-    # * *ioMaskDC* (<em>Wx::DC</em>): The device context on which the mask is merged
-    # * *iBitmap* (<em>Wx::Bitmap</em>): The bitmap to merge
-    def mergeBitmapOnDC(ioDC, ioMaskDC, iBitmap)
-      lBitmapToMerge = iBitmap
-      if ((iBitmap.width != ioDC.size.width) or
-          (iBitmap.height != ioDC.size.height))
-        # First we resize the bitmap
-        lBitmapToMerge = Wx::Bitmap.from_image(iBitmap.convert_to_image.scale(ioDC.size.width, ioDC.size.height))
-      end
-      # Then we draw on the bitmap itself
-      lBitmapToMerge.draw do |iMergeDC|
-        ioDC.blit(0, 0, iBitmap.width, iBitmap.height, iMergeDC, 0, 0, Wx::COPY, false)
-      end
-      # And then we draw the mask, once converted to monochrome (painting a coloured bitmap containing Alpha channel to a monochrome DC gives strange results. Bug ?)
-      lMonoImageToMerge = lBitmapToMerge.convert_to_image
-      lMonoImageToMerge = lMonoImageToMerge.convert_to_mono(lMonoImageToMerge.mask_red, lMonoImageToMerge.mask_green, lMonoImageToMerge.mask_blue)
-      Wx::Bitmap.from_image(lMonoImageToMerge).draw do |iMergeDC|
-        ioMaskDC.blit(0, 0, iBitmap.width, iBitmap.height, iMergeDC, 0, 0, Wx::OR_INVERT, true)
-      end
     end
 
     # Apply bitmap layers based on flags on a given bitmap
@@ -381,17 +476,32 @@ module PBS
             end
           end
           # Now compute the image ID
-          # TODO: When Tags will have associated icons, give a different ID per Tag having an icon
-          # This is the ID for Tags having no icon.
-          lImageID = [ @Controller.RootTag.getUniqueID, lFlags ]
+          lImageID = nil
+          if (lTag.Icon != nil)
+            # This image is unique to this Shortcut
+            lImageID = [ lObjectID, lFlags ]
+          else
+            # This is the ID for Tags having no icon.
+            lImageID = [ nil, lFlags ]
+          end
           # Now compute the image based on lFlags and the object ID
           lIdxImage = @ImageListManager.getTreeImageIndex(lImageID) do
             if (lFlags == 0)
               # Just return the original icon, without modifications
-              next ICON_DEFAULT_TAG
+              # Just return the original icon, without modifications
+              if (lTag.Icon != nil)
+                next lTag.Icon
+              else
+                next ICON_DEFAULT_TAG
+              end
             else
               # We will apply some layers, so clone the original bitmap
-              rBitmap = ICON_DEFAULT_TAG.clone
+              rBitmap = nil
+              if (lTag.Icon != nil)
+                rBitmap = lTag.Icon.clone
+              else
+                rBitmap = ICON_DEFAULT_TAG.clone
+              end
               applyBitmapLayers(rBitmap, lFlags)
               next rBitmap
             end
@@ -619,9 +729,15 @@ module PBS
         # Update it
         # Erase everything
         delete_all_items
+        
         # Create root
-        @RootID = add_root('     ')
+        @RootID = add_root('PBS')
         set_item_data(@RootID, [ ID_TAG, @Controller.RootTag.getUniqueID ] )
+        lIdxImage = @ImageListManager.getTreeImageIndex([ @Controller.RootTag.getUniqueID, 0 ]) do
+          next ICON_ROOT_TAG
+        end
+        set_item_image(@RootID, lIdxImage)
+
         # Keep a correspondance of each Tag and its corresponding Tree ID
         # map< Tag, Integer >
         @TagsToMainTree = { @Controller.RootTag.getUniqueID => @RootID }
@@ -640,22 +756,6 @@ module PBS
         expand(@RootID)
         if ($PBS_DevDebug)
           expand_all
-        end
-      end
-    end
-
-    # Notify the GUI that an update has occured on a Tag
-    #
-    # Parameters:
-    # * *iTag* (_Tag_): The Tag that was modified
-    def onTagContentUpdate(iTag)
-      # We update the tree accordingly
-      updateTree do
-        lTagID = @TagsToMainTree[iTag.getUniqueID]
-        if (lTagID == nil)
-          puts '!!! The updated Tag was not inserted in the main tree. Bug ?'
-        else
-          updateTreeNode(lTagID)
         end
       end
     end
@@ -737,6 +837,53 @@ module PBS
               deleteObjectFromTree(lTagNodeID, iSC)
             end
           end
+        end
+      end
+    end
+
+    # An update has occured on a Tag's data
+    #
+    # Parameters:
+    # * *iTag* (_Tag_): The Tag whose data was invalidated
+    # * *iOldTagID* (<em>list<String></em>): The Tag ID before data modification
+    # * *iOldName* (_String_): The previous name
+    # * *iOldIcon* (<em>Wx::Bitmap</em>): The previous icon (can be nil)
+    def onTagDataUpdate(iTag, iOldTagID, iOldName, iOldIcon)
+      # We update the tree accordingly
+      updateTree do
+        # Retrieve the existing node
+        lTagNodeID = @TagsToMainTree[iOldTagID]
+        if (lTagNodeID == nil)
+          puts "!!! Normally the tree should have registered Tag #{iOldTagID.join('/')}, but unable to retrieve it."
+        else
+          if (iOldName != iTag.Name)
+            # Change its registration, as well as its children' registration as its ID has changed
+            lIDSize = iOldTagID.size
+            # The list of Tag IDs to delete
+            # list< list< String > >
+            lTagIDsToDelete = []
+            # The map of Tag IDs to add
+            # map< list< String >, Integer >
+            lTagIDsToAdd = {}
+            @TagsToMainTree.each do |iTagID, iNodeID|
+              if (iTagID[0..lIDSize-1] == iOldTagID)
+                lTagIDsToDelete << iTagID
+                lNewTagID = iTagID.clone
+                lNewTagID[lIDSize-1] = iTag.Name
+                lTagIDsToAdd[lNewTagID] = iNodeID
+                # Set its new ID in the tree
+                set_item_data(iNodeID, [ ID_TAG, lNewTagID ])
+              end
+            end
+            # Delete obsolete references
+            lTagIDsToDelete.each do |iTagID|
+              @TagsToMainTree.delete(iTagID)
+            end
+            # Add new references
+            @TagsToMainTree.merge!(lTagIDsToAdd)
+          end
+          # Refresh it
+          updateTreeNode(lTagNodeID)
         end
       end
     end
@@ -950,6 +1097,17 @@ module PBS
       end
 
       return rResult
+    end
+
+    # Is the Root Tag selected alone ?
+    #
+    # Return:
+    # * _Boolean_: Is the Root Tag selected alone ?
+    def isRootTagOnlySelected?
+      lSelections = selections
+      
+      return ((lSelections.size == 1) and
+              (lSelections[0] == @RootID))
     end
 
     # Get the currently selected object and its ID from the tree

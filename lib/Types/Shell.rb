@@ -57,6 +57,15 @@ module PBS
         return 'Graphics/Run.png'
       end
 
+      # Create an empty content.
+      # This is used for putting default values in the NewShortcut dialog.
+      #
+      # Return:
+      # * _Object_: The default content
+      def createEmptyContent
+        return 'echo "Hello World"'
+      end
+
     end
 
   end

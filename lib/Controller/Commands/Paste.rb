@@ -16,7 +16,7 @@ module PBS
       def registerCmdPaste(iCommands)
         iCommands[Wx::ID_PASTE] = {
           :title => 'Paste',
-          :help => 'Past clipboard\'s content',
+          :help => 'Paste clipboard\'s content',
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Paste.png"),
           :method => :cmdPaste,
           :accelerator => [ Wx::MOD_CMD, 'v'[0] ]
@@ -27,32 +27,22 @@ module PBS
       #
       # Parameters:
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *tag* (_Tag_): Tag in which we paste the clipboard's content
+      # ** *tag* (_Tag_): Tag in which we paste the clipboard's content (can be the Root tag)
       def cmdPaste(iParams)
         lSelectedTag = iParams[:tag]
-        # Test what is inside the clipboard
-        Wx::Clipboard.open do |iClipboard|
-          if (iClipboard.supported?(Tools::DataObjectSelection.getDataFormat))
-            # OK, this is data we understand. Get it.
-            lClipboardData = Tools::DataObjectSelection.new
-            iClipboard.get_data(lClipboardData)
-            lCopyType, lCopyID, lSerializedTags, lSerializedShortcuts = lClipboardData.getData
-            undoableOperation("Paste #{Tools::MultipleSelection.getDescription(lSerializedTags, lSerializedShortcuts)} in #{lSelectedTag.Name}") do
-              mergeSerializedTagsShortcuts(lSelectedTag, lSerializedTags, lSerializedShortcuts)
-              # Mark as modified
-              setCurrentFileModified
-            end
-            # In case of Cut, we notify the sender back.
-            if (lCopyType == Wx::ID_CUT)
-              # Replace data in the clipboard with an acknowledgement
-              lClipboardData = Tools::DataObjectSelection.new
-              lClipboardData.setData(Wx::ID_DELETE, lCopyID, nil, nil)
-              Wx::Clipboard.open do |ioClipboard|
-                ioClipboard.data = lClipboardData
-              end
-            end
-          else
-            puts '!!! Clipboard does not contain data readable for PBS.'
+        # We are sure that we can paste, everything is already in the @Clipboard_* variables.
+        undoableOperation("Paste #{Tools::MultipleSelection.getDescription(@Clipboard_SerializedTags, @Clipboard_SerializedShortcuts)} in #{lSelectedTag.Name}") do
+          mergeSerializedTagsShortcuts(lSelectedTag, @Clipboard_SerializedTags, @Clipboard_SerializedShortcuts)
+          # Mark as modified
+          setCurrentFileModified
+        end
+        # In case of Cut, we notify the sender back.
+        if (@Clipboard_CopyMode == Wx::ID_CUT)
+          # Replace data in the clipboard with an acknowledgement
+          lClipboardData = Tools::DataObjectSelection.new
+          lClipboardData.setData(Wx::ID_DELETE, @Clipboard_CopyID, nil, nil)
+          Wx::Clipboard.open do |ioClipboard|
+            ioClipboard.data = lClipboardData
           end
         end
       end

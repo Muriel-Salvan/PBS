@@ -318,6 +318,67 @@ module PBS
 
     end
 
+    # Class that modifies a Tag
+    class UAO_ModifyTag < UndoableAtomicOperation
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iController* (_Controller_): The model controller
+      # * *iTag* (_Tag_): The Tag being modified
+      # * *iNewName* (_String_): The new name
+      # * *iNewIcon* (<em>Wx::Bitmap</em>): The new icon (can be nil)
+      def initialize(iController, iTag, iNewName, iNewIcon)
+        super(iController)
+
+        @OldTagID = iTag.getUniqueID
+        @NewTagID = iTag.Parent.getUniqueID + [iNewName]
+        @OldName = iTag.Name.clone
+        @NewName = iNewName.clone
+        @OldIcon = nil
+        if (iTag.Icon != nil)
+          @OldIcon = iTag.Icon.clone
+        end
+        @NewIcon = nil
+        if (iNewIcon != nil)
+          @NewIcon = iNewIcon.clone
+        end
+      end
+
+      # Perform the operation
+      def doOperation
+        # Retrieve the Tag
+        lTag = @Controller.findTag(@OldTagID)
+        puts "UAO_ModifyTag #{lTag.Name}"
+        if (lTag != nil)
+          lTag.setName_UNDO(@NewName.clone)
+          lNewIcon = nil
+          if (@NewIcon != nil)
+            lNewIcon = @NewIcon.clone
+          end
+          lTag.setIcon_UNDO(lNewIcon)
+          @Controller.notifyTagDataUpdate(lTag, @OldTagID, @OldName, @OldIcon)
+        end
+      end
+
+      # Undo the operation
+      def undoOperation
+        # Retrieve the Shortcut
+        lTag = @Controller.findTag(@NewTagID)
+        puts "UNDO - UAO_ModifyTag #{lTag.Name}"
+        if (lTag != nil)
+          lTag.setName_UNDO(@OldName.clone)
+          lOldIcon = nil
+          if (@OldIcon != nil)
+            lOldIcon = @OldIcon.clone
+          end
+          lTag.setIcon_UNDO(lOldIcon)
+          @Controller.notifyTagDataUpdate(lTag, @NewTagID, @NewName, @NewIcon)
+        end
+      end
+
+    end
+
     # Class that changes the name of the opened file
     class UAO_ChangeFile < UndoableAtomicOperation
 

@@ -8,90 +8,127 @@ module PBS
   # This module defines every method used by the Undoable Atomic Operations to broadcast notifications of data model changes.
   module Notifiers
 
+    # Called when the clipboard's content has changed.
+    # This method will the use the @Clipboard_* variables to adapt the Paste command aspect and the local Cut/Copy variables eventually.
+    def notifyClipboardContentChanged
+      updateCommand(Wx::ID_PASTE) do |ioCommand|
+        if (@Clipboard_CopyMode == nil)
+          # The clipboard has nothing interesting for us
+          # Deactivate the Paste command
+          ioCommand[:enabled] = false
+          ioCommand[:title] = 'Paste'
+          # Cancel eventual Copy/Cut pending commands
+          notifyCancelCopy
+          # Notify everybody
+          notifyRegisteredGUIs(:onClipboardContentChanged)
+        elsif (@Clipboard_CopyMode == Wx::ID_DELETE)
+          # Check that this message is adressed to us for real (if many instances of PBS are running, it is possible that some other instance was cutting things)
+          if (@CopiedID == @Clipboard_CopyID)
+            # Here we have to take some action:
+            # Delete the objects marked as being 'Cut', as we got the acknowledge of pasting it somewhere.
+            if (@CopiedMode == Wx::ID_CUT)
+              if (!@Clipboard_AlreadyProcessingDelete)
+                # Ensure that the loop will not come here again for this item.
+                @Clipboard_AlreadyProcessingDelete = true
+                cmdDelete({
+                    :parentWindow => nil,
+                    :selection => @CopiedSelection,
+                    :deleteTaggedShortcuts => false,
+                    :deleteOrphanShortcuts => false
+                  })
+                # Then empty the clipboard.
+                Wx::Clipboard.open do |ioClipboard|
+                  ioClipboard.clear
+                end
+                # Cancel the Cut pending commands.
+                notifyCutPerformed
+                notifyRegisteredGUIs(:onClipboardContentChanged)
+                @Clipboard_AlreadyProcessingDelete = false
+              end
+            else
+              puts '!!! We have been notified of a clipboard Cut acknowledgement, but no item was marked as to be Cut. Bug ?'
+            end
+          end
+          # Deactivate the Paste command
+          ioCommand[:enabled] = false
+          ioCommand[:title] = 'Paste'
+        else
+          lCopyName = nil
+          case @Clipboard_CopyMode
+          when Wx::ID_CUT
+            lCopyName = 'Move'
+          when Wx::ID_COPY
+            lCopyName = 'Copy'
+          else
+            puts "!!! Unsupported copy type from the clipboard: #{@Clipboard_CopyMode}. Bug ?"
+          end
+          if (@Clipboard_CopyID != @CopiedID)
+            # Here, we have another application of PBS that has put data in the clipboard. It is not us anymore.
+            notifyCancelCopy
+          end
+          lName = Tools::MultipleSelection.getDescription(@Clipboard_SerializedTags, @Clipboard_SerializedShortcuts)
+          if (lCopyName != nil)
+            # Activate the Paste command with a cool title
+            ioCommand[:enabled] = true
+            ioCommand[:title] = "Paste #{lName} (#{lCopyName})"
+          else
+            # Deactivate the Paste command, and explain why
+            ioCommand[:enabled] = false
+            ioCommand[:title] = "Paste (invalid type #{@Clipboard_CopyMode}) - Bug ?"
+          end
+          notifyRegisteredGUIs(:onClipboardContentChanged)
+        end
+      end
+    end
+
     # Notify the GUI that we are initializing the GUI.
     # This step performs just after having created and registered all windows.
     def notifyInit
       # Initialize appearance of many components
       notifyUndoUpdate
       notifyRedoUpdate
+      notifyClipboardContentChanged
       @Commands.each do |iCommandID, iCommandParams|
         updateImpactedAppearance(iCommandID)
       end
+      # Notify everybody that we are initializing
       notifyRegisteredGUIs(:onInit)
       # Create the Timer monitoring the clipboard
-      lAlreadyProcessingDelete = false
+      # This Timer populates the following variables with the clipboard content in real-time:
+      # * @Clipboard_CopyMode
+      # * @Clipboard_CopyID
+      # * @Clipboard_SerializedTags
+      # * @Clipboard_SerializedShortcuts
+      # Note that we are already in the process of a delete event from the clipboard.
+      @Clipboard_AlreadyProcessingDelete = false
       Wx::Timer.every(500) do
         # Check if the clipboard has some data we can paste
         Wx::Clipboard.open do |iClipboard|
-          updateCommand(Wx::ID_PASTE) do |ioCommand|
-            if (iClipboard.supported?(Tools::DataObjectSelection.getDataFormat))
-              # OK, this is data we understand.
-              # Get some details to display what we can paste
-              lClipboardData = Tools::DataObjectSelection.new
-              iClipboard.get_data(lClipboardData)
-              lCopyType, lCopyID, lSerializedTags, lSerializedShortcuts = lClipboardData.getData
-              if (lCopyType == Wx::ID_DELETE)
-                # Check that this message is adressed to us for real (if many instances of PBS are running, it is possible that some other instance was cutting things)
-                if (@CopiedID == lCopyID)
-                  # Here we have to take some action:
-                  # Delete the objects marked as being 'Cut', as we got the acknowledge of pasting it somewhere.
-                  if (@CopiedMode == Wx::ID_CUT)
-                    if (!lAlreadyProcessingDelete)
-                      # Ensure that the loop will not come here again for this item.
-                      lAlreadyProcessingDelete = true
-                      cmdDelete({
-                          :parentWindow => nil,
-                          :selection => @CopiedSelection,
-                          :deleteTaggedShortcuts => false,
-                          :deleteOrphanShortcuts => false
-                        })
-                      # Then empty the clipboard.
-                      Wx::Clipboard.open do |ioClipboard|
-                        ioClipboard.clear
-                      end
-                      # Cancel the Cut pending commands.
-                      notifyCutPerformed
-                      lAlreadyProcessingDelete = false
-                    end
-                  else
-                    puts '!!! We have been notified of a clipboard Cut acknowledgement, but no item was marked as to be Cut. Bug ?'
-                  end
-                end
-                # Deactivate the Paste command
-                ioCommand[:enabled] = false
-                ioCommand[:title] = 'Paste'
-              else
-                lCopyName = nil
-                case lCopyType
-                when Wx::ID_CUT
-                  lCopyName = 'Move'
-                when Wx::ID_COPY
-                  lCopyName = 'Copy'
-                else
-                  puts "!!! Unsupported copy type: #{lCopyType}. Bug ?"
-                end
-                if (lCopyID != @CopiedID)
-                  # Here, we have another application of PBS that has put data in the clipboard. It is not us anymore.
-                  notifyCancelCopy
-                end
-                lName = Tools::MultipleSelection.getDescription(lSerializedTags, lSerializedShortcuts)
-                if (lCopyName != nil)
-                  # Activate the Paste command with a cool title
-                  ioCommand[:enabled] = true
-                  ioCommand[:title] = "Paste #{lName} (#{lCopyName})"
-                else
-                  # Deactivate the Paste command, and explain why
-                  ioCommand[:enabled] = false
-                  ioCommand[:title] = "Paste (invalid type #{lCopyType}) - Bug ?"
-                end
-              end
-            else
-              # Deactivate the Paste command
-              ioCommand[:enabled] = false
-              ioCommand[:title] = 'Paste'
-              # Cancel eventual Copy/Cut pending commands
-              notifyCancelCopy
+          if (iClipboard.supported?(Tools::DataObjectSelection.getDataFormat))
+            # OK, this is data we understand.
+            # Get some details to display what we can paste
+            lClipboardData = Tools::DataObjectSelection.new
+            iClipboard.get_data(lClipboardData)
+            lCopyMode, lCopyID, lSerializedTags, lSerializedShortcuts = lClipboardData.getData
+            # Do not change the state if the content has not changed
+            if ((lCopyMode != @Clipboard_CopyMode) or
+                (lCopyID != @Clipboard_CopyID))
+              # Clipboard's content has changed.
+              @Clipboard_CopyMode = lCopyMode
+              @Clipboard_CopyID = lCopyID
+              @Clipboard_SerializedTags = lSerializedTags
+              @Clipboard_SerializedShortcuts = lSerializedShortcuts
+              notifyClipboardContentChanged
+            # Else, nothing to do, clipboard's state has not changed.
             end
+          elsif (@Clipboard_CopyMode != nil)
+            # Clipboard has nothing interesting anymore.
+            @Clipboard_CopyMode = nil
+            @Clipboard_CopyID = nil
+            @Clipboard_SerializedTags = nil
+            @Clipboard_SerializedShortcuts = nil
+            notifyClipboardContentChanged
+          # Else, nothing to do, clipboard's state has not changed.
           end
         end
       end
@@ -103,11 +140,6 @@ module PBS
     end
 
     # Notify the GUI that data on the current opened file has been modified
-    def notifyCurrentOpenedFileUpdate
-      notifyRegisteredGUIs(:onCurrentOpenedFileUpdate)
-    end
-
-    # Notify the GUI that we exit
     def notifyCurrentOpenedFileUpdate
       notifyRegisteredGUIs(:onCurrentOpenedFileUpdate)
     end
@@ -147,6 +179,17 @@ module PBS
     # * *iOldChildrenList* (<em>list<Tag></em>): The old children list
     def notifyTagChildrenUpdate(iParentTag, iOldChildrenList)
       notifyRegisteredGUIs(:onTagChildrenUpdate, iParentTag, iOldChildrenList)
+    end
+
+    # Mark a Tag whose data has been invalidated
+    #
+    # Parameters:
+    # * *iTag* (_Tag_): The Tag whose data was invalidated
+    # * *iOldTagID* (<em>list<String></em>): The Tag ID before data modification
+    # * *iOldName* (_String_): The previous name
+    # * *iOldIcon* (<em>Wx::Bitmap</em>): The previous icon (can be nil)
+    def notifyTagDataUpdate(iTag, iOldTagID, iOldName, iOldIcon)
+      notifyRegisteredGUIs(:onTagDataUpdate, iTag, iOldTagID, iOldName, iOldIcon)
     end
 
     # Mark a Shortcut whose data (content or metadata) has been invalidated

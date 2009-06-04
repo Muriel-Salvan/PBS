@@ -12,13 +12,14 @@ module PBS
 
     include Tools
 
-    # Set the BitmapButton icon
-    #
-    # Parameters:
-    # * *iIcon* (<em>Wx::Bitmap</em>): The icon
-    def setBBIcon(iIcon)
-      @BBIcon.bitmap_label = iIcon
-      @BBIcon.size = [ iIcon.width + 4, iIcon.height + 4 ]
+    # Set the BitmapButton icon, based on @Icon and @Type
+    def setBBIcon
+      lIconBitmap = @Icon
+      if (lIconBitmap == nil)
+        lIconBitmap = @Type.getIcon
+      end
+      @BBIcon.bitmap_label = lIconBitmap
+      @BBIcon.size = [ lIconBitmap.width + 4, lIconBitmap.height + 4 ]
     end
     
     # Create the metadata panel
@@ -34,18 +35,17 @@ module PBS
       @TCTitle = Wx::TextCtrl.new(@MetadataPanel, :value => iSC.Metadata['title'])
       @TCTitle.min_size = [300, @TCTitle.min_size.height]
       lSTIcon = Wx::StaticText.new(@MetadataPanel, -1, 'Icon')
-      if (iSC.Metadata['icon'] != nil)
-        lIconBitmap = iSC.Metadata['icon']
-      else
-        lIconBitmap = iSC.Type.getIcon
-      end
-      @BBIcon = Wx::BitmapButton.new(@MetadataPanel, -1, lIconBitmap)
+      @BBIcon = Wx::BitmapButton.new(@MetadataPanel, -1, Wx::Bitmap.new)
       evt_button(@BBIcon) do |iEvent|
         # display the icon chooser dialog
         lIconDialog = ChooseIconDialog.new(self, @BBIcon.bitmap_label)
         case lIconDialog.show_modal
         when Wx::ID_OK
-          setBBIcon(lIconDialog.getSelectedBitmap)
+          lNewIcon = lIconDialog.getSelectedBitmap
+          if (lNewIcon != nil)
+            @Icon = lNewIcon
+            setBBIcon
+          end
         end
       end
 
@@ -64,7 +64,7 @@ module PBS
       lMainSizer.add_item([0,0], :proportion => 1)
 
       # Fit correctly depending on icon's size
-      setBBIcon(lIconBitmap)
+      setBBIcon
       
     end
 
@@ -76,7 +76,7 @@ module PBS
       rMetadata = {}
 
       rMetadata['title'] = @TCTitle.value
-      rMetadata['icon'] = @BBIcon.bitmap_label
+      rMetadata['icon'] = @Icon
 
       return rMetadata
     end
@@ -187,6 +187,10 @@ module PBS
         :title => "Edit Shortcut (#{@Type.pluginName})",
         :style => Wx::DEFAULT_DIALOG_STYLE|Wx::RESIZE_BORDER|Wx::MAXIMIZE_BOX
       )
+
+      # This attribute will be changed only if the icon is changed.
+      # It is used instead of the Wx::BitmapButton::bitmap_label because it can be nil, and in this case we don't want to replace it with the default icon internally.
+      @Icon = iSC.Metadata['icon']
 
       # First create all the panels that will fit in this dialog
       @ContentPanel = iSC.Type.createEditPanel(self, iSC)

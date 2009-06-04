@@ -217,12 +217,18 @@ module PBS
       return rResult
     end
 
-    # Get the selected icon
+    # Get the selected icon.
+    # If it is the same as the previously set one, it returns nil
     #
     # Return:
     # * <em>Wx::Bitmap</em>: The bitmap
     def getSelectedBitmap
-      return getBitmapAtPos(@GIcons.grid_cursor_row, @GIcons.grid_cursor_col)
+      if ((@GIcons.grid_cursor_row == 0) and
+          (@GIcons.grid_cursor_col == 0))
+        return nil
+      else
+        return getBitmapAtPos(@GIcons.grid_cursor_row, @GIcons.grid_cursor_col)
+      end
     end
 
     # Get the bitmap at a given Row/Col position

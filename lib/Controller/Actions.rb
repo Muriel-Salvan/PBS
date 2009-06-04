@@ -35,7 +35,7 @@ module PBS
       puts "= ... #{iOperationTitle}"
     end
 
-    # Modify the shortcut based on new data.
+    # Modify the Shortcut based on new data.
     # Only this method should be used by commands to update a Shortcut's info.
     #
     # Parameters:
@@ -49,6 +49,22 @@ module PBS
             (ioSC.Metadata != iNewMetadata) or
             (ioSC.Tags != iNewTags))
           atomicOperation(Controller::UAO_ModifySC.new(self, ioSC, iNewContent, iNewMetadata, iNewTags))
+        end
+      end
+    end
+
+    # Modify the Tag based on new data.
+    # Only this method should be used by commands to update a Tag's info.
+    #
+    # Parameters:
+    # * *ioTag* (_Tag_): The Tag to modify
+    # * *iNewName* (_String_): The new name
+    # * *iNewIcon* (<em>Wx::Bitmap</em>): The new icon (can be nil)
+    def modifyTag(ioTag, iNewName, iNewIcon)
+      ensureUndoableOperation("Modify Tag #{ioTag.Name}") do
+        if ((ioTag.Name != iNewName) or
+            (ioTag.Icon != iNewIcon))
+          atomicOperation(Controller::UAO_ModifyTag.new(self, ioTag, iNewName, iNewIcon))
         end
       end
     end
@@ -127,33 +143,6 @@ module PBS
       end
     end
 
-    # Create a whole Tags' branch, ensuring that a given Tag ID exists.
-    #
-    # Parameters:
-    # * *iTagID* (<em>list<String></em>): The Tag unique ID
-    def createTagsBranch(iTagID)
-      ensureUndoableOperation("Force Tag #{iTagID[-1]}") do
-        lLastExistingTag = @RootTag
-        iTagID.each do |iTagName|
-          # Check that last existing tag has iTagName as a child
-          lTag = nil
-          lLastExistingTag.Children.each do |iChildTag|
-            if (iChildTag.Name == iTagName)
-              # Found it
-              lTag = iChildTag
-              break
-            end
-          end
-          if (lTag == nil)
-            # Create it as a child of lLastExistingTag
-            lTag = Tag.new(iTagName, nil)
-            addNewTag(lLastExistingTag, lTag)
-          end
-          lLastExistingTag = lTag
-        end
-      end
-    end
-
     # Merge a Tag with a another one
     #
     # Parameters:
@@ -179,6 +168,51 @@ module PBS
             mergeTags(lInitialChildTag, iChildTag)
           end
         end
+      end
+    end
+
+    # Create a Tag if it does not exist already, and return it.
+    # This method is protected for Undo/Redo management.
+    #
+    # Parameters:
+    # * *iParentTag* (_Tag_): The parent Tag
+    # * *iTagName* (_String_): The new Tag name
+    # * *iIcon* (<em>Wx::Bitmap</em>): The icon (can be nil)
+    # Return:
+    # * _Tag_: The created Tag.
+    def createTag(iParentTag, iTagName, iIcon)
+      lTagID = iParentTag.getUniqueID + [iTagName]
+      rTag = findTag(lTagID)
+      if (rTag == nil)
+        addNewTag(iParentTag, Tag.new(iTagName, iIcon, nil))
+        rTag = findTag(lTagID)
+      end
+
+      return rTag
+    end
+
+    # Create a Shortcut if it does not exit, or merge Tags if already existing.
+    #
+    # Parameters:
+    # * *iTypeName* (_String_): The type name
+    # * *iContent* (_Object_): The content
+    # * *iMetadata* (<em>map<String,Object></em>): The metadata
+    # * *iTags* (<em>map<Tag,nil></em>): The set of Tags
+    def createShortcut(iTypeName, iContent, iMetadata, iTags)
+      # Compute its ID
+      lSCID = Shortcut.getUniqueID(iContent, iMetadata)
+      # Check if it exists already
+      lSC = findShortcut(lSCID, false)
+      if (lSC != nil)
+        # Already exists: just merge Tags if needed
+        if (lSC.Tags != iTags)
+          lNewTags = iTags.clone
+          lNewTags.merge!(lSC.Tags)
+          modifyShortcut(lSC, lSC.Content, lSC.Metadata, lNewTags)
+        end
+      else
+        # A new one
+        addNewShortcut(Shortcut.new(@TypesPlugins[iTypeName], iTags, iContent, iMetadata))
       end
     end
 
@@ -309,7 +343,7 @@ module PBS
         rSaved = checkSavedWork(iParentWindow)
         # Then scratch
         if (rSaved)
-          replaceCompleteData(Tag.new('Root', nil), [])
+          replaceCompleteData(Tag.new('Root', nil, nil), [])
         end
       end
 

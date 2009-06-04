@@ -402,6 +402,42 @@ module PBS
       @Merging = false
     end
 
+    # Command that creates a new Shortcut.
+    #
+    # Parameters:
+    # * *iTypeID* (_String_): The type plugin ID
+    # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
+    # ** *tag* (_Tag_): Tag in which we create the new Tag (can be nil for no Tag)
+    # ** *parentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
+    def cmdNewShortcut(iTypeID, iParams)
+      lWindow = iParams[:parentWindow]
+      lTag = iParams[:tag]
+      lShortcutType = @TypesPlugins[iTypeID]
+      if (lShortcutType == nil)
+        puts "!!! Shortcut Type #{iTypeID} should have been registered, but unable to retrieve it."
+      else
+        lLocationName = ''
+        if (lTag != nil)
+          lLocationName = " in #{lTag.Name}"
+        end
+        undoableOperation("Create new Shortcut#{lLocationName}") do
+          # Create an empty shortcut that we will edit
+          lTags = {}
+          if (lTag != nil)
+            lTags[lTag] = nil
+          end
+          lNewSC = Shortcut.new(lShortcutType, lTags, lShortcutType.createEmptyContent, {'title' => 'New Shortcut'})
+          lEditSCDialog = EditShortcutDialog.new(lWindow, lNewSC, @RootTag)
+          case lEditSCDialog.show_modal
+          when Wx::ID_OK
+            lNewContent, lNewMetadata, lNewTags = lEditSCDialog.getNewData
+            addNewShortcut(Shortcut.new(lShortcutType, lNewTags, lNewContent, lNewMetadata))
+            setCurrentFileModified
+          end
+        end
+      end
+    end
+
     # Constructor
     def initialize
       # Opened file context
@@ -418,6 +454,13 @@ module PBS
       @CopiedSelection = nil
       @CopiedMode = nil
       @CopiedID = nil
+
+      # Clipboard content management
+      # Those variables reflect what is inside the clipboard in real time.
+      @Clipboard_CopyMode = nil
+      @Clipboard_CopyID = nil
+      @Clipboard_SerializedTags = nil
+      @Clipboard_SerializedShortcuts = nil
 
       # Plugins
       @TypesPlugins = readPlugins('Types')
@@ -448,13 +491,6 @@ module PBS
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Find.png"),
           :method => :cmdFind, # TODO
           :accelerator => [ Wx::MOD_CMD, 'f'[0] ]
-        },
-        ID_NEW_TAG => {
-          :title => 'New Tag',
-          :help => 'Create a new Tag',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdNewTag, # TODO
-          :accelerator => nil
         },
         ID_TAGS_EDITOR => {
           :title => 'Tags Editor',
@@ -543,7 +579,7 @@ end
       @ExportPlugins.each do |iExportID, iExport|
         @Commands[ID_EXPORT_BASE + iExport.index] = {
           :title => iExportID,
-          :help => "Export Shortcuts to #{iImportID}",
+          :help => "Export Shortcuts to #{iExportID}",
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Export.png"),
           :method => :cmdExport, # TODO
           :accelerator => nil
@@ -554,10 +590,16 @@ end
         @Commands[ID_NEW_SHORTCUT_BASE + iType.index] = {
           :title => iTypeID,
           :help => "Create a new Shortcut of type #{iTypeID}",
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdNewShortcut, # TODO
+          :bitmap => iType.getIcon,
+          :method => "cmdNewShortcut#{iTypeID}".to_sym,
           :accelerator => nil
         }
+        # Define the cmd functions
+        eval("
+def cmdNewShortcut#{iTypeID}(iParams)
+  cmdNewShortcut('#{iTypeID}', iParams)
+end
+")
       end
       # Create commands for each integration plugin
       @IntegrationPlugins.each do |iIntID, iInt|
@@ -578,11 +620,11 @@ end
 
       # Create a sample data set
       # Tags
-      @RootTag = Tag.new('Root', nil)
-      lTag1 = Tag.new('Tag1', @RootTag)
-      lTag1_1 = Tag.new('Tag1.1', lTag1)
-      lTag1_2 = Tag.new('Tag1.2', lTag1)
-      lTag2 = Tag.new('Tag2', @RootTag)
+      @RootTag = Tag.new('Root', nil, nil)
+      lTag1 = Tag.new('Tag1', nil, @RootTag)
+      lTag1_1 = Tag.new('Tag1.1', nil, lTag1)
+      lTag1_2 = Tag.new('Tag1.2', nil, lTag1)
+      lTag2 = Tag.new('Tag2', nil, @RootTag)
 
       # Shortcuts
       @ShortcutsList = [
