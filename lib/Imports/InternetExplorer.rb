@@ -47,7 +47,9 @@ module PBS
           # Use the WebBookmarks import plugin
           if (PBS::Imports.const_defined?(:WebBookmarks))
             ioController.undoableOperation('Import bookmarks from Internet Explorer') do
-              PBS::Imports::WebBookmarks.new.importWebBookmarks(ioController, lFavoritesPath, ioController.RootTag)
+              if (ioController.checkSavedWorkAndScratch(iParentWindow))
+                PBS::Imports::WebBookmarks.new.importWebBookmarks(ioController, lFavoritesPath, ioController.RootTag)
+              end
             end
           else
             puts "!!! Import plugin WebBookmarks not found. InternetExplorer import depends on it."

@@ -682,9 +682,9 @@ module PBS
       lCancel = false
       lTempFileToDelete = false
       lFileName = iFileName
-      lHTTPMatch = iFileName.match(/^http:\/\/([^\/]*)\/(.*)$/)
+      lHTTPMatch = iFileName.match(/^(http|https):\/\/([^\/]*)\/(.*)$/)
       if (lHTTPMatch != nil)
-        lHTTPServer, lHTTPPath = lHTTPMatch[1..2]
+        lHTTPServer, lHTTPPath = lHTTPMatch[2..3]
         lFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}_#{lHTTPServer}#{File.extname(iFileName)}"
         # Download iFileName to lFileName
         begin
@@ -700,9 +700,9 @@ module PBS
           lCancel = true
         end
       else
-        lFTPMatch = iFileName.match(/^ftp:\/\/([^\/]*)\/(.*)$/)
+        lFTPMatch = iFileName.match(/^(ftp|ftps):\/\/([^\/]*)\/(.*)$/)
         if (lFTPMatch != nil)
-          lFTPServer, lFTPPath = lFTPMatch[1..2]
+          lFTPServer, lFTPPath = lFTPMatch[2..3]
           lFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}_#{lFTPServer}#{File.extname(iFileName)}"
           # Download iFileName to lFileName
           begin
