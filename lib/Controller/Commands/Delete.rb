@@ -180,7 +180,6 @@ module PBS
               deleteTag(iTag)
             end
           end
-          setCurrentFileModified
         end
       end
 

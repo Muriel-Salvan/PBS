@@ -49,6 +49,7 @@ module PBS
             (ioSC.Metadata != iNewMetadata) or
             (ioSC.Tags != iNewTags))
           atomicOperation(Controller::UAO_ModifySC.new(self, ioSC, iNewContent, iNewMetadata, iNewTags))
+          setCurrentFileModified
         end
       end
     end
@@ -65,6 +66,7 @@ module PBS
         if ((ioTag.Name != iNewName) or
             (ioTag.Icon != iNewIcon))
           atomicOperation(Controller::UAO_ModifyTag.new(self, ioTag, iNewName, iNewIcon))
+          setCurrentFileModified
         end
       end
     end
@@ -82,8 +84,10 @@ module PBS
 
     # Change the current file modified status.
     def setCurrentFileModified
-      ensureUndoableOperation('Flag current project as modified') do
-        atomicOperation(Controller::UAO_SetFileModified.new(self))
+      if (!@CurrentOpenedFileModified)
+        ensureUndoableOperation('Flag current project as modified') do
+          atomicOperation(Controller::UAO_SetFileModified.new(self))
+        end
       end
     end
 
@@ -95,6 +99,7 @@ module PBS
     def replaceCompleteData(iNewRootTag, iNewShortcutsList)
       ensureUndoableOperation('Replace all') do
         atomicOperation(Controller::UAO_ReplaceAll.new(self, iNewRootTag, iNewShortcutsList))
+        setCurrentFileModified
       end
     end
 
@@ -107,6 +112,7 @@ module PBS
     def addNewTag(ioParentTag, iChildTag)
       ensureUndoableOperation("Add Tag #{iChildTag.Name}") do
         atomicOperation(Controller::UAO_AddNewTag.new(self, ioParentTag, iChildTag))
+        setCurrentFileModified
       end
     end
 
@@ -119,6 +125,7 @@ module PBS
     def deleteTag(iTag)
       ensureUndoableOperation("Delete Tag #{iTag.Name}") do
         atomicOperation(Controller::UAO_DeleteTag.new(self, iTag))
+        setCurrentFileModified
       end
     end
 
@@ -130,6 +137,7 @@ module PBS
     def addNewShortcut(iShortcut)
       ensureUndoableOperation("Add Shortcut #{iShortcut.Metadata['title']}") do
         atomicOperation(Controller::UAO_AddNewShortcut.new(self, iShortcut))
+        setCurrentFileModified
       end
     end
 
@@ -140,6 +148,7 @@ module PBS
     def deleteShortcut(iShortcut)
       ensureUndoableOperation("Delete Shortcut #{iShortcut.Metadata['title']}") do
         atomicOperation(Controller::UAO_DeleteShortcut.new(self, iShortcut))
+        setCurrentFileModified
       end
     end
 

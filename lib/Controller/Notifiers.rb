@@ -88,6 +88,7 @@ module PBS
       notifyUndoUpdate
       notifyRedoUpdate
       notifyClipboardContentChanged
+      notifyCurrentOpenedFileUpdate
       @Commands.each do |iCommandID, iCommandParams|
         updateImpactedAppearance(iCommandID)
       end
@@ -141,6 +142,15 @@ module PBS
 
     # Notify the GUI that data on the current opened file has been modified
     def notifyCurrentOpenedFileUpdate
+      updateCommand(Wx::ID_SAVE) do |ioCommand|
+        if (@CurrentOpenedFileName == nil)
+          ioCommand[:title] = 'Save'
+          ioCommand[:enabled] = false
+        else
+          ioCommand[:title] = "Save #{File.basename(@CurrentOpenedFileName)}"
+          ioCommand[:enabled] = @CurrentOpenedFileModified
+        end
+      end
       notifyRegisteredGUIs(:onCurrentOpenedFileUpdate)
     end
 

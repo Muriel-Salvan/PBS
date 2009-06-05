@@ -33,8 +33,6 @@ module PBS
         # We are sure that we can paste, everything is already in the @Clipboard_* variables.
         undoableOperation("Paste #{Tools::MultipleSelection.getDescription(@Clipboard_SerializedTags, @Clipboard_SerializedShortcuts)} in #{lSelectedTag.Name}") do
           mergeSerializedTagsShortcuts(lSelectedTag, @Clipboard_SerializedTags, @Clipboard_SerializedShortcuts)
-          # Mark as modified
-          setCurrentFileModified
         end
         # In case of Cut, we notify the sender back.
         if (@Clipboard_CopyMode == Wx::ID_CUT)

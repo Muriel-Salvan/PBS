@@ -54,7 +54,6 @@ module PBS
                   puts "!!! Tag #{lObject.Parent.Name} has already a sub-Tag named #{lNewName}. Ignoring modifications."
                 else
                   modifyTag(lObject, lNewName, lNewIcon)
-                  setCurrentFileModified
                 end
               end
             end
@@ -71,7 +70,6 @@ module PBS
                            (lObject.Tags != lNewTags))
               if (lModified)
                 modifyShortcut(lObject, lNewContent, lNewMetadata, lNewTags)
-                setCurrentFileModified
               end
             end
           end

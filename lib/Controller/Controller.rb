@@ -432,7 +432,6 @@ module PBS
           when Wx::ID_OK
             lNewContent, lNewMetadata, lNewTags = lEditSCDialog.getNewData
             addNewShortcut(Shortcut.new(lShortcutType, lNewTags, lNewContent, lNewMetadata))
-            setCurrentFileModified
           end
         end
       end
@@ -478,13 +477,6 @@ module PBS
       end
 
       @Commands.merge!({
-        Wx::ID_SAVE => {
-          :title => 'Save',
-          :help => 'Save current Shortcuts',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Save.png"),
-          :method => :cmdSave, # TODO
-          :accelerator => [ Wx::MOD_CMD, 's'[0] ]
-        },
         Wx::ID_FIND => {
           :title => 'Find',
           :help => 'Find a Shortcut',

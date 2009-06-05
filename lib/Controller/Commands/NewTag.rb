@@ -54,7 +54,6 @@ module PBS
             if (lAlreadyExistingTag == nil)
               # OK, we can create it for real
               addNewTag(lTag, Tag.new(lNewName, lNewIcon, nil))
-              setCurrentFileModified
             else
               # Oups, already here
               puts "!!! A Tag named #{lNewName} already exists as a sub-Tag of #{lTag.Name}."

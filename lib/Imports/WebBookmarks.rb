@@ -112,8 +112,8 @@ module PBS
             'URL',
             lURL,
             {
-              # Convert the file name in UTF-8
-              'title' => UTF8_CONVERTER.iconv(File.basename(iFileName)),
+              # Convert the file name in UTF-8, and remove extension
+              'title' => UTF8_CONVERTER.iconv(File.basename(iFileName[0..-1-File.extname(iFileName).size])),
               'icon' => lIconBitmap
             },
             lNewTags

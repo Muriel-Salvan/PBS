@@ -17,7 +17,7 @@ module PBS
         iCommands[ID_OPEN_MERGE] = {
           :title => 'Open and Merge',
           :help => 'Open a PBS file and merge it with existing',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
+          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/OpenMerge.png"),
           :method => :cmdOpenMerge,
           :accelerator => nil
         }
@@ -44,7 +44,6 @@ module PBS
             # Merge with current data
             mergeTags(@RootTag, lNewRootTag)
             mergeShortcuts(lNewShortcutsList, @RootTag)
-            setCurrentFileModified
           end
         end
       end

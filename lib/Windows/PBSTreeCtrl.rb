@@ -233,8 +233,6 @@ module PBS
         if (lPasteOK)
           @Controller.undoableOperation("Paste #{Tools::MultipleSelection.getDescription(lSerializedTags, lSerializedShortcuts)} in #{lSelectedTag.Name}") do
             @Controller.mergeSerializedTagsShortcuts(lSelectedTag, lSerializedTags, lSerializedShortcuts)
-            # Mark as modified
-            @Controller.setCurrentFileModified
           end
           return iSuggestedResult
         else
@@ -457,7 +455,6 @@ module PBS
               else
                 @Controller.undoableOperation("Edit Tag's name #{lTag.Name}") do
                   @Controller.modifyTag(lTag, lNewName, lTag.Icon)
-                  @Controller.setCurrentFileModified
                 end
               end
             end
@@ -468,7 +465,6 @@ module PBS
                 lNewMetadata = lSC.Metadata.clone
                 lNewMetadata['title'] = lNewName
                 @Controller.modifyShortcut(lSC, lSC.Content, lNewMetadata, lSC.Tags)
-                @Controller.setCurrentFileModified
               end
             end
           else
