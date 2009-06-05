@@ -260,6 +260,72 @@ module PBS
 
     end
 
+    # This class implements a minimalistic frame that can replace TipWindow.
+    # It notifies its parent window that it has been destroyed when it occurs with the time out.
+    # TODO (WxRuby): Make ToolTip work on TreeCtrl component with evt_tree_item_gettooltip
+    # TODO (WxRuby): Implement ToolTip.set_delay
+    # TODO (WxRuby): Implement TreeEvent.set_tool_tip
+    class HintFrame < Wx::Frame
+
+      # Get standard Hint colors
+      HINT_TEXT_COLOR = Wx::SystemSettings::get_colour(Wx::SYS_COLOUR_INFOTEXT)
+      HINT_BACK_COLOR = Wx::SystemSettings::get_colour(Wx::SYS_COLOUR_INFOBK)
+
+      # Border in pixels around the label
+      BORDER_SIZE = 4
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iParent* (<em>Wx::Window</em>): Parent window
+      # * *iToolTip* (_String_): The tool tip to display
+      # * *iPosition* (<em>Wx::Point</em>): Position to give to the window
+      # * *iTimeout* (_Integer_): Timeout in milliseconds before destruction
+      def initialize(iParent, iToolTip, iPosition, iTimeout)
+        super(iParent, -1, iToolTip,
+          :style => Wx::FRAME_TOOL_WINDOW|Wx::FRAME_NO_TASKBAR|Wx::FRAME_FLOAT_ON_PARENT,
+          :pos => iParent.client_to_screen(iPosition)
+        )
+        set_background_colour(HINT_BACK_COLOR)
+        set_foreground_colour(HINT_TEXT_COLOR)
+
+        # Compute the size based on the tool tip
+        lWidth, lHeight, lDescent, lExternalLeading = get_text_extent(iToolTip)
+
+        # Create the label
+        lSTToolTip = Wx::StaticText.new(self, -1, iToolTip)
+        # Center it in the frame
+        lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
+        lMainSizer.add_item([0,BORDER_SIZE/2], :proportion => 1)
+        lMainSizer.add_item(lSTToolTip, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lMainSizer.add_item([0,BORDER_SIZE/2], :proportion => 1)
+        self.sizer = lMainSizer
+        self.fit
+        self.size = Wx::Size.new(lWidth + BORDER_SIZE, lHeight + BORDER_SIZE)
+
+        # Kill after timeout
+        Wx::Timer.after(iTimeout) do
+          if (iParent.LastToolTip == self)
+            iParent.notifyHintKilled(self)
+            destroy
+          end
+        end
+      end
+
+    end
+
+    # The last created tool tip, useful for timers of HintFrames that have to check if the window still exists before destroying.
+    #   HintFrame
+    attr_reader :LastToolTip
+
+    # Notify that the hint previously created is destroyed
+    #
+    # Parameters:
+    # * *iHintWindow* (_HintFrame_): The window being killed
+    def notifyHintKilled(iHintWindow)
+      @LastToolTip = nil
+    end
+
     # Constructor
     #
     # Parameters:
@@ -311,6 +377,14 @@ module PBS
       # The context menu
       # Wx::Menu
       @ContextMenu = nil
+      # The last item ID that was under the mouse.
+      # This is used to detect when the mouse changes items for tool tips.
+      # It stores also the time stamp to detect in timers if we didn't change items and come back.
+      # [ Integer, Time ]
+      @LastItemUnderMouse = nil
+      # Last tool tip created
+      # HintFrame
+      @LastToolTip = nil
       # Create the image list for the tree
       @ImageListManager = ImageListManager.new(self, 16, 16)
       # Accept incoming drops of things
@@ -351,10 +425,12 @@ module PBS
         # TODO: Implement it with wxWidgets 2.9.0 (should be there May 2009)
         iEvent.skip
       end
+
       # The context menu
       evt_tree_item_menu(self) do |iEvent|
         popup_menu(@ContextMenu)
       end
+
       # Editing a label of a Tag or Shortcut
       evt_tree_begin_label_edit(self) do |iEvent|
         # We can't edit the Root
@@ -399,6 +475,75 @@ module PBS
             puts "!!! We are editing an item of unknown ID: #{lID}. Bug ?"
           end
         end
+      end
+
+      # Giving tool tips about items
+      evt_motion do |iEvent|
+        lMousePosition = Wx::Point.new(iEvent.x, iEvent.y)
+        lItemID, lFlags = hit_test(lMousePosition)
+        if (lItemID != @LastItemUnderMouse[0])
+          notifyMouseChangedItems(lItemID, lMousePosition)
+        end
+        iEvent.skip
+      end
+      evt_enter_window do |iEvent|
+        lMousePosition = Wx::Point.new(iEvent.x, iEvent.y)
+        notifyMouseChangedItems(0, lMousePosition)
+      end
+      evt_leave_window do |iEvent|
+        lMousePosition = Wx::Point.new(iEvent.x, iEvent.y)
+        notifyMouseChangedItems(0, lMousePosition)
+      end
+    end
+
+    # Notify that the mouse is not on the same item anymore
+    #
+    # Parameters:
+    # * *iItemID* (_Integer_): The new item ID the mouse is hovering (can be 0)
+    # * *iMousePosition* (<em>Wx::Point</em>): The mouse position
+    def notifyMouseChangedItems(iItemID, iMousePosition)
+      # We have changed items: destroy previous tool tip if present
+      if (@LastToolTip != nil)
+        @LastToolTip.destroy
+        @LastToolTip = nil
+      end
+      @LastItemUnderMouse = [ iItemID, Time.now ]
+      lOurTimeStamp = @LastItemUnderMouse.clone
+      # Set the hint to come after 1.5s
+      Wx::Timer.after(1500) do
+        # Check if we are still on the same item
+        if (lOurTimeStamp == @LastItemUnderMouse)
+          # Time to display a hint
+          displayHint(iItemID, iMousePosition)
+        end
+      end
+    end
+
+    # Display a Hint
+    #
+    # Parameters:
+    # * *iItemID* (_Integer_): The item ID for which we display the hint
+    # * *iMousePosition* (<em>Wx::Point</em>): The mouse position to display the hint
+    def displayHint(iItemID, iMousePosition)
+      lToolTip = nil
+      if (iItemID != 0)
+        lID, lObjectID = get_item_data(iItemID)
+        case lID
+        when ID_TAG
+          lToolTip = @Controller.findTag(lObjectID).Name
+        when ID_SHORTCUT
+          lToolTip = @Controller.findShortcut(lObjectID).getContentSummary
+        else
+          puts "!!! Asking tool tip for an item of unknwown ID: #{lID}. Ignoring it. Bug ?"
+        end
+      end
+      if (@LastToolTip != nil)
+        @LastToolTip.destroy
+        @LastToolTip = nil
+      end
+      if (lToolTip != nil)
+        @LastToolTip = HintFrame.new(self, lToolTip, iMousePosition, 2000)
+        @LastToolTip.show
       end
     end
 

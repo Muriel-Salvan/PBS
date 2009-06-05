@@ -683,6 +683,15 @@ module PBS
       @UniqueID = Shortcut.getUniqueID(@Content, @Metadata)
     end
 
+    # Get the summary of its content.
+    # This could be used in tool tips for example.
+    #
+    # Return:
+    # * _String_: The content's summary
+    def getContentSummary
+      @Type.getContentSummary(@Content)
+    end
+
     # Get the data ready to be marshalled.
     # This is used internally by Save/Undo operations
     #

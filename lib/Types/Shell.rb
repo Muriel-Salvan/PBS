@@ -66,6 +66,17 @@ module PBS
         return 'echo "Hello World"'
       end
 
+      # Get a simple summary of a given content created by this Type.
+      # This could be used in tool tips for example.
+      #
+      # Parameters:
+      # * *iContent* (_Object_): Content created by this type
+      # Return:
+      # * _String_: The content's summary
+      def getContentSummary(iContent)
+        return iContent
+      end
+
     end
 
   end
