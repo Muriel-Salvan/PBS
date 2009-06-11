@@ -41,11 +41,12 @@ module PBS
           lParentTagName = lTag.Name
         end
         undoableOperation("Create new Tag in #{lParentTagName}") do
-          lEditTagDialog = EditTagDialog.new(lWindow, nil)
-          case lEditTagDialog.show_modal
-          when Wx::ID_OK
-            lNewName, lNewIcon = lEditTagDialog.getNewData
-            createTag(lTag, lNewName, lNewIcon)
+          showModal(EditTagDialog, lWindow, nil) do |iModalResult, iDialog|
+            case iModalResult
+            when Wx::ID_OK
+              lNewName, lNewIcon = iDialog.getNewData
+              createTag(lTag, lNewName, lNewIcon)
+            end
           end
         end
       end

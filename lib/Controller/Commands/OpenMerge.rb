@@ -31,16 +31,17 @@ module PBS
       def cmdOpenMerge(iParams)
         lWindow = iParams[:parentWindow]
         # Display Open dialog
-        lOpenDialog = Wx::FileDialog.new(lWindow,
+        showModal(Wx::FileDialog.new, lWindow,
           :message => 'Open file for merge',
           :style => Wx::FD_OPEN|Wx::FD_FILE_MUST_EXIST,
           :wildcard => 'PBS Shortcuts (*.pbss)|*.pbss'
-        )
-        case lOpenDialog.show_modal
-        when Wx::ID_OK
-          undoableOperation("Merge file #{File.basename(lOpenDialog.path)[0..-6]}") do
-            # Really perform the open
-            openData(self, lOpenDialog.path)
+        ) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_OK
+            undoableOperation("Merge file #{File.basename(iDialog.path)[0..-6]}") do
+              # Really perform the open
+              openData(self, iDialog.path)
+            end
           end
         end
       end

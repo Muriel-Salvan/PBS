@@ -31,18 +31,19 @@ module PBS
       def cmdOpen(iParams)
         lWindow = iParams[:parentWindow]
         # Display Open dialog
-        lOpenDialog = Wx::FileDialog.new(lWindow,
+        showModal(Wx::FileDialog, lWindow,
           :message => 'Open file',
           :style => Wx::FD_OPEN|Wx::FD_FILE_MUST_EXIST,
           :wildcard => 'PBS Shortcuts (*.pbss)|*.pbss'
-        )
-        case lOpenDialog.show_modal
-        when Wx::ID_OK
-          if (checkSavedWorkAndScratch(lWindow))
-            undoableOperation("Open file #{File.basename(lOpenDialog.path)[0..-6]}") do
-              # Really perform the open
-              openData(self, lOpenDialog.path)
-              changeCurrentFileName(lOpenDialog.path)
+        ) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_OK
+            if (checkSavedWorkAndScratch(lWindow))
+              undoableOperation("Open file #{File.basename(iDialog.path)[0..-6]}") do
+                # Really perform the open
+                openData(self, iDialog.path)
+                changeCurrentFileName(iDialog.path)
+              end
             end
           end
         end

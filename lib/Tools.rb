@@ -241,6 +241,23 @@ module PBS
 
     end
 
+    # Display a dialog in modal mode, ensuring it is destroyed afterwards.
+    #
+    # Parameters:
+    # * *iDialogClass* (_class_): Class of the dialog to display
+    # * *iParentWindow* (<em>Wx::Window</em>): Parent window
+    # * *iParameters* (...): List of parameters to give the constructor
+    # * *CodeBlock*: The code called once the dialog has been displayed and modally closed
+    # ** *iModalResult* (_Integer_): Modal result
+    # ** *iDialog* (<em>Wx::Dialog</em>): The dialog
+    def showModal(iDialogClass, iParentWindow, *iParameters)
+      lDialog = iDialogClass.new(iParentWindow, *iParameters)
+      lModalResult = lDialog.show_modal
+      yield(lModalResult, lDialog)
+      # Don't forget to destroy, otherwise we get ObjectPreviouslyDeleted exceptions on exit.
+      lDialog.destroy
+    end
+
     # Get a bitmap/icon from a file.
     # If no type has been provided, it detects the type of icon based on the file extension.
     #

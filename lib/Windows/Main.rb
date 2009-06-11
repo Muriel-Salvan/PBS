@@ -43,6 +43,18 @@ module PBS
       end
     end
 
+    # Options have changed
+    #
+    # Parameters:
+    # * *iOldOptions* (<em>map<Symbol,Object></em>): The old options
+    def onOptionsChanged(iOldOptions)
+      if (@TCMainTree.isRootTagOnlySelected?)
+        refreshPaste(nil)
+      else
+        refreshPaste(@TCMainTree.getCurrentSelection)
+      end
+    end
+
     # Notify that we are exiting
     def onExit
       self.destroy

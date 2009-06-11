@@ -10,6 +10,8 @@ module PBS
   # Panel that displays content and metadata
   class ContentMetadataPanel < Wx::Panel
 
+    include Tools
+
     # Set the BitmapButton icon, based on @Icon and @Type
     def setBBIcon
       lIconBitmap = @Icon
@@ -43,13 +45,14 @@ module PBS
       @BBIcon = Wx::BitmapButton.new(rPanel, -1, Wx::Bitmap.new)
       evt_button(@BBIcon) do |iEvent|
         # display the icon chooser dialog
-        lIconDialog = ChooseIconDialog.new(self, @BBIcon.bitmap_label)
-        case lIconDialog.show_modal
-        when Wx::ID_OK
-          lNewIcon = lIconDialog.getSelectedBitmap
-          if (lNewIcon != nil)
-            @Icon = lNewIcon
-            setBBIcon
+        showModal(ChooseIconDialog, self, @BBIcon.bitmap_label) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_OK
+            lNewIcon = iDialog.getSelectedBitmap
+            if (lNewIcon != nil)
+              @Icon = lNewIcon
+              setBBIcon
+            end
           end
         end
       end

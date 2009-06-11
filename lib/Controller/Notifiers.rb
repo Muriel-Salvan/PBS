@@ -136,6 +136,14 @@ module PBS
       notifyRegisteredGUIs(:onExit)
     end
 
+    # Notify the GUI that options have changed
+    #
+    # Parameters:
+    # * *iOldOptions* (<em>map<Symbol,Object></em>): Old options
+    def notifyOptionsChanged(iOldOptions)
+      notifyRegisteredGUIs(:onOptionsChanged, iOldOptions)
+    end
+
     # Notify the GUI that data on the current opened file has been modified
     def notifyCurrentOpenedFileUpdate
       updateCommand(Wx::ID_SAVE) do |ioCommand|

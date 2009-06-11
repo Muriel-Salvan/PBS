@@ -10,6 +10,8 @@ module PBS
   # Panel that edits Tag's metadata
   class TagMetadataPanel < Wx::Panel
 
+    include Tools
+
     # The default Tag icon
     DEFAULT_TAG_ICON = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Tag.png")
 
@@ -48,13 +50,14 @@ module PBS
       @BBIcon = Wx::BitmapButton.new(self, -1, Wx::Bitmap.new)
       evt_button(@BBIcon) do |iEvent|
         # display the icon chooser dialog
-        lIconDialog = ChooseIconDialog.new(self, @BBIcon.bitmap_label)
-        case lIconDialog.show_modal
-        when Wx::ID_OK
-          lNewIcon = lIconDialog.getSelectedBitmap
-          if (lNewIcon != nil)
-            @Icon = lNewIcon
-            setBBIcon
+        showModal(ChooseIconDialog, self, @BBIcon.bitmap_label) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_OK
+            lNewIcon = iDialog.getSelectedBitmap
+            if (lNewIcon != nil)
+              @Icon = lNewIcon
+              setBBIcon
+            end
           end
         end
       end

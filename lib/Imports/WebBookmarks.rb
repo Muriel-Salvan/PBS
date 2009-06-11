@@ -12,10 +12,10 @@ module PBS
 
     class WebBookmarks
 
+      include Tools
+
       # The file names to UTF-8 converter
       UTF8_CONVERTER = Iconv.new('UTF-8', 'CP1252')
-
-      include Tools
 
       # All extensions we try to read (uppercase only)
       POSSIBLE_EXTENSIONS = [ '.URL' ]
@@ -43,14 +43,15 @@ module PBS
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParentWindow)
         # Display Open directory Dialog
-        lOpenDirDialog = Wx::DirDialog.new(iParentWindow,
+        showModal(Wx::DirDialog, iParentWindow,
           :message => 'Open directory containing web bookmarks'
-        )
-        case lOpenDirDialog.show_modal
-        when Wx::ID_OK
-          ioController.undoableOperation("Import bookmarks from #{File.basename(lOpenDirDialog.path)}") do
-            if (ioController.checkSavedWorkAndScratch(iParentWindow))
-              importWebBookmarks(ioController, lOpenDirDialog.path, ioController.RootTag)
+        ) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_OK
+            ioController.undoableOperation("Import bookmarks from #{File.basename(iDialog.path)}") do
+              if (ioController.checkSavedWorkAndScratch(iParentWindow))
+                importWebBookmarks(ioController, iDialog.path, ioController.RootTag)
+              end
             end
           end
         end

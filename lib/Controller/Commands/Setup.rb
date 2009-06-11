@@ -33,10 +33,13 @@ module PBS
       def cmdSetup(iParams)
         lWindow = iParams[:parentWindow]
         # Display Options dialog
-        lOptionsDialog = OptionsDialog.new(lWindow, @Options)
-        case lOptionsDialog.show_modal
-        when Wx::ID_OK
-          @Options = lOptionsDialog.getOptions
+        showModal(OptionsDialog, lWindow, @Options) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_OK
+            lOldOptions = @Options.clone
+            @Options = iDialog.getOptions
+            notifyOptionsChanged(lOldOptions)
+          end
         end
       end
 

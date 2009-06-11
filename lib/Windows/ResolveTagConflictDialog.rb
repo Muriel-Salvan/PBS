@@ -23,7 +23,7 @@ module PBS
       lBMerge = Wx::Button.new(rResult, ID_MERGE, 'Merge using above values')
       lBKeep = Wx::Button.new(rResult, ID_KEEP, 'Keep both')
       lBCancel = Wx::Button.new(rResult, Wx::ID_CANCEL, 'Cancel')
-      lCBApplyToAll = Wx::Checkbox.new(rResult, -1, 'Apply to remaining conflicts')
+      lCBApplyToAll = Wx::CheckBox.new(rResult, -1, 'Apply to remaining conflicts')
 
       # Put them in sizers
       lMainSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)

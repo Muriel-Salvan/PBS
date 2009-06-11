@@ -27,12 +27,13 @@ module PBS
       # Check possible errors
       if (!@CurrentTransactionErrors.empty?)
         # Display errors
-        lErrorDialog = Wx::MessageDialog.new(nil,
+        showModal(Wx::MessageDialog, nil,
           @CurrentTransactionErrors.join("\n"),
           "Errors during #{iOperationTitle}",
           :style => Wx::OK
-        )
-        lErrorDialog.show_modal
+        ) do |iModalResult, iDialog|
+          # Nothing to do
+        end
       end
       # Check that the client code effectively modified something before creating an Undo
       if (!@CurrentUndoableOperation.AtomicOperations.empty?)
@@ -277,13 +278,15 @@ module PBS
 
       # First check if we haven't saved current work
       if (@CurrentOpenedFileModified)
-        case Wx::MessageDialog.new(iParentWindow,
-            "Current Shortcuts are not saved.\nAre you sure you want to discard current Shortcuts to load new ones ?\nYou will still be able to undo the operation in case of mistake.",
-            :caption => 'Confirm discard',
-            :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
-          ).show_modal
-        when Wx::ID_NO
-          rSaved = false
+        showModal(Wx::MessageDialog, iParentWindow,
+          "Current Shortcuts are not saved.\nAre you sure you want to discard current Shortcuts to load new ones ?\nYou will still be able to undo the operation in case of mistake.",
+          :caption => 'Confirm discard',
+          :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
+        ) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_NO
+            rSaved = false
+          end
         end
       end
 

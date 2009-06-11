@@ -41,21 +41,23 @@ module PBS
         when ID_TAG
           undoableOperation("Edit Tag #{lObject.Name}") do
             # Now we edit lObject
-            lEditTagDialog = EditTagDialog.new(lWindow, lObject)
-            case lEditTagDialog.show_modal
-            when Wx::ID_OK
-              lNewName, lNewIcon = lEditTagDialog.getNewData
-              updateTag(lObject, lNewName, lNewIcon, lObject.Children)
+            showModal(EditTagDialog, lWindow, lObject) do |iModalResult, iDialog|
+              case iModalResult
+              when Wx::ID_OK
+                lNewName, lNewIcon = iDialog.getNewData
+                updateTag(lObject, lNewName, lNewIcon, lObject.Children)
+              end
             end
           end
         when ID_SHORTCUT
           undoableOperation("Edit Shortcut #{lObject.Metadata['title']}") do
             # Now we edit lObject
-            lEditSCDialog = EditShortcutDialog.new(lWindow, lObject, @RootTag)
-            case lEditSCDialog.show_modal
-            when Wx::ID_OK
-              lNewContent, lNewMetadata, lNewTags = lEditSCDialog.getNewData
-              updateShortcut(lObject, lNewContent, lNewMetadata, lNewTags)
+            showModal(EditShortcutDialog, lWindow, lObject, @RootTag) do |iModalResult, iDialog|
+              case iModalResult
+              when Wx::ID_OK
+                lNewContent, lNewMetadata, lNewTags = iDialog.getNewData
+                updateShortcut(lObject, lNewContent, lNewMetadata, lNewTags)
+              end
             end
           end
         else

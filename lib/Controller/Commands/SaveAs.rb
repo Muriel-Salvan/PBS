@@ -31,17 +31,18 @@ module PBS
       def cmdSaveAs(iParams)
         lWindow = iParams[:parentWindow]
         # Display Save dialog
-        lSaveDialog = Wx::FileDialog.new(lWindow,
+        showModal(Wx::FileDialog.new, lWindow,
           :message => 'Save file',
           :style => Wx::FD_SAVE|Wx::FD_OVERWRITE_PROMPT,
           :wildcard => 'PBS Shortcuts (*.pbss)|*.pbss'
-        )
-        case lSaveDialog.show_modal
-        when Wx::ID_OK
-          undoableOperation("Save file #{File.basename(lSaveDialog.path)[0..-6]}") do
-            # Perform save
-            saveData(self, lSaveDialog.path)
-            changeCurrentFileName(lSaveDialog.path)
+        ) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_OK
+            undoableOperation("Save file #{File.basename(iDialog.path)[0..-6]}") do
+              # Perform save
+              saveData(self, iDialog.path)
+              changeCurrentFileName(iDialog.path)
+            end
           end
         end
       end

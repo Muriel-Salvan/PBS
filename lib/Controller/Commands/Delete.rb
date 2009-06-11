@@ -80,13 +80,15 @@ module PBS
               lDeleteTaggedShortcuts = lForceDeleteTaggedShortcuts
             else
               if (lExistTaggedShortcuts)
-                case Wx::MessageDialog.new(lWindow,
-                    "Do you want to delete completely the selected Shortcuts ?\nIf No, this will just untag them accordingly.",
-                    :caption => 'Confirm delete Shortcut',
-                    :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
-                  ).show_modal
-                when Wx::ID_YES
-                  lDeleteTaggedShortcuts = true
+                showModal(Wx::MessageDialog, lWindow,
+                  "Do you want to delete completely the selected Shortcuts ?\nIf No, this will just untag them accordingly.",
+                  :caption => 'Confirm delete Shortcut',
+                  :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
+                ) do |iModalResult, iDialog|
+                  case iModalResult
+                  when Wx::ID_YES
+                    lDeleteTaggedShortcuts = true
+                  end
                 end
               end
             end
@@ -96,13 +98,15 @@ module PBS
             else
               if ((!lDeleteTaggedShortcuts) and
                   (lExistOrphanShortcuts))
-                case Wx::MessageDialog.new(lWindow,
-                    "Do you want to delete the selected Shortcuts that will have no Tag anymore ?",
-                    :caption => 'Confirm delete orphan Shortcuts',
-                    :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
-                  ).show_modal
-                when Wx::ID_YES
-                  lDeleteOrphanShortcuts = true
+                showModal(Wx::MessageDialog.new, lWindow,
+                  "Do you want to delete the selected Shortcuts that will have no Tag anymore ?",
+                  :caption => 'Confirm delete orphan Shortcuts',
+                  :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
+                ) do |iModalResult, iDialog|
+                  case iModalResult
+                  when Wx::ID_YES
+                    lDeleteOrphanShortcuts = true
+                  end
                 end
               end
             end

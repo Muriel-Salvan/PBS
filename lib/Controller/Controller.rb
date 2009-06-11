@@ -159,7 +159,7 @@ module PBS
       rDoublon = nil
       rAction = nil
 
-      iParentTag.Children do |ioChildTag|
+      iParentTag.Children.each do |ioChildTag|
         if ((ioChildTag != iTagToIgnore) and
             (tagSameAs?(ioChildTag, iTagName, iIcon)))
           # It already exists. Check options to know what to do.
@@ -167,13 +167,14 @@ module PBS
           when TAGSCONFLICT_ASK
             # Ask for replacement or cancellation
             rDoublon = ioChildTag
-            lResolveTagConflictDialog = ResolveTagConflictDialog.new(nil, ioChildTag, iTagName, iIcon)
-            rAction = lResolveTagConflictDialog.show_modal
-            case rAction
-            when ID_MERGE
-              # Take values from the dialog, and put them into the existing Tag
-              lName, lIcon = lResolveTagConflictDialog.getNewData
-              updateTag(ioChildTag, lName, lIcon, ioChildTag.Children)
+            showModal(ResolveTagConflictDialog, nil, ioChildTag, iTagName, iIcon) do |iModalResult, iDialog|
+              rAction = iModalResult
+              case iModalResult
+              when ID_MERGE
+                # Take values from the dialog, and put them into the existing Tag
+                lName, lIcon = iDialog.getNewData
+                updateTag(ioChildTag, lName, lIcon, ioChildTag.Children)
+              end
             end
           when TAGSCONFLICT_MERGE_EXISTING
             rAction = ID_MERGE
@@ -219,15 +220,16 @@ module PBS
           # It already exists. Check options to know what to do.
           case @Options[:shortcutsConflict]
           when SHORTCUTSCONFLICT_ASK
-            lResolveShortcutConflictDialog = ResolveShortcutConflictDialog.new(nil, ioSC, iContent, iMetadata)
-            rAction = lResolveShortcutConflictDialog.show_modal
-            case rAction
-            when ID_MERGE
-              # Take values from the dialog, then modify the current Shortcut
-              lContent, lMetadata = lResolveShortcutConflictDialog.getNewData
-              lNewTags = iTags.clone
-              lNewTags.merge!(ioSC.Tags)
-              updateShortcut(ioSC, lContent, lMetadata, lNewTags)
+            showModal(ResolveShortcutConflictDialog, nil, ioSC, iContent, iMetadata) do |iModalResult, iDialog|
+              rAction = iModalResult
+              case iModalResult
+              when ID_MERGE
+                # Take values from the dialog, then modify the current Shortcut
+                lContent, lMetadata = iDialog.getNewData
+                lNewTags = iTags.clone
+                lNewTags.merge!(ioSC.Tags)
+                updateShortcut(ioSC, lContent, lMetadata, lNewTags)
+              end
             end
           when SHORTCUTSCONFLICT_MERGE_EXISTING
             rAction = ID_MERGE
@@ -335,11 +337,13 @@ module PBS
         end
       else
         iEvtWindow.evt_menu(ioMenuItem) do |iEvent|
-          Wx::MessageDialog.new(nil,
-              "This command (#{lTitle}) has not yet been implemented. Sorry.",
-              :caption => 'Not yet implemented',
-              :style => Wx::OK|Wx::ICON_EXCLAMATION
-            ).show_modal
+          showModal(Wx::MessageDialog, nil,
+            "This command (#{lTitle}) has not yet been implemented. Sorry.",
+            :caption => 'Not yet implemented',
+            :style => Wx::OK|Wx::ICON_EXCLAMATION
+          ) do |iModalResult, iDialog|
+            # Nothing to do
+          end
         end
       end
     end
@@ -550,11 +554,12 @@ module PBS
           lLocationName = " in #{lTag.Name}"
         end
         undoableOperation("Create new Shortcut#{lLocationName}") do
-          lEditSCDialog = EditShortcutDialog.new(lWindow, nil, @RootTag, lShortcutType)
-          case lEditSCDialog.show_modal
-          when Wx::ID_OK
-            lNewContent, lNewMetadata, lNewTags = lEditSCDialog.getNewData
-            createShortcut(lShortcutType, lNewContent, lNewMetadata, lNewTags)
+          showModal(EditShortcutDialog, lWindow, nil, @RootTag, lShortcutType) do |iModalResult, iDialog|
+            case iModalResult
+            when Wx::ID_OK
+              lNewContent, lNewMetadata, lNewTags = iDialog.getNewData
+              createShortcut(lShortcutType, lNewContent, lNewMetadata, lNewTags)
+            end
           end
         end
       end

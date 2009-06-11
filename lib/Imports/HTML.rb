@@ -11,6 +11,8 @@ module PBS
 
     class HTML
 
+      include Tools
+
       # Here we list all the HTML tags that do not add any indentation in the level of a HTML file.
       # That is HTML tags that will not change the level of links compared with the headers: even if such HTML tags are absent from the file, the resulting Shortcuts/Tags associations would be exactly the same.
       NO_INDENT_HTML_TAGS = [
@@ -51,16 +53,17 @@ module PBS
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParentWindow)
         # Display Open dialog
-        lOpenDialog = Wx::FileDialog.new(iParentWindow,
+        showModal(Wx::FileDialog, iParentWindow,
           :message => 'Open HTML file',
           :style => Wx::FD_OPEN|Wx::FD_FILE_MUST_EXIST,
           :wildcard => 'HTML files (*.html)|*.html'
-        )
-        case lOpenDialog.show_modal
-        when Wx::ID_OK
-          ioController.undoableOperation("Import HTML file #{File.basename(lOpenDialog.path)[0..-6]}") do
-            if (ioController.checkSavedWorkAndScratch(iParentWindow))
-              importHTMLData(ioController, lOpenDialog.path)
+        ) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_OK
+            ioController.undoableOperation("Import HTML file #{File.basename(iDialog.path)[0..-6]}") do
+              if (ioController.checkSavedWorkAndScratch(iParentWindow))
+                importHTMLData(ioController, iDialog.path)
+              end
             end
           end
         end

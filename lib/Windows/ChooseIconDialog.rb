@@ -202,23 +202,24 @@ module PBS
       # Event for the add button
       evt_button(lBAdd) do |iEvent|
         # Open a file to add icons in the list
-        lOpenDialog = Wx::FileDialog.new(self,
+        showModal(Wx::FileDialog, self,
           :message => 'Open image',
           :style => Wx::FD_OPEN|Wx::FD_FILE_MUST_EXIST,
           :wildcard => 'All files (*)|*'
-        )
-        case lOpenDialog.show_modal
-        when Wx::ID_OK
-          begin
-            lBitmap = createBitmapFromFile(lOpenDialog.path)
-            if (lBitmap != nil)
-              @BitmapsList << lBitmap
-              notifyBitmapsListChanged
-            else
-              puts "!!! Error while reading file #{lOpenDialog.path}: #{$!}. Ignoring this file."
+        ) do |iModalResult, iDialog|
+          case iModalResult
+          when Wx::ID_OK
+            begin
+              lBitmap = createBitmapFromFile(iDialog.path)
+              if (lBitmap != nil)
+                @BitmapsList << lBitmap
+                notifyBitmapsListChanged
+              else
+                puts "!!! Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
+              end
+            rescue
+              puts "!!! Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
             end
-          rescue
-            puts "!!! Error while reading file #{lOpenDialog.path}: #{$!}. Ignoring this file."
           end
         end
       end
