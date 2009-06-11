@@ -125,7 +125,7 @@ module PBS
     # * *iSelection* (_MultipleSelection_): The selection (nil for the Root Tag)
     def refreshPaste(iSelection)
       lPasteEnabled = false
-      lError = nil
+      lErrors = nil
       if (@Controller.Clipboard_CopyMode != nil)
         lLocalSelection = nil
         if (@Controller.Clipboard_CopyID == @Controller.CopiedID)
@@ -136,12 +136,11 @@ module PBS
           iSelection,
           @Controller.Clipboard_CopyMode,
           lLocalSelection,
-          @Controller.Clipboard_SerializedTags,
-          @Controller.Clipboard_SerializedShortcuts
+          @Controller.Clipboard_SerializedSelection
         )
       end
       @Controller.setMenuItemGUIEnabled(@EditMenu, Wx::ID_PASTE, lPasteEnabled)
-      if (lError != nil)
+      if (lErrors != nil)
         @Controller.setMenuItemGUITitle(@EditMenu, Wx::ID_PASTE, "Unable to paste: #{lErrors.join(' & ')}")
       else
         @Controller.setMenuItemGUITitle(@EditMenu, Wx::ID_PASTE, nil)
@@ -149,7 +148,7 @@ module PBS
       lButton = @ToolBar.find_by_id(Wx::ID_PASTE)
       if (lButton != nil)
         @Controller.setToolbarButtonGUIEnabled(lButton, Wx::ID_PASTE, lPasteEnabled)
-        if (lError != nil)
+        if (lErrors != nil)
           @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_PASTE, "Unable to paste: #{lErrors.join(' & ')}")
         else
           @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_PASTE, nil)
@@ -259,14 +258,9 @@ module PBS
             :tag => @Controller.RootTag
           )
         else
-          lSelectedTag = @Controller.findTag(@TCMainTree.getCurrentSelection.SelectedPrimaryTags[0])
-          if (lSelectedTag == nil)
-            oValidator.setError("Normally a single Tag was selected: #{@TCMainTree.getCurrentSelection.getDescription}. However we are unable to retrieve it. Bug ?")
-          else
-            oValidator.authorizeCmd(
-              :tag => lSelectedTag
-            )
-          end
+          oValidator.authorizeCmd(
+            :tag => @TCMainTree.getCurrentSelection.SelectedPrimaryTags[0]
+          )
         end
       end
       addMenuCommand(@EditMenu, Wx::ID_DELETE) do |iEvent, oValidator|
@@ -283,28 +277,18 @@ module PBS
         lSelection = @TCMainTree.getCurrentSelection
         if (lSelection.singleTag?)
           # A Tag is selected
-          lSelectedTag = @Controller.findTag(lSelection.SelectedPrimaryTags[0])
-          if (lSelectedTag == nil)
-            oValidator.setError("Normally a single Tag was selected: #{lSelection.getDescription}. However we are unable to retrieve it. Bug ?")
-          else
-            oValidator.authorizeCmd(
-              :parentWindow => self,
-              :objectID => ID_TAG,
-              :object => lSelectedTag
-            )
-          end
+          oValidator.authorizeCmd(
+            :parentWindow => self,
+            :objectID => ID_TAG,
+            :object => lSelection.SelectedPrimaryTags[0]
+          )
         elsif (lSelection.singleShortcut?)
           # A Shortcut is selected
-          lSelectedSC = @Controller.findShortcut(lSelection.SelectedPrimaryShortcuts[0][0])
-          if (lSelectedSC == nil)
-            oValidator.setError("Normally a single Shortcut was selected: #{lSelection.getDescription}. However we are unable to retrieve it. Bug ?")
-          else
-            oValidator.authorizeCmd(
-              :parentWindow => self,
-              :objectID => ID_SHORTCUT,
-              :object => lSelectedSC
-            )
-          end
+          oValidator.authorizeCmd(
+            :parentWindow => self,
+            :objectID => ID_SHORTCUT,
+            :object => lSelection.SelectedPrimaryShortcuts[0][0]
+          )
         else
           oValidator.setError("Normally a single Shortcut or Tag was selected: #{lSelection.getDescription}. However we are unable to retrieve it. Bug ?")
         end
@@ -318,15 +302,10 @@ module PBS
             :parentWindow => self
           )
         else
-          lSelectedTag = @Controller.findTag(@TCMainTree.getCurrentSelection.SelectedPrimaryTags[0])
-          if (lSelectedTag == nil)
-            oValidator.setError("Normally a single Tag was selected: #{@TCMainTree.getCurrentSelection.getDescription}. However we are unable to retrieve it. Bug ?")
-          else
-            oValidator.authorizeCmd(
-              :tag => lSelectedTag,
-              :parentWindow => self
-            )
-          end
+          oValidator.authorizeCmd(
+            :tag => @TCMainTree.getCurrentSelection.SelectedPrimaryTags[0],
+            :parentWindow => self
+          )
         end
       end
       @NewShortcutMenu = Wx::Menu.new
@@ -339,33 +318,21 @@ module PBS
               :parentWindow => self
             )
           else
-            lSelectedTag = @Controller.findTag(@TCMainTree.getCurrentSelection.SelectedPrimaryTags[0])
-            if (lSelectedTag == nil)
-              oValidator.setError("Normally a single Tag was selected: #{@TCMainTree.getCurrentSelection.getDescription}. However we are unable to retrieve it. Bug ?")
-            else
-              oValidator.authorizeCmd(
-                :tag => lSelectedTag,
-                :parentWindow => self
-              )
-            end
+            oValidator.authorizeCmd(
+              :tag => @TCMainTree.getCurrentSelection.SelectedPrimaryTags[0],
+              :parentWindow => self
+            )
           end
         end
       end
       @EditMenu.append_sub_menu(@NewShortcutMenu, 'New Shortcut')
-      # Setup menu
-      lSetupMenu = Wx::Menu.new
-      addMenuCommand(lSetupMenu, ID_TAGS_EDITOR)
-      addMenuCommand(lSetupMenu, ID_TYPES_CONFIG)
-      addMenuCommand(lSetupMenu, ID_KEYMAPS)
-      addMenuCommand(lSetupMenu, ID_ENCRYPTION)
-      addMenuCommand(lSetupMenu, ID_TOOLBARS)
-      lIntPluginsMenu = Wx::Menu.new
-      @Controller.IntegrationPlugins.each do |iIntID, iInt|
-        addMenuCommand(lIntPluginsMenu, ID_INTEGRATION_BASE + iInt.index)
-      end
-      lSetupMenu.append_sub_menu(lIntPluginsMenu, 'Integration plugins')
       # Tools menu
       lToolsMenu = Wx::Menu.new
+      addMenuCommand(lToolsMenu, Wx::ID_SETUP) do |iEvent, oValidator|
+        oValidator.authorizeCmd(
+          :parentWindow => self
+        )
+      end
       addMenuCommand(lToolsMenu, ID_STATS)
       if ($PBS_DevDebug)
         addMenuCommand(lToolsMenu, ID_DEVDEBUG)
@@ -379,7 +346,6 @@ module PBS
       lMenu = Wx::MenuBar.new
       lMenu.append(lFileMenu, 'File')
       lMenu.append(@EditMenu, 'Edit')
-      lMenu.append(lSetupMenu, 'Setup')
       lMenu.append(lToolsMenu, 'Tools')
       lMenu.append(lHelpMenu, 'Help')
       self.menu_bar = lMenu

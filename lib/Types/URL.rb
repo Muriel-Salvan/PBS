@@ -15,15 +15,15 @@ module PBS
       #
       # Parameters:
       # * *iParent* (_Window_): The parent window
-      # * *iSC* (_Shortcut_): The Shortcut containing initial values
+      # * *iContent* (_Object_): The content containing initial values
       # Return:
       # * _Panel_: The panel containing controls
-      def createEditPanel(iParent, iSC)
+      def createEditPanel(iParent, iContent)
         rResult = Wx::Panel.new(iParent)
 
         # Create all components
         lSTURL = Wx::StaticText.new(rResult, -1, 'URL')
-        lTCURL = Wx::TextCtrl.new(rResult, :id => TCURL_ID, :value => iSC.Content)
+        lTCURL = Wx::TextCtrl.new(rResult, :id => TCURL_ID, :value => iContent)
         lTCURL.min_size = [300, lTCURL.min_size.height]
 
         # Put them in sizers

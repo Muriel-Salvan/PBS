@@ -45,21 +45,11 @@ module PBS
           # map< Shortcut, [ map< Tag, nil >, map< Tag, nil > ] >
           lSelectedShortcuts = {}
           (lSelection.SelectedPrimaryShortcuts + lSelection.SelectedSecondaryShortcuts).each do |iSelectedShortcutInfo|
-            iSelectedShortcutID, iParentTagID = iSelectedShortcutInfo
-            lSC = findShortcut(iSelectedShortcutID)
-            if (lSC == nil)
-              puts "!!! Shortcut of ID #{iSelectedShortcutID} was part of the selection, but it is non existent. Ignoring it. Bug ?"
-            else
-              if (lSelectedShortcuts[lSC] == nil)
-                lSelectedShortcuts[lSC] = [ {}, nil ]
-              end
-              lTag = findTag(iParentTagID)
-              if (lTag == nil)
-                puts "!!! Tag #{iParentTagID.join('/')} was marked as the parent Tag of Shortcut #{lSC.Metadata['title']}. However it does not exist. Bug ?"
-              else
-                lSelectedShortcuts[lSC][0][lTag] = nil
-              end
+            iSelectedShortcut, iParentTag = iSelectedShortcutInfo
+            if (lSelectedShortcuts[iSelectedShortcut] == nil)
+              lSelectedShortcuts[iSelectedShortcut] = [ {}, nil ]
             end
+            lSelectedShortcuts[iSelectedShortcut][0][iParentTag] = nil
           end
           if (!lSelectedShortcuts.empty?)
             lExistOrphanShortcuts = false
@@ -135,7 +125,7 @@ module PBS
                 # * We refuse to delete systematically tagged Shortcuts, AND
                 # * We refuse to delete orphan Shortcuts, OR it has some remaining Tags even after deleting selected ones.
                 # So here we just replace its Tags set with the new one computed previously.
-                modifyShortcut(iSC, iSC.Content, iSC.Metadata, iNewTagsSet)
+                updateShortcut(iSC, iSC.Content, iSC.Metadata, iNewTagsSet)
               end
             end
           end
@@ -147,32 +137,27 @@ module PBS
             # We first have to select Tags that do not have other primary selected Tags among their predecessor (as the primary selected predecessor will also delete its children Tags)
             # list< Tag >
             lTagsToDelete = []
-            lSelection.SelectedPrimaryTags.each do |iTagID|
-              lTag = findTag(iTagID)
-              if (lTag == nil)
-                puts "!!! Tag of ID #{iTagID.join('/')} was part of the selection, but non existent. Ignoring it. Bug ?"
-              else
-                # If this Tag is not already a sub-Tag (recursively) of an already selected one, add it
-                lFound = false
-                lCheckTag = lTag
-                while (lCheckTag != nil)
-                  if (lTagsToDelete.include?(lCheckTag))
-                    # Already present
-                    lFound = true
-                    break
-                  end
-                  lCheckTag = lCheckTag.Parent
+            lSelection.SelectedPrimaryTags.each do |iTag|
+              # If this Tag is not already a sub-Tag (recursively) of an already selected one, add it
+              lFound = false
+              lCheckTag = iTag
+              while (lCheckTag != nil)
+                if (lTagsToDelete.include?(lCheckTag))
+                  # Already present
+                  lFound = true
+                  break
                 end
-                if (!lFound)
-                  # No parent Tag of lTag is present in lTagsToDelete.
-                  # Now we have to make sure that existing Tags are not part of the sub-Tags of iTag also, and delete them if it is the case.
-                  # Delete Tags from the list that are sub-Tags of iTag
-                  lTagsToDelete.delete_if do |iSelectedTag|
-                    iSelectedTag.subTagOf?(lTag)
-                  end
-                  # Add the Tag to be deleted
-                  lTagsToDelete << lTag
+                lCheckTag = lCheckTag.Parent
+              end
+              if (!lFound)
+                # No parent Tag of lTag is present in lTagsToDelete.
+                # Now we have to make sure that existing Tags are not part of the sub-Tags of iTag also, and delete them if it is the case.
+                # Delete Tags from the list that are sub-Tags of iTag
+                lTagsToDelete.delete_if do |iSelectedTag|
+                  iSelectedTag.subTagOf?(iTag)
                 end
+                # Add the Tag to be deleted
+                lTagsToDelete << iTag
               end
             end
             # Now we can delete safely every Tag from lTagsToDelete

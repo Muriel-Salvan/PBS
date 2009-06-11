@@ -64,6 +64,7 @@ module PBS
 end
 
 # Require those files after having defined $PBSRootDir, as it will be used during require
+require 'Model/Model.rb'
 require 'Controller/Controller.rb'
 require 'Windows/Main.rb'
 

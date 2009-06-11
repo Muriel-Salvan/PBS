@@ -45,17 +45,7 @@ module PBS
             case lEditTagDialog.show_modal
             when Wx::ID_OK
               lNewName, lNewIcon = lEditTagDialog.getNewData
-              lModified = ((lObject.Name != lNewName) or
-                           (lObject.Icon != lNewIcon))
-              if (lModified)
-                # First check that we are not going over an already existing Tag
-                if ((lObject.Parent != nil) and
-                    (lObject.Parent.searchTag([lNewName]) != nil))
-                  puts "!!! Tag #{lObject.Parent.Name} has already a sub-Tag named #{lNewName}. Ignoring modifications."
-                else
-                  modifyTag(lObject, lNewName, lNewIcon)
-                end
-              end
+              updateTag(lObject, lNewName, lNewIcon, lObject.Children)
             end
           end
         when ID_SHORTCUT
@@ -65,12 +55,7 @@ module PBS
             case lEditSCDialog.show_modal
             when Wx::ID_OK
               lNewContent, lNewMetadata, lNewTags = lEditSCDialog.getNewData
-              lModified = ((lObject.Content != lNewContent) or
-                           (lObject.Metadata != lNewMetadata) or
-                           (lObject.Tags != lNewTags))
-              if (lModified)
-                modifyShortcut(lObject, lNewContent, lNewMetadata, lNewTags)
-              end
+              updateShortcut(lObject, lNewContent, lNewMetadata, lNewTags)
             end
           end
         else

@@ -70,47 +70,13 @@ module PBS
     #   Integer
     attr_reader :Clipboard_CopyID
 
-    # Serialized Shortcuts in the clipboard, with their parent Tag's ID
-    #   list< Object, list< String > >
-    attr_reader :Clipboard_SerializedShortcuts
+    # Serialized selection in the clipboard
+    #   MultipleSelection::Serialized
+    attr_reader :Clipboard_SerializedSelection
 
-    # Serialized Tags in the clipboard
-    #   list< Object >
-    attr_reader :Clipboard_SerializedTags
-
-    # Find a Shortcut based on its unique ID
-    #
-    # Parameters:
-    # * *iSCID* (_Integer_): The Shortcut's unique id
-    # * *iHasToExist* (_Boolean_): Has the Shortcut to exist ? [optional = true]
-    # Return:
-    # * _Shortcut_: The retrieved Shortcut, or nil if none found
-    def findShortcut(iSCID, iHasToExist = true)
-      rShortcut = nil
-
-      @ShortcutsList.each do |iSC|
-        if (iSC.getUniqueID == iSCID)
-          rShortcut = iSC
-          break
-        end
-      end
-      if ((rShortcut == nil) and
-          (iHasToExist))
-        puts "!!! Unable to retrieve Shortcut with internal ID #{iSCID}. Bug ?"
-      end
-
-      return rShortcut
-    end
-
-    # Find a Tag based on its unique ID
-    #
-    # Parameters:
-    # * *iTagID* (<em>list<String></em>): The Tag's unique id
-    # Return:
-    # * _Tag_: The retrieved Tag, or nil if none found
-    def findTag(iTagID)
-      return @RootTag.searchTag(iTagID)
-    end
+    # Options
+    #   map< Symbol, Object >
+    attr_reader :Options
 
   end
 

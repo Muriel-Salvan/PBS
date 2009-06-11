@@ -28,28 +28,25 @@ module PBS
       # Constructor
       #
       # Parameters:
-      # * *ioTree* (<em>Wx::TreeCtrl</em>): The TreeCtrl component this class will manage
-      # * *iWidth* (_Integer_): Width for images
-      # * *iHeight* (_Integer_): Height for images
-      def initialize(ioTree, iWidth, iHeight)
-        @Tree = ioTree
+      # * *ioImageList* (<em>Wx::ImageList</em>): The image list this manager will handle
+      # * *iWidth* (_Integer_): The images width
+      # * *iHeight* (_Integer_): The images height
+      def initialize(ioImageList, iWidth, iHeight)
+        @ImageList = ioImageList
+        # TODO (WxRuby): Get the size directly from ioImageList (get_size does not work)
         @Width = iWidth
         @Height = iHeight
-        # The internal map of image IDs => tree indexes
+        # The internal map of image IDs => indexes
         # map< Object, Integer >
         @Id2Idx = {}
-        # The minimal width and height
-        # The image list used with the tree
-        @TreeImageList = Wx::ImageList.new(@Width, @Height)
-        @Tree.set_image_list(@TreeImageList)
       end
 
-      # Get the Tree's image index for a given image ID
+      # Get the image index for a given image ID
       #
       # Parameters:
       # * *iID* (_Object_): Id of the image
       # * *CodeBlock*: The code that will be called if the image ID is unknown. This code has to return a Wx::Bitmap object, representing the bitmap for the given image ID.
-      def getTreeImageIndex(iID)
+      def getImageIndex(iID)
         if (@Id2Idx[iID] == nil)
           # Bitmap unknown.
           # First create it.
@@ -61,7 +58,7 @@ module PBS
             lBitmap = Wx::Bitmap.from_image(lBitmap.convert_to_image.scale(@Width, @Height))
           end
           # Then add it to the image list, and register it
-          @Id2Idx[iID] = @TreeImageList.add(lBitmap)
+          @Id2Idx[iID] = @ImageList.add(lBitmap)
         end
 
         return @Id2Idx[iID]
@@ -84,14 +81,13 @@ module PBS
       # Parameters:
       # * *iCopyType* (_Integer_): Type of the copy (Wx::ID_COPY/Wx::ID_CUT)
       # * *iCopyID* (_Integer_): ID of the copy
-      # * *iSerializedTags* (<em>list<Object></em>): The list of serialized Tags, with their sub-Tags and Shortcuts (can be nil for acks)
-      # * *iSerializedShortcuts* (<em>list<[Object,list<String>]></em>): The list of serialized Shortcuts, with their parent Tag's ID (can be nil for acks)
-      def setData(iCopyType, iCopyID, iSerializedTags, iSerializedShortcuts)
-        @Data = Marshal.dump( [ iCopyType, iCopyID, iSerializedTags, iSerializedShortcuts ] )
-        if (iSerializedTags == nil)
+      # * *iSerializedSelection* (<em>MultipleSelection::Serialized</em>): The serialized selection (can be nil for acks)
+      def setData(iCopyType, iCopyID, iSerializedSelection)
+        @Data = Marshal.dump( [ iCopyType, iCopyID, iSerializedSelection ] )
+        if (iSerializedSelection == nil)
           @DataAsText = nil
         else
-          @DataAsText = MultipleSelection::getSingleContent(iSerializedTags, iSerializedShortcuts)
+          @DataAsText = iSerializedSelection.getSingleContent
         end
       end
 
@@ -100,8 +96,7 @@ module PBS
       # Return:
       # * _Integer_: Type of the copy (Wx::ID_COPY/Wx::ID_CUT)
       # * _Integer_: ID of the copy
-      # * <em>list<Object></em>: The list of serialized Tags, with their sub-Tags and Shortcuts (can be nil for acks)
-      # * <em>list<[Object,list<String>]></em>: The list of serialized Shortcuts, with their parent Tag's ID (can be nil for acks)
+      # * <em>MultipleSelection::Serialized</em>: The serialized selection (can be nil for acks)
       def getData
         return Marshal.load(@Data)
       end
@@ -212,10 +207,8 @@ module PBS
         @OldEffect = nil
 
         # Create the serialized data
-        lSerializedTags, lSerializedShortcuts = @Selection.getSerializedSelection
-        lCopyID = @Controller.getNewCopyID
         lData = Tools::DataObjectSelection.new
-        lData.setData(Wx::ID_CUT, lCopyID, lSerializedTags, lSerializedShortcuts)
+        lData.setData(Wx::ID_CUT, @Controller.getNewCopyID, @Selection.getSerializedSelection)
 
         # Set the DropSource internal data
         self.data = lData
@@ -246,397 +239,6 @@ module PBS
         return false
       end
 
-    end
-
-    # Class that stores a selection of several Tags and Shortcuts alltogether
-    class MultipleSelection
-
-      # The list of Shortcuts IDs directly selected, with their corresponding parent Tag ID
-      #   list< [ Integer, list< String > ] >
-      attr_reader :SelectedPrimaryShortcuts
-
-      # The list of Tags IDs directly selected
-      #   list< list< String > >
-      attr_reader :SelectedPrimaryTags
-
-      # The list of Shortcuts IDs that are part of the selection because they belong to a selected Tag
-      #   list< [ Integer, list< String > ] >
-      attr_reader :SelectedSecondaryShortcuts
-
-      # The list of Tags IDs that are part of the selection because they are a sub-Tag of a selected Tag
-      #   list< list< String > >
-      attr_reader :SelectedSecondaryTags
-
-      # Constructor
-      #
-      # Parameters:
-      # * *iController* (_Controller_): The model controller
-      def initialize(iController)
-        @Controller = iController
-        @SerializedTags = nil
-        @SerializedShortcuts = nil
-        @SelectedPrimaryShortcuts = []
-        @SelectedPrimaryTags = []
-        @SelectedSecondaryShortcuts = []
-        @SelectedSecondaryTags = []
-      end
-
-      # Add a Tag to the selection
-      #
-      # Parameters:
-      # * *iTag* (_Tag_): The Tag to add (nil in case of the Root Tag)
-      def selectTag(iTag)
-        if (iTag == @Controller.RootTag)
-          # In this case, it is different: we select every first level Tag, and Shortcuts having no Tags as primary selection.
-          # This is equivalent to selecting everything.
-          # Select Tags
-          @Controller.RootTag.Children.each do |iChildTag|
-            selectTag(iChildTag)
-          end
-          # Select Shortcuts
-          @Controller.ShortcutsList.each do |iSC|
-            if (iSC.Tags.empty?)
-              selectShortcut(iSC, nil)
-            end
-          end
-        else
-          iTag.getSecondaryObjects(@Controller.ShortcutsList, @SelectedSecondaryShortcuts, @SelectedSecondaryTags)
-          @SelectedPrimaryTags << iTag.getUniqueID
-        end
-      end
-
-      # Add a Shortcut to the selection
-      #
-      # Parameters:
-      # * *iShortcut* (_Shortcut_): The Shortcut
-      # * *iParentTag* (_Tag_): The Tag from which the Shortcut was selected (nil for Root)
-      def selectShortcut(iShortcut, iParentTag)
-        if (iParentTag == nil)
-          @SelectedPrimaryShortcuts << [ iShortcut.getUniqueID, @Controller.RootTag.getUniqueID ]
-        else
-          @SelectedPrimaryShortcuts << [ iShortcut.getUniqueID, iParentTag.getUniqueID ]
-        end
-      end
-
-      # Is the given Tag selected as a primary selection ?
-      #
-      # Parameters:
-      # * *iTag* (_Tag_): The Tag to check
-      # Return:
-      # * _Boolean_: Is the given Tag selected as a primary selection ?
-      def isTagPrimary?(iTag)
-        return @SelectedPrimaryTags.include?(iTag.getUniqueID)
-      end
-
-      # Is the given Tag selected as a secondary selection ?
-      #
-      # Parameters:
-      # * *iTag* (_Tag_): The Tag to check
-      # Return:
-      # * _Boolean_: Is the given Tag selected as a secondary selection ?
-      def isTagSecondary?(iTag)
-        return @SelectedSecondaryTags.include?(iTag.getUniqueID)
-      end
-
-      # Is the given Shortcut selected as a primary selection ?
-      #
-      # Parameters:
-      # * *iSC* (_Shortcut_): The Shortcut to check
-      # * *iParentTag* (_Tag_): The corresponding parent Tag (can be nil for root)
-      # Return:
-      # * _Boolean_: Is the given Shortcut selected as a primary selection ?
-      def isShortcutPrimary?(iSC, iParentTag)
-        if (iParentTag == nil)
-          return @SelectedPrimaryShortcuts.include?( [ iSC.getUniqueID, @Controller.RootTag.getUniqueID ] )
-        else
-          return @SelectedPrimaryShortcuts.include?( [ iSC.getUniqueID, iParentTag.getUniqueID ] )
-        end
-      end
-
-      # Is the given Shortcut selected as a secondary selection ?
-      #
-      # Parameters:
-      # * *iSC* (_Shortcut_): The Shortcut to check
-      # * *iParentTag* (_Tag_): The corresponding parent Tag (can be nil for root)
-      # Return:
-      # * _Boolean_: Is the given Shortcut selected as a secondary selection ?
-      def isShortcutSecondary?(iSC, iParentTag)
-        if (iParentTag == nil)
-          return @SelectedSecondaryShortcuts.include?( [ iSC.getUniqueID, @Controller.RootTag.getUniqueID ] )
-        else
-          return @SelectedSecondaryShortcuts.include?( [ iSC.getUniqueID, iParentTag.getUniqueID ] )
-        end
-      end
-
-      # Is the selection empty ?
-      #
-      # Return:
-      # * _Boolean_: Is the selection empty ?
-      def empty?
-        return ((@SelectedPrimaryShortcuts.empty?) and
-                (@SelectedPrimaryTags.empty?))
-      end
-
-      # Is the selection about a single Tag ?
-      #
-      # Return:
-      # * _Boolean_: Is the selection about a single Tag ?
-      def singleTag?
-        return ((@SelectedPrimaryShortcuts.empty?) and
-                (@SelectedPrimaryTags.size == 1))
-      end
-
-      # Is the selection about a single Shortcut ?
-      #
-      # Return:
-      # * _Boolean_: Is the selection about a single Shortcut ?
-      def singleShortcut?
-        return ((@SelectedPrimaryShortcuts.size == 1) and
-                (@SelectedPrimaryTags.empty?))
-      end
-
-      # Return a simple string summary of what is selected
-      #
-      # Return:
-      # * _String_: The simple description of the selection
-      def getDescription
-        rDescription = nil
-
-        if (@SelectedPrimaryShortcuts.empty?)
-          if (@SelectedPrimaryTags.empty?)
-            rDescription = 'Empty'
-          elsif (@SelectedPrimaryTags.size == 1)
-            lTag = @Controller.findTag(@SelectedPrimaryTags[0])
-            if (lTag == nil)
-              puts "!!! Tag #{@SelectedPrimaryTags[0].join('/')} was selected, but does not exist in the data. Bug ?"
-              rDescription = 'Error'
-            else
-              rDescription = "Tag #{lTag.Name}"
-            end
-          else
-            rDescription = 'Multiple Tags'
-          end
-        elsif (@SelectedPrimaryTags.empty?)
-          if (@SelectedPrimaryShortcuts.size == 1)
-            lSC = @Controller.findShortcut(@SelectedPrimaryShortcuts[0][0])
-            if (lSC == nil)
-              puts "!!! Shortcut #{@SelectedPrimaryShortcuts[0][0]} was selected, but does not exist in the data. Bug ?"
-              rDescription = 'Error'
-            else
-              rDescription = "Shortcut #{lSC.Metadata['title']}"
-            end
-          else
-            rDescription = 'Multiple Shortcuts'
-          end
-        else
-          rDescription = 'Multiple'
-        end
-
-        return rDescription
-      end
-
-      # Get a description from 2 lists of serialized Shortcuts and Tags returned by this class
-      #
-      # Parameters:
-      # * *iSerializedTags* (<em>list<Object></em>): The list of serialized Tags, with their sub-Tags and Shortcuts
-      # * *iSerializedShortcuts* (<em>list<Object]></em>): The list of serialized Shortcuts
-      # Return:
-      # * _String_: The simple description
-      def self.getDescription(iSerializedTags, iSerializedShortcuts)
-        rDescription = nil
-
-        if (iSerializedShortcuts.empty?)
-          if (iSerializedTags.empty?)
-            rDescription = 'Empty'
-          elsif (iSerializedTags.size == 1)
-            rDescription = "Tag #{iSerializedTags[0].getName}"
-          else
-            rDescription = 'Multiple Tags'
-          end
-        elsif (iSerializedTags.empty?)
-          if (iSerializedShortcuts.size == 1)
-            rDescription = "Shortcut #{iSerializedShortcuts[0].getName}"
-          else
-            rDescription = 'Multiple Shortcuts'
-          end
-        else
-          rDescription = 'Multiple'
-        end
-
-        return rDescription
-      end
-
-      # Get the content of a single selected and serialized Tag or Shortcut, or nil otherwise.
-      # In fact this function is useful to give an alternate text representation of the data to be put in the clipboard.
-      #
-      # Parameters:
-      # * *iSerializedTags* (<em>list<Object></em>): The list of serialized Tags, with their sub-Tags and Shortcuts
-      # * *iSerializedShortcuts* (<em>list<Object></em>): The list of serialized Shortcuts
-      # Return:
-      # * _String_: The single content
-      def self.getSingleContent(iSerializedTags, iSerializedShortcuts)
-        rContent = nil
-
-        if (iSerializedShortcuts.empty?)
-          if (iSerializedTags.size == 1)
-            rContent = iSerializedTags[0].getSingleClipContent
-          end
-        elsif (iSerializedTags.empty?)
-          if (iSerializedShortcuts.size == 1)
-            rContent = iSerializedShortcuts[0].getSingleClipContent
-          end
-        end
-
-        return rContent
-      end
-
-      # Get the complete selected data in a serialized way (that is without any references to objects, ready to be marshalled)
-      #
-      # Return:
-      # * <em>list< Object ></em>: The list of serialized Tags, with their sub-Tags and Shortcuts
-      # * <em>list< Object ></em>: The list of serialized Shortcuts
-      def getSerializedSelection
-        if (@SerializedTags == nil)
-          computeSerializedTags
-        end
-        if (@SerializedShortcuts == nil)
-          computeSerializedShortcuts
-        end
-        return @SerializedTags, @SerializedShortcuts
-      end
-
-      # Create serialized Tags data
-      def computeSerializedTags
-        @SerializedTags = []
-        @SelectedPrimaryTags.each do |iTagID|
-          if (iTagID == [])
-            # Root Tag
-            @SerializedTags << @Controller.RootTag.getSerializedDataWithShortcuts(@Controller.ShortcutsList)
-          else
-            lTag = @Controller.findTag(iTagID)
-            if (lTag == nil)
-              puts "!!! Tag of ID #{iTagID.join('/')} should be part of the data, as it was marked as selected. Ignoring it. Bug ?"
-            else
-              @SerializedTags << lTag.getSerializedDataWithShortcuts(@Controller.ShortcutsList)
-            end
-          end
-        end
-      end
-
-      # Create serialized Shortcuts data
-      def computeSerializedShortcuts
-        @SerializedShortcuts = []
-        @SelectedPrimaryShortcuts.each do |iSCInfo|
-          iSCID, iParentTagID = iSCInfo
-          lSC = @Controller.findShortcut(iSCID)
-          if (lSC == nil)
-            puts "!!! Shortcut of ID #{iSCID} should be part of the data, as it was marked as selected. Ignoring it. Bug ?"
-          else
-            @SerializedShortcuts << lSC.getSerializedData(true)
-          end
-        end
-      end
-
-      # Get the bitmap representing this selection
-      #
-      # Parameters:
-      # * *iFont* (<em>Wx::Font</em>): The font to be used to write
-      # * *CodeBlock*: The code called once the bitmap has been created without alpha channel. This is used to put some modifications on it.
-      # Return:
-      # * <em>Wx::Bitmap</em>: The bitmap
-      def getBitmap(iFont)
-        # Paint the bitmap corresponding to the selection
-        lWidth = 0
-        lHeight = 0
-        # Arbitrary max size
-        lMaxWidth = 400
-        lMaxHeight = 400
-        lDragBitmap = Wx::Bitmap.new(lMaxWidth, lMaxHeight)
-        lDragBitmap.draw do |ioDC|
-          # White will be set as transparent afterwards
-          ioDC.brush = Wx::WHITE_BRUSH
-          ioDC.pen = Wx::WHITE_PEN
-          ioDC.draw_rectangle(0, 0, lMaxWidth, lMaxHeight)
-          lWidth, lHeight = draw(ioDC, iFont)
-        end
-        # Modify it before continuing
-        lWidth, lHeight = yield(lDragBitmap, lWidth, lHeight)
-        # Compute the alpha mask
-        lSelectionImage = Wx::Image.from_bitmap(lDragBitmap)
-        lSelectionImage.set_mask_colour(Wx::WHITE.red, Wx::WHITE.green, Wx::WHITE.blue)
-        lSelectionImage.init_alpha
-        lSelectionImage.convert_alpha_to_mask
-
-        return Wx::Bitmap.from_image(lSelectionImage.resize([lWidth, lHeight], Wx::Point.new(0, 0)))
-      end
-
-      # Draw the selection in a device context
-      #
-      # Parameters:
-      # * *ioDC* (<em>Wx::DC</em>): The device context to draw into
-      # * *iFont* (<em>Wx::Font</em>): The font to be used to write
-      # Return:
-      # * _Integer_: The final width used to draw
-      # * _Integer_: The final height used to draw
-      def draw(ioDC, iFont)
-        rFinalWidth = 0
-        rFinalHeight = 0
-
-        ioDC.font = iFont
-        # Draw Shortcuts
-        @SelectedPrimaryShortcuts.each do |iSCInfo|
-          iSCID, iParentTagID = iSCInfo
-          lSC = @Controller.findShortcut(iSCID)
-          if (lSC == nil)
-            puts "!!! Shortcut of ID #{iSCID} should be part of the data, as it was marked as selected. Ignoring it. Bug ?"
-          else
-            lTitle = lSC.Metadata['title']
-            lWidth, lHeight, lDescent, lLeading = ioDC.get_text_extent(lTitle)
-            if (lWidth > rFinalWidth)
-              rFinalWidth = lWidth
-            end
-            ioDC.draw_text(lTitle, 0, rFinalHeight)
-            rFinalHeight += lHeight + lLeading
-          end
-        end
-        # Draw Tags
-        @SelectedPrimaryTags.each do |iTagID|
-          lTag = @Controller.findTag(iTagID)
-          if (lTag == nil)
-            puts "!!! Tag of ID #{iTagID.join('/')} should be part of the data, as it was marked as selected. Ignoring it. Bug ?"
-          else
-            lTitle = "#{lTag.Name} ..."
-            lWidth, lHeight, lDescent, lLeading = ioDC.get_text_extent(lTitle)
-            ioDC.draw_text(lTitle, 0, rFinalHeight)
-            if (lWidth > rFinalWidth)
-              rFinalWidth = lWidth
-            end
-            rFinalHeight += lHeight + lLeading
-          end
-        end
-
-        return rFinalWidth, rFinalHeight
-      end
-
-      # Check if a Tag is part of the selection
-      #
-      # Parameters:
-      # * *iTagID* (<em>list<String></em>): The Tag ID
-      # Return:
-      # * _Boolean_: Is the Tag part of the selection ?
-      def tagSelected?(iTagID)
-        rFound = false
-
-        @SelectedPrimaryTags.each do |iSelectedTagID|
-          if (iTagID[0..iSelectedTagID.size - 1] == iSelectedTagID)
-            rFound = true
-            break
-          end
-        end
-
-        return rFound
-      end
-      
     end
 
     # Get a bitmap/icon from a file.
@@ -746,226 +348,215 @@ module PBS
       return rBitmap
     end
 
-    # Can we paste a given selection (ex. from clipboard) in the Root Tag ?
-    # * Conditions that each primary selected Shortcut has to meet:
-    # ** In the case of a copy mode 'Copy':
-    # *** The Shortcut to be copied does not already exist in the Controller
-    # ** In the case of a copy mode 'Cut':
-    # *** The Shortcut to be moved does not already exist in the Controller, or
-    # *** it exists, belonging to just 1 Tag and we are the source of the Cut (no external application).
-    # * Conditions that each primary selected Tag has to meet:
-    # ** the copy mode is 'Copy', or
-    # ** the copy mode is 'Cut' and
-    # *** The data source is not the same as us (external application), or
-    # *** each primary selected Tag to be pasted is not a direct sub-Tag of the Root Tag
-    # If the serialized data is not given, the function will eventually return true even if it would be false with the serialized knowledge.
-    # If the serialized data is from the same data source as us (iLocalSelection != nil), don't use the serialized data, but exclusively iLocalSelection. This lets the function return correctly even if the serialized data is not available.
-    #
-    # Parameters:
-    # * *iController* (_Controller_): The controller
-    # * *iSerializedTags* (<em>list<Object></em>): The serialized Tags to be pasted (nil if we don't have the information)
-    # * *iSerializedShortcuts* (<em>list<Object,list<String>></em>): The serialized Shortcuts to be pasted (nil if we don't have the information)
-    # * *iCopyType* (_Integer_): The copy type of what is to be pasted (Wx::ID_COPY or Wx::ID_CUT)
-    # * *iLocalSelection* (_MultipleSelection_): The local selection that can be pasted if the source data to be copied is us (nil if external application source of data to be pasted)
-    # Return:
-    # * _Boolean_: Can we paste ?
-    # * <em>list<String></em>: Reasons why we can't paste (empty in case of success)
-    def isPasteAuthorizedInRoot?(iController, iSerializedTags, iSerializedShortcuts, iCopyType, iLocalSelection)
-      rPasteableInRoot = true
-      rError = []
-
-      case iCopyType
-      when Wx::ID_COPY
-        if (iLocalSelection != nil)
-          # If we have Shortcuts, we can't paste them, as they are forcefully from another place of the same datamodel
-          if (iLocalSelection.SelectedPrimaryShortcuts.size > 0)
-            rPasteableInRoot = false
-            rError << 'Shortcuts can\'t be pasted in Root as they already exist somewhere else.'
-          end
-        elsif (iSerializedShortcuts != nil)
-          iSerializedShortcuts.each do |iSerializedShortcutInfo|
-            iSerializedShortcut, iParentID = iSerializedShortcutInfo
-            # Check that the Shortcut does not already exist
-            if (iController.findShortcut(iSerializedShortcut.getUniqueID) != nil)
-              rPasteableInRoot = false
-              rError << "Shortcut #{iSerializedShortcut.getName} already exists"
-            end
-            # If we don't want to log more errors, we can uncomment the following
-            #if (!rPasteableInRoot)
-            #  # No need to continue, we already know we can't paste
-            #  break
-            #end
-          end
-        end
-      when Wx::ID_CUT
-        if (iLocalSelection != nil)
-          # Perform the check using local data
-          iLocalSelection.SelectedPrimaryShortcuts.each do |iShortcutInfo|
-            iShortcutID, iParentTagID = iShortcutInfo
-            # Get the real Shortcut
-            lAlreadyExistingSC = iController.findShortcut(iShortcutID)
-            if (lAlreadyExistingSC == nil)
-              puts "!!! Shortcut of ID #{iShortcutID} was part of the selection, but unable to retrieve it. Bug ?"
-            else
-              # Check that the Shortcut belongs to just 1 Tag
-              if (lAlreadyExistingSC.Tags.size == 0)
-                rPasteableInRoot = false
-                rError << "Can't move Shortcut #{lAlreadyExistingSC.Metadata['title']} to the Root as it is already there."
-              elsif (lAlreadyExistingSC.Tags.size > 1)
-                rPasteableInRoot = false
-                rError << "Can't move Shortcut #{lAlreadyExistingSC.Metadata['title']} to the Root as it has several Tags."
-              end
-            end
-            # If we don't want to log more errors, we can uncomment the following
-            #if (!rPasteableInRoot)
-            #  # No need to continue, we already know we can't paste
-            #  break
-            #end
-          end
-        elsif (iSerializedShortcuts != nil)
-          iSerializedShortcuts.each do |iSerializedShortcutInfo|
-            iSerializedShortcut, iParentID = iSerializedShortcutInfo
-            # Check if it exists
-            lAlreadyExistingSC = iController.findShortcut(iSerializedShortcut.getUniqueID)
-            if (lAlreadyExistingSC != nil)
-              # Check that we are the source of the Cut, and that the Shortcut belongs to just 1 Tag
-              rPasteableInRoot = false
-              rError << "Shortcut #{lAlreadyExistingSC.Metadata['title']} already exists"
-            end
-            # If we don't want to log more errors, we can uncomment the following
-            #if (!rPasteableInRoot)
-            #  # No need to continue, we already know we can't paste
-            #  break
-            #end
-          end
-        end
-        if (iLocalSelection != nil)
-          iLocalSelection.SelectedPrimaryTags.each do |iTagID|
-            lTag = iController.findTag(iTagID)
-            if (lTag == nil)
-              puts "!!! Tag #{iTagID.join('/')} was part of the selection, but unable to retrieve it. Bug ?"
-            else
-              # Check that iTag is not a sub-Tag of the Root Tag.
-              iController.RootTag.Children.each do |iRootChildTag|
-                if (lTag == iRootChildTag)
-                  rPasteableInRoot = false
-                  rError << "Can't move #{lTag.Name} in the same location."
-                  # If we don't want to log more errors, we can uncomment the following
-                  #break
-                end
-              end
-            end
-            # If we don't want to log more errors, we can uncomment the following
-            #if (!rPasteableInRoot)
-            #  # No need to continue, we already know we can't paste
-            #  break
-            #end
-          end
-        end
-      else
-        puts "!!! Unknown Copy Mode #{iCopyType}. Bug ?"
-        rError << "!!! Unknown Copy Mode #{iCopyType}. Bug ?"
-      end
-
-      return rPasteableInRoot, rError
-    end
-
-    # Check if we can paste a specified selection in another one
-    # Paste is enabled only if the selection (the current one, where we want to paste):
-    # * contains a single Tag, and
-    # ** the copy mode is 'Copy', or
-    # ** the copy mode is 'Cut' and
-    # *** The data source is not the same as us (external application), or
-    # **** the selected Tag is not part of what is in the clipboard and
-    # **** each primary selected Tag to be pasted is not a direct sub-Tag of the selected Tag to paste in, and
-    # **** each primary selected Shortcut to be pasted is not already part of the selected Tag to paste in
-    # * or contains the Root Tag and each primary selected Tag and Shortcut from the clipboard can be pasted in the Root Tag.
-    # (check isPasteAuthorizedInRoot? for the conditions about the Root Tag)
+    # Check if we can import a serialized selection (from local or external source) in a given Tag.
+    # The algorithm is as follow:
+    # 1. Check first if import is possible without questioning unicity constraints:
+    # 1.1. If the selection is from an external source (other application through clipboard/drop...):
+    # 1.1.1. Ok, go to step 2.
+    # 1.2. Else:
+    # 1.2.1. If the selection is to be copied (no delete afterwards):
+    # 1.2.1.1. If the primary selection contains Shortcuts, and we want to import in the Root Tag:
+    # 1.2.1.1.1. Fail (we can't copy Shortcuts already having Tags to remove their Tags afterwards)
+    # 1.2.1.2. Else:
+    # 1.2.1.2.1. OK, go to step 2.
+    # 1.2.2. Else (it is then to be moved):
+    # 1.2.2.1. Check that we will not delete what is being imported afterwards:
+    # 1.2.2.1.1. If the Tag to import to is part of the selection (primary or secondary):
+    # 1.2.2.1.1.1. Fail (we can't move it to itself or one of its sub-Tags)
+    # 1.2.2.1.2. Else, if one of the primary selected Tags is a direct sub-Tag of the Tag we import to:
+    # 1.2.2.1.2.1. Fail (we can't move to the same place, it is useless)
+    # 1.2.2.1.3. Else, if one of the primary selected Shortcuts already belongs to the Tag we import to:
+    # 1.2.2.1.3.1. Fail (we can't move to the same place, it is useless)
+    # 1.2.2.1.4. Else:
+    # 1.2.2.1.4.1. OK, go to step 2.
+    # 2. Then, check that importing there does not violate any unicity constraints:
+    # 2.1. If the option has been set to reject automatically the operation in case of Shortcuts doublons (SHORTCUTSCONFLICT_CANCEL_ALL):
+    # 2.1.1. If at least 1 of the selected Shortcuts (primary and secondary) is in conflict with our Shortcuts:
+    # 2.1.1.1. Fail (the operation would have been cancelled anyway due to Shortcuts doublons)
+    # 2.2. If the option has been set to reject automatically the operation in case of Tags doublons (TAGSCONFLICT_CANCEL_ALL):
+    # 2.2.1. If at least 1 of the primary selected Tags is in conflict with children of the Tag we import to:
+    # 2.2.1.1. Fail (the operation would have been cancelled anyway due to Tags doublons)
     #
     # Parameters:
     # * *iController* (_Controller_): The controller
     # * *iSelection* (_MultipleSelection_): The selection in which we paste (nil in case of the Root Tag)
     # * *iCopyType* (_Integer_): The copy type of what is to be pasted (Wx::ID_COPY or Wx::ID_CUT)
     # * *iLocalSelection* (_MultipleSelection_): The local selection that can be pasted if the source data to be copied is us (nil if external application source of data to be pasted)
-    # * *iSerializedTags* (<em>list<Object></em>): The serialized Tags to be pasted (nil if we don't have the information)
-    # * *iSerializedShortcuts* (<em>list<[Object,list<String>]></em>): The list of serialized Shortcuts, with their parent Tag's ID (nil if we don't have the information)
+    # * *iSerializedSelection* (<em>MultipleSelection::Serialized</em>): The serialized selection to be pasted (nil if we don't have the information)
     # Return:
     # * _Boolean_: Can we paste ?
     # * <em>list<String></em>: Reasons why we can't paste (empty in case of success)
-    def isPasteAuthorized?(iController, iSelection, iCopyType, iLocalSelection, iSerializedTags, iSerializedShortcuts)
-      rPasteOK = false
+    def isPasteAuthorized?(iController, iSelection, iCopyType, iLocalSelection, iSerializedSelection)
+      rPasteOK = true
       rError = []
 
-      if (iSelection == nil)
-        # Root Tag is selected
-        rPasteOK, rError = isPasteAuthorizedInRoot?(
-          iController,
-          iSerializedTags,
-          iSerializedShortcuts,
-          iCopyType,
-          iLocalSelection
-        )
-      elsif (iSelection.singleTag?)
-        # We can paste if we are not moving a Tag to one of its sub-Tags recursively
-        case iCopyType
-        when Wx::ID_COPY
-          rPasteOK = true
-        when Wx::ID_CUT
-          if (iLocalSelection != nil)
-            # Check that the Tag in which we Paste is not part of the data to paste
-            lSelectedTagID = iSelection.SelectedPrimaryTags[0]
-            if (!iLocalSelection.tagSelected?(lSelectedTagID))
-              lSelectedTag = iController.findTag(lSelectedTagID)
-              if (lSelectedTag == nil)
-                puts "!!! Normally Tag #{lSelectedTagID.join('/')} was selected, but unable to retrieve it. Bug ?"
-                rError << "!!! Normally Tag #{lSelectedTagID.join('/')} was selected, but unable to retrieve it. Bug ?"
-              else
-                rPasteOK = true
-                # Check that each primary selected Tag is not a direct sub-Tag of lSelectedTag
-                lSelectedTag.Children.each do |iChildTag|
-                  lChildTagID = iChildTag.getUniqueID
-                  # Check if iChildTag is not selected
-                  iLocalSelection.SelectedPrimaryTags.each do |iTagID|
-                    if (iTagID == lChildTagID)
-                      rPasteOK = false
-                      rError << "Tag #{iChildTag.Name} is already a sub-Tag of #{lSelectedTag.Name}."
-                      # If we don't want to log more errors, we can uncomment the following
-                      #break
-                    end
+      if ((iSelection == nil) or
+          (iSelection.singleTag?))
+        # The selection is valid
+        if (iSelection == nil)
+          lSelectedTag = iController.RootTag
+        else
+          lSelectedTag = iSelection.SelectedPrimaryTags[0]
+        end
+        # Here, lSelectedTag contains the Tag in which we import data, possibly the Root Tag.
+        # 1. Check first if import is possible without questioning unicity constraints:
+        # 1.1. If the selection is from an external source (other application through clipboard/drop...):
+        # 1.1.1. Ok, go to step 2.
+        # 1.2. Else:
+        if (iLocalSelection != nil)
+          # 1.2.1. If the selection is to be copied (no delete afterwards):
+          if (iCopyType == Wx::ID_COPY)
+            # 1.2.1.1. If the primary selection contains Shortcuts, and we want to import in the Root Tag:
+            if ((!iLocalSelection.SelectedPrimaryShortcuts.empty?) and
+                (lSelectedTag == iController.RootTag))
+              # 1.2.1.1.1. Fail (we can't copy Shortcuts already having Tags to remove their Tags afterwards)
+              rPasteOK = false
+              rError << 'Can\'t copy Shortcuts already having Tags to remove their Tags afterwards'
+            end
+            # 1.2.1.2. Else:
+            # 1.2.1.2.1. OK, go to step 2.
+          # 1.2.2. Else (it is then to be moved):
+          else
+            # 1.2.2.1. Check that we will not delete what is being imported afterwards:
+            # 1.2.2.1.1. If the Tag to import to is part of the selection (primary or secondary):
+            if (iLocalSelection.tagSelected?(lSelectedTag))
+              # 1.2.2.1.1.1. Fail (we can't move it to itself or one of its sub-Tags)
+              rPasteOK = false
+              rError << "Can't move Tag #{lSelectedTag.Name} in one of its sub-Tags."
+            # 1.2.2.1.2. Else, if one of the primary selected Tags is a direct sub-Tag of the Tag we import to:
+            else
+              # Check that each primary selected Tag is not a direct sub-Tag of lSelectedTag
+              lSelectedTag.Children.each do |iChildTag|
+                # Check if iChildTag is not selected among primary selection
+                iLocalSelection.SelectedPrimaryTags.each do |iTag|
+                  if (iTag == iChildTag)
+                    # 1.2.2.1.2.1. Fail (we can't move to the same place, it is useless)
+                    rPasteOK = false
+                    rError << "Tag #{iChildTag.Name} is already a sub-Tag of #{lSelectedTag.Name}."
+                    # If we don't want to log more errors, we can uncomment the following
+                    #break
                   end
-                  # If we don't want to log more errors, we can uncomment the following
-                  #if (!rPasteOK)
-                  #  break
-                  #end
                 end
-                # Check that each primary selected Shortcut does not belong already to lSelectedTag
+                # If we don't want to log more errors, we can uncomment the following
+                #if (!rPasteOK)
+                #  break
+                #end
+              end
+              # 1.2.2.1.3. Else, if one of the primary selected Shortcuts already belongs to the Tag we import to:
+              if (rPasteOK)
                 iLocalSelection.SelectedPrimaryShortcuts.each do |iShortcutInfo|
-                  iShortcutID, iParentTagID = iShortcutInfo
-                  lShortcut = iController.findShortcut(iShortcutID)
-                  if (lShortcut == nil)
-                    puts "!!! Shortcut of ID #{iShortcutID} is part of the selection, but unable to retrieve it. Bug ?"
-                  else
-                    if (lShortcut.Tags.has_key?(lSelectedTag))
-                      rPasteOK = false
-                      rError << "Shortcut #{lShortcut.Metadata['title']} is already part of Tag #{lSelectedTag.Name}."
-                      # If we don't want to log more errors, we can uncomment the following
-                      #break
-                    end
+                  iShortcut, iParentTag = iShortcutInfo
+                  if ((lSelectedTag == iController.RootTag) and
+                      (iShortcut.Tags.empty?))
+                    # 1.2.2.1.3.1. Fail (we can't move to the same place, it is useless)
+                    # It already belongs to the Root Tag
+                    rPasteOK = false
+                    rError << "Shortcut #{iShortcut.Metadata['title']} is already part of the Root Tag."
+                    # If we don't want to log more errors, we can uncomment the following
+                    #break
+                  elsif ((lSelectedTag != iController.RootTag) and
+                         (iShortcut.Tags.has_key?(lSelectedTag)))
+                    # 1.2.2.1.3.1. Fail (we can't move to the same place, it is useless)
+                    rPasteOK = false
+                    rError << "Shortcut #{iShortcut.Metadata['title']} is already part of Tag #{lSelectedTag.Name}."
+                    # If we don't want to log more errors, we can uncomment the following
+                    #break
                   end
+                end
+              # 1.2.2.1.4. Else:
+              # 1.2.2.1.4.1. OK, go to step 2.
+              end
+            end
+          end
+        end
+        # 2. Then, check that importing there does not violate any unicity constraints:
+        # 2.1. If the option has been set to reject automatically the operation in case of Shortcuts doublons (SHORTCUTSCONFLICT_CANCEL_ALL):
+        if (iController.Options[:shortcutsConflict] == SHORTCUTSCONFLICT_CANCEL_ALL)
+          # 2.1.1. If at least 1 of the selected Shortcuts (primary and secondary) is in conflict with our Shortcuts:
+          if (iLocalSelection != nil)
+            # Perform the checks on the local selection
+            iController.ShortcutsList.each do |iExistingShortcut|
+              (iLocalSelection.SelectedPrimaryShortcuts + iLocalSelection.SelectedSecondaryShortcuts).each do |iShortcutInfo|
+                iShortcut, iParentTag = iShortcutInfo
+                if ((iExistingShortcut.Type == iShortcut.Type) and
+                    (iController.shortcutSameAs?(iExistingShortcut, iShortcut.Content, iShortcut.Metadata)))
+                  # 2.1.1.1. Fail (the operation would have been cancelled anyway due to Shortcuts doublons)
+                  rPasteOK = false
+                  rError << "Shortcut #{iShortcut.Metadata['title']} would result in conflict with Shortcut #{iExistingShortcut.Metadata['title']}. You can remove automatic cancellation in the conflicts options."
+                  # If we don't want to log more errors, we can uncomment the following
+                  #break
                 end
               end
-            else
-              rError << "Can't move into #{lSelectedTagID[-1]} as it is part of the cut data."
+              # If we don't want to log more errors, we can uncomment the following
+              #if (!rPasteOK)
+              #  break
+              #end
             end
-          else
-            rPasteOK = true
+          elsif (iSerializedSelection != nil)
+            # Perform the checks using the serialized selection
+            iController.ShortcutsList.each do |iExistingShortcut|
+              iSerializedSelection.getSelectedShortcuts.each do |iSerializedShortcut|
+                if ((iExistingShortcut.Type.pluginName == iSerializedShortcut.TypePluginName) and
+                    (iController.shortcutSameAsSerialized?(iExistingShortcut, iSerializedShortcut.Content, iSerializedShortcut.Metadata)))
+                  # 2.1.1.1. Fail (the operation would have been cancelled anyway due to Shortcuts doublons)
+                  rPasteOK = false
+                  rError << "Shortcut #{iSerializedShortcut.Metadata['title']} would result in conflict with Shortcut #{iExistingShortcut.Metadata['title']}. You can remove automatic cancellation in the conflicts options."
+                  # If we don't want to log more errors, we can uncomment the following
+                  #break
+                end
+              end
+              # If we don't want to log more errors, we can uncomment the following
+              #if (!rPasteOK)
+              #  break
+              #end
+            end
           end
-        else
-          puts "!!! Unknown Copy Mode #{iCopyType}. Bug ?"
-          rError << "!!! Unknown Copy Mode #{iCopyType}. Bug ?"
+        end
+        # 2.2. If the option has been set to reject automatically the operation in case of Tags doublons (TAGSCONFLICT_CANCEL_ALL):
+        if ((rPasteOK) and
+            (iController.Options[:tagsConflict] == TAGSCONFLICT_CANCEL_ALL))
+          # 2.2.1. If at least 1 of the primary selected Tags is in conflict with children of the Tag we import to:
+          if (iLocalSelection != nil)
+            # Perform the checks on the local selection
+            lSelectedTag.Children.each do |iChildTag|
+              # Check if iChildTag is in conflict with any primary selected Tag
+              iLocalSelection.SelectedPrimaryTags.each do |iTag|
+                if (iController.tagSameAs?(iChildTag, iTag.Name, iTag.Icon))
+                  # 2.2.1.1. Fail (the operation would have been cancelled anyway due to Tags doublons)
+                  rPasteOK = false
+                  rError << "Tag #{iTag.Name} would result in conflict with Tag #{iChildTag.Name}. You can remove automatic cancellation in the conflicts options."
+                  # If we don't want to log more errors, we can uncomment the following
+                  #break
+                end
+              end
+              # If we don't want to log more errors, we can uncomment the following
+              #if (!rPasteOK)
+              #  break
+              #end
+            end
+          elsif (iSerializedSelection != nil)
+            # Perform the checks using the serialized selection
+            lSelectedTag.Children.each do |iChildTag|
+              # Check if iChildTag is in conflict with any primary selected Tag
+              iSerializedSelection.getSelectedPrimaryTags.each do |iSerializedTag|
+                if (iController.tagSameAsSerialized?(iChildTag, iSerializedTag.Name, iSerializedTag.Icon))
+                  # 2.2.1.1. Fail (the operation would have been cancelled anyway due to Tags doublons)
+                  rPasteOK = false
+                  rError << "Tag #{iSerializedTag.Name} would result in conflict with Tag #{iChildTag.Name}. You can remove automatic cancellation in the conflicts options."
+                  # If we don't want to log more errors, we can uncomment the following
+                  #break
+                end
+              end
+              # If we don't want to log more errors, we can uncomment the following
+              #if (!rPasteOK)
+              #  break
+              #end
+            end
+          end
         end
       else
-        rError << 'Invalid selection to paste into. Select just 1 Tag.'
+        rPasteOK = false
+        rError << 'Invalid selection. Please select just 1 Tag.'
       end
 
       return rPasteOK, rError
@@ -1037,21 +628,15 @@ module PBS
     # Save data in a file
     #
     # Parameters:
-    # * *iRootTag* (_Tag_): The root tag, used to store all tags
-    # * *iShortcuts* (<em>list<Shortcut></em>): The list of shortcuts to store
+    # * *iController* (_Controller_): The controller giving data
     # * *iFileName* (_String_): The file name to save into
-    def saveData(iRootTag, iShortcuts, iFileName)
+    def saveData(iController, iFileName)
       # First serialize our data to store
-      lSerializedTags = []
-      iRootTag.Children.each do |iTag|
-        lSerializedTags << iTag.getSerializedData
-      end
-      lSerializedShortcuts = []
-      iShortcuts.each do |iSC|
-        lSerializedShortcuts << iSC.getSerializedData
-      end
-      # Then, marshall this data
-      lData = Marshal.dump([ lSerializedTags, lSerializedShortcuts ])
+      lAll = MultipleSelection.new(iController)
+      # Select the Root Tag: it selects everything
+      lAll.selectTag(iController.RootTag)
+      # Serialize the selection and marshal it
+      lData = Marshal.dump(lAll.getSerializedSelection)
       # The write everything in the file
       File.open(iFileName, 'wb') do |iFile|
         iFile.write(lData)
@@ -1061,78 +646,16 @@ module PBS
     # Open data from a file
     #
     # Parameters:
-    # * *iTypes* (<em>map<String,Object></em>): The known types
+    # * *ioController* (_Controller_): The controller that will get data
     # * *iFileName* (_String_): The file name to load from
-    # Return:
-    # * _Tag_: The root tag
-    # * <em>list<Shortcut></em>: The list of shortcuts
-    def openData(iTypes, iFileName)
-      rRootTag = Tag.new('Root', nil, nil)
-      rShortcuts = []
-
+    def openData(ioController, iFileName)
       # First read the file
       lData = nil
       File.open(iFileName, 'rb') do |iFile|
         lData = iFile.read
       end
-      # Unmarshal it
-      lSerializedTags, lSerializedShortcuts = Marshal.load(lData)
-      # Deserialize Tags
-      lSerializedTags.each do |iSerializedTagData|
-        iSerializedTagData.createTag(rRootTag, nil, nil)
-      end
-      # Deserialize Shortcuts
-      lSerializedShortcuts.each do |iSerializedShortcutData|
-        lNewShortcut = iSerializedShortcutData.createShortcut(rRootTag, iTypes)
-        if (lNewShortcut != nil)
-          rShortcuts << lNewShortcut
-        end
-      end
-
-      return rRootTag, rShortcuts
-    end
-
-    # Translate old Tags (belonging to an obsolete root) into new ones.
-    #
-    # Parameters:
-    # * *iOldTags* (<em>map<Tag,nil></em>): The old Tags
-    # * *ioNewTags* (<em>map<Tag,nil></em>): The new Tags
-    # * *iNewRootTag* (_Tag_): The root Tag that is already merged into the model, and has been created as the root of the  to consider for new ones
-    def translateTags(iOldTags, ioNewTags, iNewRootTag)
-      iOldTags.each do |iTag, iNil|
-        lTagID = iTag.getUniqueID
-        # And now we search for the real Tag
-        lNewCorrespondingTag = iNewRootTag.searchTag(lTagID)
-        if (lNewCorrespondingTag == nil)
-          puts "!!! Normally Tag #{lTagID.join('/')} should have been merged in #{iNewRootTag.getUniqueID.join('/')}, but it appears we can't retrieve it after the merge. Ignoring this Tag."
-        else
-          ioNewTags[lNewCorrespondingTag] = nil
-        end
-      end
-    end
-
-    # Clone a complete Tags tree, and a list of Shortcuts.
-    # It also takes care of the Tags references from the Shortcuts to point also to the cloned Tags.
-    #
-    # Parameters:
-    # * *iRootTag* (_Tag_): The root Tag
-    # * *iShortcutsList* (<em>list<Shortcut></em>): The list of Shortcuts
-    # Return:
-    # * _Tag_: The cloned root Tag
-    # * <em>list<Shortcut></em>: The cloned list of Shortcuts
-    def cloneTagsShortcuts(iRootTag, iShortcutsList)
-      rClonedRootTag = iRootTag.clone(nil)
-      rClonedShortcutsList = []
-
-      iShortcutsList.each do |iSC|
-        lNewSC = iSC.clone
-        lNewTags = {}
-        translateTags(lNewSC.Tags, lNewTags, rClonedRootTag)
-        lNewSC.replaceTags(lNewTags)
-        rClonedShortcutsList << lNewSC
-      end
-
-      return rClonedRootTag, rClonedShortcutsList
+      # Unmarshal it and apply it to our controller in the Root Tag.
+      Marshal.load(lData).createSerializedTagsShortcuts(ioController, ioController.RootTag, nil)
     end
 
     # Get a new Unique ID for Copy/Paste operations

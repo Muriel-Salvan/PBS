@@ -3,7 +3,7 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'Windows/ChooseIconDialog.rb'
+require 'Windows/ContentMetadataPanel.rb'
 
 module PBS
 
@@ -11,80 +11,6 @@ module PBS
   class EditShortcutDialog < Wx::Dialog
 
     include Tools
-
-    # Set the BitmapButton icon, based on @Icon and @Type
-    def setBBIcon
-      lIconBitmap = @Icon
-      if (lIconBitmap == nil)
-        lIconBitmap = @Type.getIcon
-      end
-      @BBIcon.bitmap_label = lIconBitmap
-      if (lIconBitmap.is_ok)
-        @BBIcon.bitmap_label = lIconBitmap
-      else
-        @BBIcon.bitmap_label = INVALID_ICON
-      end
-      @BBIcon.size = [ @BBIcon.bitmap_label.width + 4, @BBIcon.bitmap_label.height + 4 ]
-    end
-    
-    # Create the metadata panel
-    #
-    # Parameters:
-    # * *iParent* (_Window_): The parent window
-    # * *iSC* (_Shortcut_): The Shortcut containing initial values
-    def createMetadataPanel(iParent, iSC)
-      @MetadataPanel = Wx::Panel.new(iParent)
-
-      # Create all components
-      lSTTitle = Wx::StaticText.new(@MetadataPanel, -1, 'Title')
-      @TCTitle = Wx::TextCtrl.new(@MetadataPanel, :value => iSC.Metadata['title'])
-      @TCTitle.min_size = [300, @TCTitle.min_size.height]
-      lSTIcon = Wx::StaticText.new(@MetadataPanel, -1, 'Icon')
-      @BBIcon = Wx::BitmapButton.new(@MetadataPanel, -1, Wx::Bitmap.new)
-      evt_button(@BBIcon) do |iEvent|
-        # display the icon chooser dialog
-        lIconDialog = ChooseIconDialog.new(self, @BBIcon.bitmap_label)
-        case lIconDialog.show_modal
-        when Wx::ID_OK
-          lNewIcon = lIconDialog.getSelectedBitmap
-          if (lNewIcon != nil)
-            @Icon = lNewIcon
-            setBBIcon
-          end
-        end
-      end
-
-      # Put them in sizers
-      lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
-      @MetadataPanel.sizer = lMainSizer
-      lMainSizer.add_item([0,0], :proportion => 1)
-      lMainSizer.add_item(lSTTitle, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
-      lMainSizer.add_item(@TCTitle, :flag => Wx::GROW, :proportion => 0)
-      lIconSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
-      lIconSizer.add_item(lSTIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
-      lIconSizer.add_item([8,0], :proportion => 0)
-      lIconSizer.add_item(@BBIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
-      lMainSizer.add_item([0,8], :proportion => 0)
-      lMainSizer.add_item(lIconSizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
-      lMainSizer.add_item([0,0], :proportion => 1)
-
-      # Fit correctly depending on icon's size
-      setBBIcon
-      
-    end
-
-    # Create the metadata corresponding to the metadata panel
-    #
-    # Return:
-    # * <em>map<String,Object></em>: The corresponding metadata
-    def createMetadataFromPanel
-      rMetadata = {}
-
-      rMetadata['title'] = @TCTitle.value
-      rMetadata['icon'] = @Icon
-
-      return rMetadata
-    end
 
     # Populate a TreeCtrl component with Tags and checkboxes.
     # Keep inserted tags in a map filled by the method.
@@ -183,28 +109,32 @@ module PBS
     #
     # Parameters:
     # * *iParent* (<em>Wx::Window</em>): The parent
-    # * *iSC* (_Shortcut_): The shortcut being edited in this frame
+    # * *iSC* (_Shortcut_): The Shortcut containing info to edit (or nil if initial values needed)
     # * *iRootTag* (_Tag_): The root tag
-    def initialize(iParent, iSC, iRootTag)
-      @Type = iSC.Type
+    # * *iType* (_ShortcutType_): The Shortcut Type used (ignored if iSC != nil) [optional = nil]
+    def initialize(iParent, iSC, iRootTag, iType = nil)
+      if (iSC == nil)
+        @Type = iType
+      else
+        @Type = iSC.Type
+      end
 
       super(iParent,
         :title => "Edit Shortcut (#{@Type.pluginName})",
         :style => Wx::DEFAULT_DIALOG_STYLE|Wx::RESIZE_BORDER|Wx::MAXIMIZE_BOX
       )
 
-      # This attribute will be changed only if the icon is changed.
-      # It is used instead of the Wx::BitmapButton::bitmap_label because it can be nil, and in this case we don't want to replace it with the default icon internally.
-      @Icon = iSC.Metadata['icon']
-
       # First create all the panels that will fit in this dialog
-      @ContentPanel = iSC.Type.createEditPanel(self, iSC)
-      createTagsPanel(self, iRootTag, iSC.Tags)
-      createMetadataPanel(self, iSC)
+      if (iSC == nil)
+        createTagsPanel(self, iRootTag, {})
+        @ContentMetadataPanel = ContentMetadataPanel.new(self, @Type, iType.createEmptyContent, {'title' => 'New Shortcut', 'icon' => nil})
+      else
+        createTagsPanel(self, iRootTag, iSC.Tags)
+        @ContentMetadataPanel = ContentMetadataPanel.new(self, @Type, iSC.Content, iSC.Metadata)
+      end
       lButtonsPanel = createButtonsPanel(self)
       # Fit them all now, as we will use their true sizes to determine proportions in the sizers
-      @ContentPanel.fit
-      @MetadataPanel.fit
+      @ContentMetadataPanel.fit
       @TagsPanel.fit
 
       # Then put everything in place using sizers
@@ -216,18 +146,7 @@ module PBS
       # First sizer item is the group of 3 panels (content, metadata and tags)
       l3PanelsSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
 
-      # The first part of the 3 Panels sizer is the group of content and metadata panels
-      l2PanelsSizer = Wx::BoxSizer.new(Wx::VERTICAL)
-      l2PanelsSizer.add_item(@ContentPanel, :flag => Wx::GROW, :proportion => @ContentPanel.size.height)
-      # A little space
-      l2PanelsSizer.add_item([0,8], :proportion => 0)
-      l2PanelsSizer.add_item(@MetadataPanel, :flag => Wx::GROW, :proportion => @MetadataPanel.size.height)
-
-      lSize = @ContentPanel.size.width
-      if (@MetadataPanel.size.width > lSize)
-        lSize = @MetadataPanel.size.width
-      end
-      l3PanelsSizer.add_item(l2PanelsSizer, :flag => Wx::GROW, :proportion => lSize)
+      l3PanelsSizer.add_item(@ContentMetadataPanel, :flag => Wx::GROW, :proportion => @ContentMetadataPanel.size.width)
       # A little space
       l3PanelsSizer.add_item([8,0], :proportion => 0)
       # The second part of the 3 Panels sizer is the panel of tags
@@ -248,8 +167,7 @@ module PBS
     # * <em>map<String,Object></em>: The Metadata
     # * <em>map<Tag,nil></em>: The Tags
     def getNewData
-      rNewContent = @Type.createContentFromPanel(@ContentPanel)
-      rNewMetadata = createMetadataFromPanel
+      rNewContent, rNewMetadata = @ContentMetadataPanel.getNewData
       rNewTags = createTagsFromPanel
 
       return rNewContent, rNewMetadata, rNewTags

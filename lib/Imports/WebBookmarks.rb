@@ -104,7 +104,7 @@ module PBS
           # Tags
           lNewTags = {}
           # Beware the root Tag
-          if (iParentTag.getUniqueID != [])
+          if (iParentTag != ioController.RootTag)
             lNewTags[iParentTag] = nil
           end
           # Create the new Shortcut

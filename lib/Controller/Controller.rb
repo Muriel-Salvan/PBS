@@ -10,25 +10,47 @@ require 'Controller/Notifiers.rb'
 require 'Controller/GUIHelpers.rb'
 require 'Controller/Readers.rb'
 require 'Controller/UndoableAtomicOperations.rb'
+require 'Windows/ResolveTagConflictDialog.rb'
+require 'Windows/ResolveShortcutConflictDialog.rb'
 
 module PBS
 
   # Define constants for commands that are not among predefined Wx ones
+  # WxRuby takes 5000 - 6000 range.
+  # TODO (WxRuby): Use an ID generator
   ID_OPEN_MERGE = 1000
   ID_NEW_TAG = 1001
-  ID_TAGS_EDITOR = 1002
-  ID_TYPES_CONFIG = 1003
-  ID_KEYMAPS = 1004
-  ID_ENCRYPTION = 1005
-  ID_TOOLBARS = 1006
-  ID_STATS = 1007
-  ID_DEVDEBUG = 1008
-  # Following constants are base integers for plugins related commands. WxRuby takes 5000 - 6000 range.
+  ID_STATS = 1002
+  ID_DEVDEBUG = 1003
+  # Following constants are used in dialogs (for Buttons IDs and so return values)
+  ID_MERGE = 2000
+  ID_KEEP = 2001
+  # Following constants are base integers for plugins related commands.
   ID_IMPORT_BASE = 6000
   ID_IMPORT_MERGE_BASE = 7000
   ID_EXPORT_BASE = 8000
   ID_NEW_SHORTCUT_BASE = 9000
   ID_INTEGRATION_BASE = 10000
+
+  # Following constants are used in options
+  TAGSUNICITY_NONE = 0
+  TAGSUNICITY_NAME = 1
+  TAGSUNICITY_ALL = 2
+  SHORTCUTSUNICITY_NONE = 0
+  SHORTCUTSUNICITY_NAME = 1
+  SHORTCUTSUNICITY_CONTENT = 2
+  SHORTCUTSUNICITY_METADATA = 3
+  SHORTCUTSUNICITY_ALL = 4
+  TAGSCONFLICT_ASK = 0
+  TAGSCONFLICT_MERGE_EXISTING = 1
+  TAGSCONFLICT_MERGE_CONFLICTING = 2
+  TAGSCONFLICT_CANCEL = 3
+  TAGSCONFLICT_CANCEL_ALL = 4
+  SHORTCUTSCONFLICT_ASK = 0
+  SHORTCUTSCONFLICT_MERGE_EXISTING = 1
+  SHORTCUTSCONFLICT_MERGE_CONFLICTING = 2
+  SHORTCUTSCONFLICT_CANCEL = 3
+  SHORTCUTSCONFLICT_CANCEL_ALL = 4
 
   # This class stores session information, and relays info from model to gui.
   # * Stores the main data (Shortcuts/Tags)
@@ -92,7 +114,7 @@ module PBS
 
       # Title of the Undoable opersation
       #   String
-      attr_accessor :Title
+      attr_reader :Title
 
       # List of the atomic modifications
       #   list< UndoableAtomicOperation >
@@ -121,6 +143,113 @@ module PBS
         end
       end
 
+    end
+
+    # Test if a given data does not violate unicity constraints for a Tag if it was to be added
+    #
+    # Parameters:
+    # * *iParentTag* (_Tag_): The parent Tag
+    # * *iTagName* (_String_): The new Tag name
+    # * *iIcon* (<em>Wx::Bitmap</em>): The icon (can be nil)
+    # * *iTagToIgnore* (_Tag_): The Tag to ignore in unicity checking (useful when editing: we don't match unicity with the already existing object). Can be nil to check all sub-Tags. [optional = nil]
+    # Return:
+    # * _Tag_: Tag that is a doublon of the data given, or nil otherwise.
+    # * _Integer_: Action taken in case of doublon, or nil otherwise
+    def checkTagUnicity(iParentTag, iTagName, iIcon, iTagToIgnore = nil)
+      rDoublon = nil
+      rAction = nil
+
+      iParentTag.Children do |ioChildTag|
+        if ((ioChildTag != iTagToIgnore) and
+            (tagSameAs?(ioChildTag, iTagName, iIcon)))
+          # It already exists. Check options to know what to do.
+          case @Options[:tagsConflict]
+          when TAGSCONFLICT_ASK
+            # Ask for replacement or cancellation
+            rDoublon = ioChildTag
+            lResolveTagConflictDialog = ResolveTagConflictDialog.new(nil, ioChildTag, iTagName, iIcon)
+            rAction = lResolveTagConflictDialog.show_modal
+            case rAction
+            when ID_MERGE
+              # Take values from the dialog, and put them into the existing Tag
+              lName, lIcon = lResolveTagConflictDialog.getNewData
+              updateTag(ioChildTag, lName, lIcon, ioChildTag.Children)
+            end
+          when TAGSCONFLICT_MERGE_EXISTING
+            rAction = ID_MERGE
+          when TAGSCONFLICT_MERGE_CONFLICTING
+            updateTag(ioChildTag, iTagName, iIcon, ioChildTag.Children)
+            rAction = ID_MERGE
+          when TAGSCONFLICT_CANCEL
+            @CurrentTransactionErrors << "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
+            rAction = Wx::ID_CANCEL
+          when TAGSCONFLICT_CANCEL_ALL
+            @CurrentTransactionErrors << "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
+            @CurrentTransactionToBeCancelled = true
+            rAction = Wx::ID_CANCEL
+          else
+            puts "!!! Unknown value for option :tagsConflict: #{@Options[:tagsConflict]}. Bug ?"
+          end
+        end
+      end
+
+      return rDoublon, rAction
+    end
+
+    # Test if a given data does not violate unicity constraints for a Shortcut if it was to be added
+    #
+    # Parameters:
+    # * *iTypeName* (_String_): The type name
+    # * *iContent* (_Object_): The content
+    # * *iMetadata* (<em>map<String,Object></em>): The metadata
+    # * *iTags* (<em>map<Tag,nil></em>): The set of Tags
+    # * *iShortcutToIgnore* (_Shortcut_): The Shortcut to ignore in unicity checking (useful when editing: we don't match unicity with the already existing object). Can be nil to check all Shortcuts. [optional = nil]
+    # Return:
+    # * _Shortcut_: Shortcut that is a doublon of the data given, or nil otherwise.
+    # * _Integer_: Action taken in case of doublon, or nil otherwise
+    def checkShortcutUnicity(iTypeName, iContent, iMetadata, iTags, iShortcutToIgnore = nil)
+      rDoublon = nil
+      rAction = nil
+
+      @ShortcutsList.each do |ioSC|
+        if ((ioSC != iShortcutToIgnore) and
+            (ioSC.Type.pluginName == iTypeName) and
+            (shortcutSameAs?(ioSC,  iContent, iMetadata)))
+          rDoublon = ioSC
+          # It already exists. Check options to know what to do.
+          case @Options[:shortcutsConflict]
+          when SHORTCUTSCONFLICT_ASK
+            lResolveShortcutConflictDialog = ResolveShortcutConflictDialog.new(nil, ioSC, iContent, iMetadata)
+            rAction = lResolveShortcutConflictDialog.show_modal
+            case rAction
+            when ID_MERGE
+              # Take values from the dialog, then modify the current Shortcut
+              lContent, lMetadata = lResolveShortcutConflictDialog.getNewData
+              lNewTags = iTags.clone
+              lNewTags.merge!(ioSC.Tags)
+              updateShortcut(ioSC, lContent, lMetadata, lNewTags)
+            end
+          when SHORTCUTSCONFLICT_MERGE_EXISTING
+            rAction = ID_MERGE
+          when SHORTCUTSCONFLICT_MERGE_CONFLICTING
+            lNewTags = iTags.clone
+            lNewTags.merge!(ioSC.Tags)
+            updateShortcut(ioSC, iContent, iMetadata, lNewTags)
+            rAction = ID_MERGE
+          when SHORTCUTSCONFLICT_CANCEL
+            @CurrentTransactionErrors << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
+            rAction = Wx::ID_CANCEL
+          when SHORTCUTSCONFLICT_CANCEL_ALL
+            @CurrentTransactionErrors << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
+            @CurrentTransactionToBeCancelled = true
+            rAction = Wx::ID_CANCEL
+          else
+            puts "!!! Unknown value for option :shortcutsConflict: #{@Options[:shortcutsConflict]}. Bug ?"
+          end
+        end
+      end
+
+      return rDoublon, rAction
     end
 
     # Method that sends notifications to registered GUIs that implement desired methods
@@ -421,17 +550,11 @@ module PBS
           lLocationName = " in #{lTag.Name}"
         end
         undoableOperation("Create new Shortcut#{lLocationName}") do
-          # Create an empty shortcut that we will edit
-          lTags = {}
-          if (lTag != nil)
-            lTags[lTag] = nil
-          end
-          lNewSC = Shortcut.new(lShortcutType, lTags, lShortcutType.createEmptyContent, {'title' => 'New Shortcut'})
-          lEditSCDialog = EditShortcutDialog.new(lWindow, lNewSC, @RootTag)
+          lEditSCDialog = EditShortcutDialog.new(lWindow, nil, @RootTag, lShortcutType)
           case lEditSCDialog.show_modal
           when Wx::ID_OK
             lNewContent, lNewMetadata, lNewTags = lEditSCDialog.getNewData
-            addNewShortcut(Shortcut.new(lShortcutType, lNewTags, lNewContent, lNewMetadata))
+            createShortcut(lShortcutType, lNewContent, lNewMetadata, lNewTags)
           end
         end
       end
@@ -448,8 +571,10 @@ module PBS
       @CurrentUndoableOperation = nil
       @UndoStack = []
       @RedoStack = []
+      @CurrentTransactionErrors = []
+      @CurrentTransactionToBeCancelled = false
 
-      # Copy/Cut management
+      # Local Copy/Cut management
       @CopiedSelection = nil
       @CopiedMode = nil
       @CopiedID = nil
@@ -458,8 +583,17 @@ module PBS
       # Those variables reflect what is inside the clipboard in real time.
       @Clipboard_CopyMode = nil
       @Clipboard_CopyID = nil
-      @Clipboard_SerializedTags = nil
-      @Clipboard_SerializedShortcuts = nil
+      @Clipboard_SerializedSelection = nil
+
+      # Options
+      # Fill this with the default options
+      # map< Symbol, Object >
+      @Options = {
+        :tagsUnicity => TAGSUNICITY_NONE,
+        :shortcutsUnicity => SHORTCUTSUNICITY_ALL,
+        :tagsConflict => TAGSCONFLICT_ASK,
+        :shortcutsConflict => SHORTCUTSCONFLICT_ASK
+      }
 
       # Plugins
       @TypesPlugins = readPlugins('Types')
@@ -483,41 +617,6 @@ module PBS
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Find.png"),
           :method => :cmdFind, # TODO
           :accelerator => [ Wx::MOD_CMD, 'f'[0] ]
-        },
-        ID_TAGS_EDITOR => {
-          :title => 'Tags Editor',
-          :help => 'Edit the Tag\'s',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdTagsEditor, # TODO
-          :accelerator => nil
-        },
-        ID_TYPES_CONFIG => {
-          :title => 'Shortcuts\' Types configuration',
-          :help => 'Configure the different Shortcut\'s Types',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Config.png"),
-          :method => :cmdTypesConfig, # TODO
-          :accelerator => nil
-        },
-        ID_KEYMAPS => {
-          :title => 'Keymaps',
-          :help => 'Configure key associations to commands',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdKeymaps, # TODO
-          :accelerator => nil
-        },
-        ID_ENCRYPTION => {
-          :title => 'Encryption',
-          :help => 'Configure the encryption of PBS files',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdEncryption, # TODO
-          :accelerator => nil
-        },
-        ID_TOOLBARS => {
-          :title => 'Toolbars',
-          :help => 'Configure buttons displayed in the toolbars',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdToolbars, # TODO
-          :accelerator => nil
         },
         ID_STATS => {
           :title => 'Stats',
@@ -610,41 +709,46 @@ end
         iCommandParams[:registeredToolbarButtons] = []
       end
 
+      # Create the base of the data model
+      # * The root Tag
+      #   Tag
+      @RootTag = Tag.new('Root', nil)
+      # * The Shortcuts list
+      #   list< Shortcut >
+      @ShortcutsList = []
+
       # Create a sample data set
       # Tags
-      @RootTag = Tag.new('Root', nil, nil)
-      lTag1 = Tag.new('Tag1', nil, @RootTag)
-      lTag1_1 = Tag.new('Tag1.1', nil, lTag1)
-      lTag1_2 = Tag.new('Tag1.2', nil, lTag1)
-      lTag2 = Tag.new('Tag2', nil, @RootTag)
+      lTag1 = createTag(@RootTag, 'Tag1', nil)
+      lTag1_1 = createTag(lTag1, 'Tag1.1', nil)
+      lTag1_2 = createTag(lTag1, 'Tag1.2', nil)
+      lTag2 = createTag(@RootTag, 'Tag2', nil)
 
       # Shortcuts
-      @ShortcutsList = [
-        Shortcut.new(
-          @TypesPlugins['URL'],
-          { lTag1 => nil, lTag2 => nil },
-          'www.google.com',
-          { 'title' => 'Google' }
-        ),
-        Shortcut.new(
-          @TypesPlugins['Shell'],
-          { lTag1_1 => nil },
-          'notepad',
-          { 'title' => 'Bloc-notes' }
-        ),
-        Shortcut.new(
-          @TypesPlugins['Shell'],
-          {},
-          'calc',
-          { 'title' => 'Calculatrice' }
-        ),
-        Shortcut.new(
-          @TypesPlugins['Shell'],
-          { lTag1_1 => nil },
-          'irb',
-          { 'title' => 'Ruby' }
-        )
-      ]
+      createShortcut(
+        'URL',
+        'www.google.com',
+        { 'title' => 'Google' },
+        { lTag1 => nil, lTag2 => nil }
+      )
+      createShortcut(
+        'Shell',
+        'notepad',
+        { 'title' => 'Bloc-notes' },
+        { lTag1_1 => nil }
+      )
+      createShortcut(
+        'Shell',
+        'calc',
+        { 'title' => 'Calculatrice' },
+        {}
+      )
+      createShortcut(
+        'Shell',
+        'irb',
+        { 'title' => 'Ruby' },
+        { lTag1_1 => nil }
+      )
     end
 
     # Read plugins that define modules to be included in the Controller
@@ -728,6 +832,150 @@ end
       return rPlugins
     end
 
+    # Does a Tag equal another content ?
+    #
+    # Parameters:
+    # * *iTag* (_Tag_): Existing Tag
+    # * *iOtherName* (_String_): Name of other Tag
+    # * *iOtherIcon* (<em>Wx::Bitmap</em>): Icon of other Tag
+    # Return:
+    # * _Boolean_: Does a Tag equal another content ?
+    def tagSameAs?(iTag, iOtherName, iOtherIcon)
+      rSame = false
+
+      case @Options[:tagsUnicity]
+      when TAGSUNICITY_NONE
+        rSame = false
+      when TAGSUNICITY_NAME
+        rSame = (iTag.Name == iOtherName)
+      when TAGSUNICITY_ALL
+        if (iTag.Name == iOtherName)
+          if ((iTag.Icon == nil) and
+              (iOtherIcon == nil))
+            rSame = true
+          elsif ((iTag.Icon != nil) and
+                 (iOtherIcon != nil))
+            # Check the icon data only
+            rSame = (iOtherIcon.convert_to_image.data == iTag.Icon.convert_to_image.data)
+          end
+        end
+      else
+        puts "!!! Unknown value for option :tagsUnicity: #{@Options[:tagsUnicity]}. Bug ?"
+      end
+
+      return rSame
+    end
+
+    # Does a Tag equal another serialized content ?
+    # TODO (WxRuby): When Wx::Bitmap will be serializable, remove this method, and use tagSameAs? instead
+    #
+    # Parameters:
+    # * *iTag* (_Tag_): Existing Tag
+    # * *iOtherName* (_String_): Name of other Tag
+    # * *iOtherIcon* (_String_): Serialized Icon of other Tag
+    # Return:
+    # * _Boolean_: Does a Tag equal another serialized content ?
+    def tagSameAsSerialized?(iTag, iOtherName, iOtherIcon)
+      lOtherIconBitmap = nil
+      if (iOtherIcon != nil)
+        lOtherIconBitmap = Wx::Bitmap.new
+        lOtherIconBitmap.setSerialized(iOtherIcon)
+      end
+
+      return tagSameAs?(iTag, iOtherName, lOtherIconBitmap)
+    end
+
+    # Are 2 metadata equal ?
+    #
+    # Parameters:
+    # * *iMetadata1* (<em>map<String,Object></em>): First metadata
+    # * *iMetadata2* (<em>map<String,Object></em>): Second metadata
+    # Return:
+    # * _Boolean_: Are 2 metadata equal ?
+    def metadataSameAs?(iMetadata1, iMetadata2)
+      rSame = true
+
+      # Check each property, as there is an exception for Wx::Bitmap, and also for missing properties equaling nil values.
+      (iMetadata1.keys + iMetadata2.keys).sort.uniq.each do |iKey|
+        lValue1 = iMetadata1[iKey]
+        lValue2 = iMetadata2[iKey]
+        if ((lValue1 != nil) or
+            (lValue2 != nil))
+          if (lValue1.is_a?(Wx::Bitmap))
+            if (lValue2.is_a?(Wx::Bitmap))
+              rSame = (lValue1.convert_to_image.data == lValue2.convert_to_image.data)
+            else
+              rSame = false
+            end
+          else
+            rSame = (lValue1 == lValue2)
+          end
+        end
+        if (rSame)
+          # No need to continue
+          break
+        end
+      end
+
+      return rSame
+    end
+
+    # Does a Shortcut equal another content ?
+    #
+    # Parameters:
+    # * *iShortcut* (_Shortcut_): Existing Shortcut
+    # * *iOtherContent* (_Content_): Content of other Shortcut
+    # * *iOtherMetadata* (<em>map<String,Object></em>): Metadata of other Shortcut
+    # Return:
+    # * _Boolean_: Does a Shortcut equal another content ?
+    def shortcutSameAs?(iShortcut, iOtherContent, iOtherMetadata)
+      rSame = false
+
+      case @Options[:shortcutsUnicity]
+      when SHORTCUTSUNICITY_NONE
+        rSame = false
+      when SHORTCUTSUNICITY_NAME
+        rSame = (iShortcut.Metadata['title'] == iOtherMetadata['title'])
+      when SHORTCUTSUNICITY_CONTENT
+        rSame = (iShortcut.Content == iOtherContent)
+      when SHORTCUTSUNICITY_METADATA
+        rSame = metadataSameAs?(iShortcut.Metadata, iOtherMetadata)
+      when SHORTCUTSUNICITY_ALL
+        rSame = ((iShortcut.Content == iOtherContent) and
+                 (metadataSameAs?(iShortcut.Metadata, iOtherMetadata)))
+      else
+        puts "!!! Unknown value for option :shortcutsUnicity: #{@Options[:shortcutsUnicity]}. Bug ?"
+      end
+
+      return rSame
+    end
+
+    # Does a Shortcut equal another serialized content ?
+    # TODO (WxRuby): When Wx::Bitmap will be serializable, remove this method, and use shortcutSameAs? instead
+    #
+    # Parameters:
+    # * *iShortcut* (_Shortcut_): Existing Shortcut
+    # * *iOtherContent* (_Content_): Content of other Shortcut
+    # * *iOtherMetadata* (<em>map<String,Object></em>): Serialized Metadata of other Shortcut
+    # Return:
+    # * _Boolean_: Does a Shortcut equal another serialized content ?
+    def shortcutSameAsSerialized?(iShortcut, iOtherContent, iOtherMetadata)
+      lMetadata = {}
+      iOtherMetadata.each do |iKey, iValue|
+        if ((iValue.is_a?(Array)) and
+            (iValue.size == 2) and
+            (iValue[0] == Wx::Bitmap))
+          lBitmap = Wx::Bitmap.new
+          lBitmap.setSerialized(iValue[1])
+          lMetadata[iKey] = lBitmap
+        else
+          lMetadata[iKey] = iValue
+        end
+      end
+
+      return shortcutSameAs?(iShortcut, iOtherContent, lMetadata)
+    end
+
     # Ensure that we are in a current undoableOperation, and create a default one if not.
     #
     # Parameters:
@@ -741,62 +989,6 @@ end
         end
       else
         yield
-      end
-    end
-
-    # Set the Root Tag.
-    # !!! This method has to be used only in the atomic operation replacing all the data
-    #
-    # Parameters:
-    # * *iNewRootTag* (_Tag_): The new root Tag to set
-    def setRootTag_UNDO(iNewRootTag)
-      @RootTag = iNewRootTag
-    end
-
-    # Set the Shortcuts list.
-    # !!! This method has to be used only in the atomic operation replacing all the data
-    #
-    # Parameters:
-    # * *iNewShortcutsList* (<em>list<Shortcut></em>): The new Shortcuts list to set
-    def setShortcutsList_UNDO(iNewShortcutsList)
-        @ShortcutsList = iNewShortcutsList
-    end
-
-    # Set the current opened file name.
-    # !!! This method has to be used only in the atomic operation replacing all the data
-    #
-    # Parameters:
-    # * *iNewFileName* (_String_): New file name
-    def setCurrentOpenedFileName_UNDO(iNewFileName)
-      @CurrentOpenedFileName = iNewFileName
-    end
-
-    # Set the current opened file modified flag
-    # !!! This method has to be used only in the atomic operation replacing all the data
-    #
-    # Parameters:
-    # * *iNewFileModified* (_Boolean_): The flag
-    def setCurrentOpenedFileModified_UNDO(iNewFileModified)
-      @CurrentOpenedFileModified = iNewFileModified
-    end
-
-    # Add a new Shortcut
-    # !!! This method has to be used only in the atomic operation adding new Shortcuts
-    #
-    # Parameters:
-    # * *iSC* (_Shortcut_): The Shortcut to add
-    def addShortcut_UNDO(iSC)
-      @ShortcutsList << iSC
-    end
-    
-    # Delete a Shortcut
-    # !!! This method has to be used only in the atomic operation adding new Shortcuts
-    #
-    # Parameters:
-    # * *iSCID* (_Integer_): The Shortcut ID to delete
-    def deleteShortcut_UNDO(iSCID)
-      @ShortcutsList.delete_if do |iSC|
-        iSC.getUniqueID == iSCID
       end
     end
 
@@ -827,14 +1019,54 @@ end
     def dumpShortcutsList(iShortcutsList)
       iShortcutsList.each do |iSC|
         puts "=== #{iSC.Metadata['title']} (@#{iSC.object_id})"
-        puts "  = ID: #{iSC.getUniqueID}"
         puts "  = Type: #{iSC.Type.inspect}"
         puts "  = Metadata: #{iSC.Metadata.inspect}"
         puts "  = Content: #{iSC.Content.inspect}"
         puts "  = #{iSC.Tags.size} Tags:"
         iSC.Tags.each do |iTag, iNil|
-          puts "  = - #{iTag.Name}: ID #{iTag.getUniqueID.join('/')} (@#{iTag.object_id})"
+          puts "  = - #{iTag.Name} (@#{iTag.object_id})"
         end
+      end
+    end
+
+    # !!! Following methods have to be used ONLY by UAO_* classes.
+    # !!! This is the only way to ensure that Undo/Redo management will behave correctly.
+
+    # Set the current opened file name.
+    # !!! This method has to be used only in the atomic operation replacing all the data
+    #
+    # Parameters:
+    # * *iNewFileName* (_String_): New file name
+    def _UNDO_setCurrentOpenedFileName(iNewFileName)
+      @CurrentOpenedFileName = iNewFileName
+    end
+
+    # Set the current opened file modified flag
+    # !!! This method has to be used only in the atomic operation replacing all the data
+    #
+    # Parameters:
+    # * *iNewFileModified* (_Boolean_): The flag
+    def _UNDO_setCurrentOpenedFileModified(iNewFileModified)
+      @CurrentOpenedFileModified = iNewFileModified
+    end
+
+    # Add a new Shortcut
+    # !!! This method has to be used only in the atomic operation adding new Shortcuts
+    #
+    # Parameters:
+    # * *iSC* (_Shortcut_): The Shortcut to add
+    def _UNDO_addShortcut(iSC)
+      @ShortcutsList << iSC
+    end
+
+    # Delete a Shortcut
+    # !!! This method has to be used only in the atomic operation adding new Shortcuts
+    #
+    # Parameters:
+    # * *iSCToDelete* (_Shortcut_): The Shortcut to delete
+    def _UNDO_deleteShortcut(iSCToDelete)
+      @ShortcutsList.delete_if do |iSC|
+        iSCToDelete == iSC
       end
     end
 

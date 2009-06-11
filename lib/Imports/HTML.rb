@@ -72,16 +72,16 @@ module PBS
       # * *ioController* (_Controller_): The data model controller
       # * *iElement* (<em>Nokogiri::XML::Element</em>): The element to retrieve data from
       # * *iHeadersStack* (<em>list<[String,Tag]></em>): The stack of headers encountered and their corresponding Tag
-      # * *iTagIDsDefinedInThisGroup* (<em>list<list<String>></em>): List that keeps track of all Tags IDs defined in this group
+      # * *iTagsDefinedInThisGroup* (<em>list<Tag></em>): List that keeps track of all Tags defined in this group
       # * *iHeaderJustDefined* (_Boolean_): Has last header just been defined ?
       # Return:
       # * <em>list<[String,Tag]></em>: The headers stack at the end of this method. This is useful in the case we want to just ignore some HTML tags (such as <dt>): the caller will use them at its level also.
-      # * <em>list<list<String>></em>: List that keeps track of all Tags IDs defined in this group
+      # * <em>list<Tag></em>: List that keeps track of all Tags defined in this group
       # * _Boolean_: Has last header just been defined ?
-      def importHTMLDataFromElement(ioController, iElement, iHeadersStack, iTagIDsDefinedInThisGroup, iHeaderJustDefined)
+      def importHTMLDataFromElement(ioController, iElement, iHeadersStack, iTagsDefinedInThisGroup, iHeaderJustDefined)
         # This Tag is the one in which we create the Shortcuts and Tags read from the element.
         rCurrentStack = iHeadersStack.clone
-        rTagIDsDefinedInThisGroup = iTagIDsDefinedInThisGroup.clone
+        rTagsDefinedInThisGroup = iTagsDefinedInThisGroup.clone
         rHeaderJustDefined = iHeaderJustDefined
 
         iElement.children.each do |iChildElement|
@@ -117,7 +117,7 @@ module PBS
               # /li
               if ((iChildElement.name < iHeader) or
                   ((iChildElement.name == iHeader) and
-                   (rTagIDsDefinedInThisGroup.include?(iTag.getUniqueID))))
+                   (rTagsDefinedInThisGroup.include?(iTag))))
                 # We are moving to the position lIdxStack of the stack
                 break
               end
@@ -132,14 +132,14 @@ module PBS
             # Add it if it does not exist already, and get it back once inserted
             lNewTag = ioController.createTag(lParentTag, iChildElement.content, nil)
             # Add ourselves to the stack
-            rTagIDsDefinedInThisGroup << lNewTag.getUniqueID
+            rTagsDefinedInThisGroup << lNewTag
             rCurrentStack << [ iChildElement.name, lNewTag ]
             rHeaderJustDefined = true
           when *NO_INDENT_HTML_TAGS
             # Here, we stay at the same level of Tag, but the content to parse is considered as an XML sub-tag.
             # We just have to get rid of it, as if this tag never existed.
             # To achieve this, we get the remaining Tag from the recursive call as being the next parent one.
-            rCurrentStack, rTagIDsDefinedInThisGroup, rHeaderJustDefined = importHTMLDataFromElement(ioController, iChildElement, rCurrentStack, rTagIDsDefinedInThisGroup, rHeaderJustDefined)
+            rCurrentStack, rTagsDefinedInThisGroup, rHeaderJustDefined = importHTMLDataFromElement(ioController, iChildElement, rCurrentStack, rTagsDefinedInThisGroup, rHeaderJustDefined)
           when *INDENT_HTML_TAGS
             # We are entering a new level of Tags
             importHTMLDataFromElement(ioController, iChildElement, rCurrentStack, [], false)
@@ -203,7 +203,7 @@ module PBS
               # Tags
               lNewTags = {}
               # Beware the root Tag
-              if (lCurrentTag.getUniqueID != [])
+              if (lCurrentTag != ioController.RootTag)
                 lNewTags[lCurrentTag] = nil
               end
               ioController.createShortcut(
@@ -220,7 +220,7 @@ module PBS
           end
         end
 
-        return rCurrentStack, rTagIDsDefinedInThisGroup, rHeaderJustDefined
+        return rCurrentStack, rTagsDefinedInThisGroup, rHeaderJustDefined
       end
 
       # Import HTML data

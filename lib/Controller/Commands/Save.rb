@@ -18,7 +18,7 @@ module PBS
           :title => 'Save',
           :help => 'Save current Shortcuts',
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Save.png"),
-          :method => :cmdSave, # TODO
+          :method => :cmdSave,
           :accelerator => [ Wx::MOD_CMD, 's'[0] ]
         }
       end
@@ -26,7 +26,7 @@ module PBS
       # Command that saves the current file
       def cmdSave
         undoableOperation("Save file #{File.basename(@CurrentOpenedFileName)[0..-6]}") do
-          saveData(@RootTag, @ShortcutsList, @CurrentOpenedFileName)
+          saveData(self, @CurrentOpenedFileName)
           # To set the flag as not modified after save
           changeCurrentFileName(@CurrentOpenedFileName)
         end

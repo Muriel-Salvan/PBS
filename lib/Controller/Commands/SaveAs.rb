@@ -40,7 +40,7 @@ module PBS
         when Wx::ID_OK
           undoableOperation("Save file #{File.basename(lSaveDialog.path)[0..-6]}") do
             # Perform save
-            saveData(@RootTag, @ShortcutsList, lSaveDialog.path)
+            saveData(self, lSaveDialog.path)
             changeCurrentFileName(lSaveDialog.path)
           end
         end

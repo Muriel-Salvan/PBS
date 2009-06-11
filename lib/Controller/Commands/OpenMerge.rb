@@ -40,10 +40,7 @@ module PBS
         when Wx::ID_OK
           undoableOperation("Merge file #{File.basename(lOpenDialog.path)[0..-6]}") do
             # Really perform the open
-            lNewRootTag, lNewShortcutsList = openData(@TypesPlugins, lOpenDialog.path)
-            # Merge with current data
-            mergeTags(@RootTag, lNewRootTag)
-            mergeShortcuts(lNewShortcutsList, @RootTag)
+            openData(self, lOpenDialog.path)
           end
         end
       end

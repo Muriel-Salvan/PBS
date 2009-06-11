@@ -38,11 +38,10 @@ module PBS
         )
         case lOpenDialog.show_modal
         when Wx::ID_OK
-          if (checkSavedWork(lWindow))
+          if (checkSavedWorkAndScratch(lWindow))
             undoableOperation("Open file #{File.basename(lOpenDialog.path)[0..-6]}") do
               # Really perform the open
-              lNewRootTag, lNewShortcuts = openData(@TypesPlugins, lOpenDialog.path)
-              replaceCompleteData(lNewRootTag, lNewShortcuts)
+              openData(self, lOpenDialog.path)
               changeCurrentFileName(lOpenDialog.path)
             end
           end

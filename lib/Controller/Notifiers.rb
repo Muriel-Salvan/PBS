@@ -66,11 +66,10 @@ module PBS
             # Here, we have another application of PBS that has put data in the clipboard. It is not us anymore.
             notifyCancelCopy
           end
-          lName = Tools::MultipleSelection.getDescription(@Clipboard_SerializedTags, @Clipboard_SerializedShortcuts)
           if (lCopyName != nil)
             # Activate the Paste command with a cool title
             ioCommand[:enabled] = true
-            ioCommand[:title] = "Paste #{lName} (#{lCopyName})"
+            ioCommand[:title] = "Paste #{@Clipboard_SerializedSelection.getDescription} (#{lCopyName})"
           else
             # Deactivate the Paste command, and explain why
             ioCommand[:enabled] = false
@@ -98,8 +97,7 @@ module PBS
       # This Timer populates the following variables with the clipboard content in real-time:
       # * @Clipboard_CopyMode
       # * @Clipboard_CopyID
-      # * @Clipboard_SerializedTags
-      # * @Clipboard_SerializedShortcuts
+      # * @Clipboard_SerializedSelection
       # Note that we are already in the process of a delete event from the clipboard.
       @Clipboard_AlreadyProcessingDelete = false
       Wx::Timer.every(500) do
@@ -110,15 +108,14 @@ module PBS
             # Get some details to display what we can paste
             lClipboardData = Tools::DataObjectSelection.new
             iClipboard.get_data(lClipboardData)
-            lCopyMode, lCopyID, lSerializedTags, lSerializedShortcuts = lClipboardData.getData
+            lCopyMode, lCopyID, lSerializedSelection = lClipboardData.getData
             # Do not change the state if the content has not changed
             if ((lCopyMode != @Clipboard_CopyMode) or
                 (lCopyID != @Clipboard_CopyID))
               # Clipboard's content has changed.
               @Clipboard_CopyMode = lCopyMode
               @Clipboard_CopyID = lCopyID
-              @Clipboard_SerializedTags = lSerializedTags
-              @Clipboard_SerializedShortcuts = lSerializedShortcuts
+              @Clipboard_SerializedSelection = lSerializedSelection
               notifyClipboardContentChanged
             # Else, nothing to do, clipboard's state has not changed.
             end
@@ -126,8 +123,7 @@ module PBS
             # Clipboard has nothing interesting anymore.
             @Clipboard_CopyMode = nil
             @Clipboard_CopyID = nil
-            @Clipboard_SerializedTags = nil
-            @Clipboard_SerializedShortcuts = nil
+            @Clipboard_SerializedSelection = nil
             notifyClipboardContentChanged
           # Else, nothing to do, clipboard's state has not changed.
           end
@@ -195,30 +191,28 @@ module PBS
     #
     # Parameters:
     # * *iTag* (_Tag_): The Tag whose data was invalidated
-    # * *iOldTagID* (<em>list<String></em>): The Tag ID before data modification
     # * *iOldName* (_String_): The previous name
     # * *iOldIcon* (<em>Wx::Bitmap</em>): The previous icon (can be nil)
-    def notifyTagDataUpdate(iTag, iOldTagID, iOldName, iOldIcon)
-      notifyRegisteredGUIs(:onTagDataUpdate, iTag, iOldTagID, iOldName, iOldIcon)
+    def notifyTagDataUpdate(iTag, iOldName, iOldIcon)
+      notifyRegisteredGUIs(:onTagDataUpdate, iTag, iOldName, iOldIcon)
     end
 
     # Mark a Shortcut whose data (content or metadata) has been invalidated
     #
     # Parameters:
     # * *iSC* (_Shortcut_): The Shortcut whose data was invalidated
-    # * *iOldSCID* (_Integer_): The Shortcut ID before data modification
     # * *iOldContent* (_Object_): The previous content, or nil if it was not modified
     # * *iOldMetadata* (_Object_): The previous metadata, or nil if it was not modified
-    def notifyShortcutDataUpdate(iSC, iOldSCID, iOldContent, iOldMetadata)
-      notifyRegisteredGUIs(:onShortcutDataUpdate, iSC, iOldSCID, iOldContent, iOldMetadata)
+    def notifyShortcutDataUpdate(iSC, iOldContent, iOldMetadata)
+      notifyRegisteredGUIs(:onShortcutDataUpdate, iSC, iOldContent, iOldMetadata)
     end
 
     # Notify that a Shortcut has just been added
     #
     # Parameters:
     # * *iSC* (_Shortcut_): The new Shortcut
-    def notifyShortcutAdd(iSC)
-      notifyRegisteredGUIs(:onShortcutAdd, iSC)
+    def notifyShortcutCreate(iSC)
+      notifyRegisteredGUIs(:onShortcutCreate, iSC)
     end
 
     # Notify that a Shortcut has just been deleted
@@ -236,11 +230,6 @@ module PBS
     # * *iOldTags* (<em>map<Tag,nil></em>): The old Tags set
     def notifyShortcutTagsUpdate(iSC, iOldTags)
       notifyRegisteredGUIs(:onShortcutTagsUpdate, iSC, iOldTags)
-    end
-
-    # Notify the GUI that complete Shortcuts/Tags data have been changed
-    def notifyReplaceAll
-      notifyRegisteredGUIs(:onReplaceAll)
     end
 
     # Notify the GUI that what has enventually been copied/cut is not anymore available

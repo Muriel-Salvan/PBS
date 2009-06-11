@@ -12,10 +12,10 @@ module PBS
 
     # Base class for every undoable atomic operation.
     # Here are some considerations to ENSURE when coding Undo/Redo atomic operations:
-    # * Objects saved during initialization that will serve for the Undo method (ie. objects reflecting the old state) HAVE to never be modified by any possible past or future operation (even by operations not part of this atomic operation). The best way to ensure that is to clone them when saved, and also when used.
-    # * The same goes for objects saved to ensure the Redo method (ie. objects reflecting the new state), for the same reasons.
-    # To be more convinced, check this use case:
-    # 01. Do Create New Shortcut: SC1.title = 'A' ( Save 01.NewSC = SC1)
+    # * Objects created/saved HAVE to be persistent. That is to say a created Shortcut undone and redone has to be the same object again, at the same memory adress. It has to use .new just once.
+    # This way the Undo/Redo chain will always change the same object little by little, and we will be certain to have a correct behaviour without cloning data.
+    # To be more convinced, check this use case (description with examples of no object persistence to illustrate the problem):
+    # 01. Do Create New Shortcut: SC1.title = 'A' (Save 01.NewSC = SC1)
     # 02. Do Modify SC1.title = 'B' (Save 02.OldTitle = SC1.title and 02.NewTitle = 'B')
     # 03. Do Modify SC1.title = 'C' (Save 03.OldTitle = SC1.title and 03.NewTitle = 'C')
     # 04. Do Delete SC1 (Save 04.OldSC = SC1)
@@ -39,38 +39,58 @@ module PBS
 
     end
 
-    # Class that adds a new Tag as a child of an existing one
-    class UAO_AddNewTag < UndoableAtomicOperation
+    # Add a new atomic operation in the current undoable transaction, and perform its operation.
+    #
+    # Parameters:
+    # * *iUndoableAtomicOperation* (_UndoableAtomicOperation_): The atomic operation
+    # Return:
+    # * _Object_: The return of the doOperation
+    def atomicOperation(iUndoableAtomicOperation)
+      @CurrentUndoableOperation.AtomicOperations << iUndoableAtomicOperation
+      # Perform it right now
+      iUndoableAtomicOperation.doOperation
+    end
+
+    # ### Following are Undoable Atomic Operations useable with atomicOperation method.
+    # ### Those classes are the only ones allowed to manipulate the datamodel (that is data linked to @Controller.ShortcutsList or @Controller.RootTag).
+    # ### To ensure that code does not manipulate data outside those classes, every single data manipulation method is prefixed with _UNDO_.
+
+    # Class that creates a new Tag as a child of an existing one
+    class UAO_CreateTag < UndoableAtomicOperation
 
       # Constructor
       #
       # Parameters:
       # * *iController* (_Controller_): The model controller
       # * *ioParentTag* (_Tag_): The Tag that will receive the new one
-      # * *iChildTag* (_Tag_): The new Tag to add
-      def initialize(iController, ioParentTag, iChildTag)
+      # * *iName* (_String_): The Tag name
+      # * *iIcon* (<em>Wx::Bitmap</em>): The Tag icon
+      def initialize(iController, ioParentTag, iName, iIcon)
         super(iController)
 
-        @ParentTagID = ioParentTag.getUniqueID.clone
-        @ChildTag = iChildTag.clone(nil)
+        @ParentTag = ioParentTag
+        @NewTag = Tag.new(iName, iIcon)
       end
 
       # Perform the operation
+      #
+      # Return:
+      # * _Tag_: The newly created Tag
       def doOperation
-        puts "UAO_AddNewTag #{@ChildTag.Name}"
-        lParentTag = @Controller.findTag(@ParentTagID)
-        lOldChildrenList = lParentTag.Children.clone
-        @ChildTag.clone(lParentTag)
-        @Controller.notifyTagChildrenUpdate(lParentTag, lOldChildrenList)
+        puts "UAO_CreateTag #{@NewTag.Name}"
+        lOldChildrenList = @ParentTag.Children.clone
+        @ParentTag._UNDO_addChild(@NewTag)
+        @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
+
+        return @NewTag
       end
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_AddNewTag #{@ChildTag.Name}"
-        lParentTag = @Controller.findTag(@ParentTagID)
-        lOldChildrenList = lParentTag.Children.clone
-        lParentTag.deleteChildTag_UNDO(@ChildTag.Name)
-        @Controller.notifyTagChildrenUpdate(lParentTag, lOldChildrenList)
+        puts "UNDO - UAO_CreateTag #{@NewTag.Name}"
+        lOldChildrenList = @ParentTag.Children.clone
+        @ParentTag._UNDO_deleteChild(@NewTag)
+        @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
       end
 
     end
@@ -86,59 +106,168 @@ module PBS
       def initialize(iController, iTag)
         super(iController)
 
-        @ParentTagID = iTag.Parent.getUniqueID.clone
-        @Tag = iTag.clone(nil)
+        @Tag = iTag
+        @ParentTag = iTag.Parent
       end
 
       # Perform the operation
       def doOperation
         puts "UAO_DeleteTag #{@Tag.Name}"
-        lParentTag = @Controller.findTag(@ParentTagID)
-        lOldChildrenList = lParentTag.Children.clone
-        lParentTag.deleteChildTag_UNDO(@Tag.Name)
-        @Controller.notifyTagChildrenUpdate(lParentTag, lOldChildrenList)
+        lOldChildrenList = @ParentTag.Children.clone
+        @ParentTag._UNDO_deleteChild(@Tag)
+        @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
       end
 
       # Undo the operation
       def undoOperation
         puts "UNDO - UAO_DeleteTag #{@Tag.Name}"
-        lParentTag = @Controller.findTag(@ParentTagID)
-        lOldChildrenList = lParentTag.Children.clone
-        @Tag.clone(lParentTag)
-        @Controller.notifyTagChildrenUpdate(lParentTag, lOldChildrenList)
+        lOldChildrenList = @ParentTag.Children.clone
+        @ParentTag._UNDO_addChild(@Tag)
+        @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
       end
 
     end
 
-    # Class that adds a new Shortcut
-    class UAO_AddNewShortcut < UndoableAtomicOperation
+    # Class that modifies a Tag
+    class UAO_UpdateTag < UndoableAtomicOperation
 
       # Constructor
       #
       # Parameters:
       # * *iController* (_Controller_): The model controller
-      # * *iShortcut* (_Shortcut_): The Shortcut to add
-      def initialize(iController, iShortcut)
+      # * *iTag* (_Tag_): The Tag being modified
+      # * *iNewName* (_String_): The new name
+      # * *iNewIcon* (<em>Wx::Bitmap</em>): The new icon (can be nil)
+      # * *iNewSubTags* (<em>list<Tag></em>): The new sub-Tags
+      def initialize(iController, iTag, iNewName, iNewIcon, iNewSubTags)
         super(iController)
 
-        @NewShortcutSerializedData = iShortcut.getSerializedData.clone
-        @ShortcutID = iShortcut.getUniqueID
+        @Tag = iTag
+        if (iTag.Name != iNewName)
+          @OldName = iTag.Name
+          @NewName = iNewName
+        else
+          @OldName = nil
+          @NewName = nil
+        end
+        if (iTag.Icon != iNewIcon)
+          if (iTag.Icon == nil)
+            @OldIcon = nil
+          else
+            @OldIcon = iTag.Icon
+          end
+          if (iNewIcon == nil)
+            @NewIcon = nil
+          else
+            @NewIcon = iNewIcon
+          end
+        else
+          @OldIcon = nil
+          @NewIcon = nil
+        end
+        if (iTag.Children != iNewSubTags)
+          # Here we clone as the assignment is not made by replacing the Tag.Children property, but by changing the current one instead.
+          @OldSubTags = iTag.Children.clone
+          @NewSubTags = iNewSubTags
+        else
+          @OldSubTags = nil
+          @NewSubTags = nil
+        end
       end
 
       # Perform the operation
       def doOperation
-        puts "UAO_AddNewShortcut #{@NewShortcutSerializedData.getName}"
-        lNewShortcut = @NewShortcutSerializedData.clone.createShortcut(@Controller.RootTag, @Controller.TypesPlugins)
-        @Controller.addShortcut_UNDO(lNewShortcut)
-        @Controller.notifyShortcutAdd(lNewShortcut)
+        puts "UAO_UpdateTag #{@OldName}"
+        if ((@NewName != nil) or
+            (@NewIcon != nil) or
+            (@OldIcon != nil))
+          if (@NewName != nil)
+            @Tag._UNDO_setName(@NewName)
+          end
+          if ((@NewIcon != nil) or
+              (@OldIcon != nil))
+            if (@NewIcon == nil)
+              @Tag._UNDO_setIcon(nil)
+            else
+              @Tag._UNDO_setIcon(@NewIcon)
+            end
+          end
+          @Controller.notifyTagDataUpdate(@Tag, @OldName, @OldIcon)
+        end
+        if (@NewSubTags != nil)
+          lOldSubTags = @Tag.Children.clone
+          @Tag._UNDO_setSubTags(@NewSubTags).each do |iParentTag, iOldSubTags|
+            @Controller.notifyTagChildrenUpdate(iParentTag, iOldSubTags)
+          end
+          @Controller.notifyTagChildrenUpdate(@Tag, lOldSubTags)
+        end
       end
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_AddNewShortcut #{@NewShortcutSerializedData.getName}"
-        lAddedShortcut = @Controller.findShortcut(@ShortcutID)
-        @Controller.deleteShortcut_UNDO(@ShortcutID)
-        @Controller.notifyShortcutDelete(lAddedShortcut)
+        # Retrieve the Shortcut
+        puts "UNDO - UAO_UpdateTag #{@NewName}"
+        if ((@OldName != nil) or
+            (@OldIcon != nil) or
+            (@NewIcon != nil))
+          if (@OldName != nil)
+            @Tag._UNDO_setName(@OldName)
+          end
+          if ((@OldIcon != nil) or
+              (@NewIcon != nil))
+            if (@OldIcon == nil)
+              @Tag._UNDO_setIcon(nil)
+            else
+              @Tag._UNDO_setIcon(@OldIcon)
+            end
+          end
+          @Controller.notifyTagDataUpdate(@Tag, @NewName, @NewIcon)
+        end
+        if (@OldSubTags != nil)
+          lOldSubTags = @Tag.Children.clone
+          @Tag._UNDO_setSubTags(@OldSubTags).each do |iParentTag, iOldSubTags|
+            @Controller.notifyTagChildrenUpdate(iParentTag, iOldSubTags)
+          end
+          @Controller.notifyTagChildrenUpdate(@Tag, lOldSubTags)
+        end
+      end
+
+    end
+
+    # Class that creates a new Shortcut
+    class UAO_CreateShortcut < UndoableAtomicOperation
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iController* (_Controller_): The model controller
+      # * *iType* (_ShortcutType_): The Shortcut type to create
+      # * *iContent* (_Object_): The content
+      # * *iMetadata* (<em>map<String,Object></em>): The metadata
+      # * *iTags* (<em>map<Tag,nil></em>): The Tags set
+      def initialize(iController, iType, iContent, iMetadata, iTags)
+        super(iController)
+
+        @NewShortcut = Shortcut.new(iType, iContent, iMetadata, iTags)
+      end
+
+      # Perform the operation
+      #
+      # Return:
+      # * _Shortcut_: The newly created Shortcut
+      def doOperation
+        puts "UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
+        @Controller._UNDO_addShortcut(@NewShortcut)
+        @Controller.notifyShortcutCreate(@NewShortcut)
+
+        return @NewShortcut
+      end
+
+      # Undo the operation
+      def undoOperation
+        puts "UNDO - UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
+        @Controller._UNDO_deleteShortcut(@NewShortcut)
+        @Controller.notifyShortcutDelete(@NewShortcut)
       end
 
     end
@@ -154,24 +283,102 @@ module PBS
       def initialize(iController, iShortcut)
         super(iController)
 
-        @NewShortcutSerializedData = iShortcut.getSerializedData(false).clone
-        @ShortcutID = iShortcut.getUniqueID
+        @Shortcut = iShortcut
       end
 
       # Perform the operation
       def doOperation
-        puts "UAO_DeleteShortcut #{@NewShortcutSerializedData.getName}"
-        lShortcut = @Controller.findShortcut(@ShortcutID)
-        @Controller.deleteShortcut_UNDO(@ShortcutID)
-        @Controller.notifyShortcutDelete(lShortcut)
+        puts "UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
+        @Controller._UNDO_deleteShortcut(@Shortcut)
+        @Controller.notifyShortcutDelete(@Shortcut)
       end
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_DeleteShortcut #{@NewShortcutSerializedData.getName}"
-        lNewShortcut = @NewShortcutSerializedData.clone.createShortcut(@Controller.RootTag, @Controller.TypesPlugins)
-        @Controller.addShortcut_UNDO(lNewShortcut)
-        @Controller.notifyShortcutAdd(lNewShortcut)
+        puts "UNDO - UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
+        @Controller._UNDO_addShortcut(@Shortcut)
+        @Controller.notifyShortcutCreate(@Shortcut)
+      end
+
+    end
+
+    # Class that modifies a Shortcut
+    class UAO_UpdateShortcut < UndoableAtomicOperation
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iController* (_Controller_): The model controller
+      # * *iShortcut* (_Shortcut_): The Shortcut being modified
+      # * *iNewContent* (_Object_): The new Content
+      # * *iNewMetadata* (<em>map<String,Object></em>): The new Metadata
+      # * *iNewTags* (<em>map<Tag,nil></em>): The new Tags
+      def initialize(iController, iShortcut, iNewContent, iNewMetadata, iNewTags)
+        super(iController)
+
+        @Shortcut = iShortcut
+        if (iShortcut.Content != iNewContent)
+          @OldContent = iShortcut.Content
+          @NewContent = iNewContent
+        else
+          @OldContent = nil
+          @NewContent = nil
+        end
+        if (iShortcut.Metadata != iNewMetadata)
+          @OldMetadata = iShortcut.Metadata
+          @NewMetadata = iNewMetadata
+        else
+          @OldMetadata = nil
+          @NewMetadata = nil
+        end
+        if (iShortcut.Tags != iNewTags)
+          # Here we clone as the assignment is not made by replacing the Shortcut.Tags property, but by changing the current one instead.
+          @OldTags = iShortcut.Tags.clone
+          @NewTags = iNewTags
+        else
+          @OldTags = nil
+          @NewTags = nil
+        end
+      end
+
+      # Perform the operation
+      def doOperation
+        puts "UAO_ModifySC #{@Shortcut.Metadata['title']}"
+        if (@NewContent != nil)
+          @Shortcut._UNDO_setContent(@NewContent)
+        end
+        if (@NewMetadata != nil)
+          @Shortcut._UNDO_setMetadata(@NewMetadata)
+        end
+        if ((@NewContent != nil) or
+            (@NewMetadata != nil))
+          @Controller.notifyShortcutDataUpdate(@Shortcut, @OldContent, @OldMetadata)
+        end
+        if (@NewTags != nil)
+          lOldTags = @Shortcut.Tags.clone
+          @Shortcut._UNDO_setTags(@NewTags)
+          @Controller.notifyShortcutTagsUpdate(@Shortcut, lOldTags)
+        end
+      end
+
+      # Undo the operation
+      def undoOperation
+        puts "UNDO - UAO_ModifySC #{@Shortcut.Metadata['title']}"
+        if (@OldContent != nil)
+          @Shortcut._UNDO_setContent(@OldContent)
+        end
+        if (@OldMetadata != nil)
+          @Shortcut._UNDO_setMetadata(@OldMetadata)
+        end
+        if ((@OldContent != nil) or
+            (@OldMetadata != nil))
+          @Controller.notifyShortcutDataUpdate(@Shortcut, @NewContent, @NewMetadata)
+        end
+        if (@OldTags != nil)
+          lOldTags = @Shortcut.Tags.clone
+          @Shortcut._UNDO_setTags(@OldTags)
+          @Controller.notifyShortcutTagsUpdate(@Shortcut, lOldTags)
+        end
       end
 
     end
@@ -192,189 +399,15 @@ module PBS
       # Perform the operation
       def doOperation
         puts 'UAO_SetFileModified'
-        @Controller.setCurrentOpenedFileModified_UNDO(true)
+        @Controller._UNDO_setCurrentOpenedFileModified(true)
         @Controller.notifyCurrentOpenedFileUpdate
       end
 
       # Undo the operation
       def undoOperation
         puts 'UNDO - UAO_SetFileModified'
-        @Controller.setCurrentOpenedFileModified_UNDO(@OldModifiedFlag)
+        @Controller._UNDO_setCurrentOpenedFileModified(@OldModifiedFlag)
         @Controller.notifyCurrentOpenedFileUpdate
-      end
-
-    end
-
-    # Class that modifies a Shortcut
-    class UAO_ModifySC < UndoableAtomicOperation
-
-      # Constructor
-      #
-      # Parameters:
-      # * *iController* (_Controller_): The model controller
-      # * *iShortcut* (_Shortcut_): The Shortcut being modified
-      # * *iNewContent* (_Object_): The new Content
-      # * *iNewMetadata* (<em>map<String,Object></em>): The new Metadata
-      # * *iNewTags* (<em>map<Tag,nil></em>): The new Tags
-      def initialize(iController, iShortcut, iNewContent, iNewMetadata, iNewTags)
-        super(iController)
-
-        @OldShortcutID = iShortcut.getUniqueID
-        @NewShortcutID = Shortcut.getUniqueID(iNewContent, iNewMetadata)
-        if (iShortcut.Content != iNewContent)
-          @OldContent = iShortcut.Content.clone
-          @NewContent = iNewContent.clone
-        else
-          @OldContent = nil
-          @NewContent = nil
-        end
-        if (iShortcut.Metadata != iNewMetadata)
-          @OldMetadata = iShortcut.Metadata.clone
-          @NewMetadata = iNewMetadata.clone
-        else
-          @OldMetadata = nil
-          @NewMetadata = nil
-        end
-        if (iShortcut.Tags != iNewTags)
-          @OldTags = []
-          iShortcut.Tags.each do |iTag, iNil|
-            @OldTags << iTag.getUniqueID
-          end
-          @NewTags = []
-          iNewTags.each do |iTag, iNil|
-            @NewTags << iTag.getUniqueID
-          end
-        else
-          @OldTags = nil
-          @NewTags = nil
-        end
-      end
-
-      # Perform the operation
-      def doOperation
-        # Retrieve the Shortcut
-        lShortcut = @Controller.findShortcut(@OldShortcutID)
-        puts "UAO_ModifySC #{lShortcut.Metadata['title']}"
-        if (lShortcut != nil)
-          if (@NewContent != nil)
-            lShortcut.setContent_UNDO(@NewContent.clone)
-          end
-          if (@NewMetadata != nil)
-            lShortcut.setMetadata_UNDO(@NewMetadata.clone)
-          end
-          if ((@NewContent != nil) or
-              (@NewMetadata != nil))
-            @Controller.notifyShortcutDataUpdate(lShortcut, @OldShortcutID, @OldContent, @OldMetadata)
-          end
-          if (@NewTags != nil)
-            lOldTags = lShortcut.Tags
-            lNewTags = {}
-            @NewTags.each do |iTagID|
-              lTag = @Controller.findTag(iTagID)
-              if (lTag == nil)
-                puts "!!! Tag ID #{iTagID} should exist, but the controller returned nil. Bug ?"
-              else
-                lNewTags[lTag] = nil
-              end
-            end
-            lShortcut.setTags_UNDO(lNewTags)
-            @Controller.notifyShortcutTagsUpdate(lShortcut, lOldTags)
-          end
-        end
-      end
-
-      # Undo the operation
-      def undoOperation
-        # Retrieve the Shortcut
-        lShortcut = @Controller.findShortcut(@NewShortcutID)
-        puts "UNDO - UAO_ModifySC #{lShortcut.Metadata['title']}"
-        if (lShortcut != nil)
-          if (@OldContent != nil)
-            lShortcut.setContent_UNDO(@OldContent.clone)
-          end
-          if (@OldMetadata != nil)
-            lShortcut.setMetadata_UNDO(@OldMetadata.clone)
-          end
-          if ((@OldContent != nil) or
-              (@OldMetadata != nil))
-            @Controller.notifyShortcutDataUpdate(lShortcut, @NewShortcutID, @NewContent, @NewMetadata)
-          end
-          if (@OldTags != nil)
-            lNewTags = lShortcut.Tags
-            lOldTags = {}
-            @OldTags.each do |iTagID|
-              lTag = @Controller.findTag(iTagID)
-              if (lTag == nil)
-                puts "!!! Tag ID #{iTagID} should exist, but the controller returned nil. Bug ?"
-              else
-                lOldTags[lTag] = nil
-              end
-            end
-            lShortcut.setTags_UNDO(lOldTags)
-            @Controller.notifyShortcutTagsUpdate(lShortcut, lNewTags)
-          end
-        end
-      end
-
-    end
-
-    # Class that modifies a Tag
-    class UAO_ModifyTag < UndoableAtomicOperation
-
-      # Constructor
-      #
-      # Parameters:
-      # * *iController* (_Controller_): The model controller
-      # * *iTag* (_Tag_): The Tag being modified
-      # * *iNewName* (_String_): The new name
-      # * *iNewIcon* (<em>Wx::Bitmap</em>): The new icon (can be nil)
-      def initialize(iController, iTag, iNewName, iNewIcon)
-        super(iController)
-
-        @OldTagID = iTag.getUniqueID
-        @NewTagID = iTag.Parent.getUniqueID + [iNewName]
-        @OldName = iTag.Name.clone
-        @NewName = iNewName.clone
-        @OldIcon = nil
-        if (iTag.Icon != nil)
-          @OldIcon = iTag.Icon.clone
-        end
-        @NewIcon = nil
-        if (iNewIcon != nil)
-          @NewIcon = iNewIcon.clone
-        end
-      end
-
-      # Perform the operation
-      def doOperation
-        # Retrieve the Tag
-        lTag = @Controller.findTag(@OldTagID)
-        puts "UAO_ModifyTag #{lTag.Name}"
-        if (lTag != nil)
-          lTag.setName_UNDO(@NewName.clone)
-          lNewIcon = nil
-          if (@NewIcon != nil)
-            lNewIcon = @NewIcon.clone
-          end
-          lTag.setIcon_UNDO(lNewIcon)
-          @Controller.notifyTagDataUpdate(lTag, @OldTagID, @OldName, @OldIcon)
-        end
-      end
-
-      # Undo the operation
-      def undoOperation
-        # Retrieve the Shortcut
-        lTag = @Controller.findTag(@NewTagID)
-        puts "UNDO - UAO_ModifyTag #{lTag.Name}"
-        if (lTag != nil)
-          lTag.setName_UNDO(@OldName.clone)
-          lOldIcon = nil
-          if (@OldIcon != nil)
-            lOldIcon = @OldIcon.clone
-          end
-          lTag.setIcon_UNDO(lOldIcon)
-          @Controller.notifyTagDataUpdate(lTag, @NewTagID, @NewName, @NewIcon)
-        end
       end
 
     end
@@ -398,71 +431,19 @@ module PBS
       # Perform the operation
       def doOperation
         puts "UAO_ChangeFile #{@NewFileName}"
-        @Controller.setCurrentOpenedFileName_UNDO(@NewFileName)
-        @Controller.setCurrentOpenedFileModified_UNDO(false)
+        @Controller._UNDO_setCurrentOpenedFileName(@NewFileName)
+        @Controller._UNDO_setCurrentOpenedFileModified(false)
         @Controller.notifyCurrentOpenedFileUpdate
       end
 
       # Undo the operation
       def undoOperation
         puts "UNDO - UAO_ChangeFile #{@NewFileName}"
-        @Controller.setCurrentOpenedFileName_UNDO(@OldFileName)
-        @Controller.setCurrentOpenedFileModified_UNDO(@OldFileModified)
+        @Controller._UNDO_setCurrentOpenedFileName(@OldFileName)
+        @Controller._UNDO_setCurrentOpenedFileModified(@OldFileModified)
         @Controller.notifyCurrentOpenedFileUpdate
       end
 
-    end
-
-    # Class that changes all Shortcuts and Tags data
-    class UAO_ReplaceAll < UndoableAtomicOperation
-
-      include Tools
-
-      # Constructor
-      #
-      # Parameters:
-      # * *iController* (_Controller_): The model controller
-      # * *iNewRootTag* (_Tag_): The new root tag
-      # * *iNewShortcutsList* (<em>list<Shortcut></em>): The new Shortcuts list
-      def initialize(iController, iNewRootTag, iNewShortcutsList)
-        super(iController)
-
-        # This class is a little bit different: it stores references to Tags/Shortcuts inside its own saved data.
-        # The reason why it works is that all those objects will never be referenced by anyone outside them.
-        # Therefore we can keep the references knowing that we save every Tag/Shortcut.
-        # Be careful when cloning, as the Shortcuts list contains references to Tags that are among iNewRootTag
-        @OldRootTag, @OldShortcutsList = cloneTagsShortcuts(@Controller.RootTag, @Controller.ShortcutsList)
-        @NewRootTag, @NewShortcutsList = cloneTagsShortcuts(iNewRootTag, iNewShortcutsList)
-      end
-
-      # Perform the operation
-      def doOperation
-        puts 'UAO_ReplaceAll'
-        lNewRootTag, lNewShortcutsList = cloneTagsShortcuts(@NewRootTag, @NewShortcutsList)
-        @Controller.setRootTag_UNDO(lNewRootTag)
-        @Controller.setShortcutsList_UNDO(lNewShortcutsList)
-        @Controller.notifyReplaceAll
-      end
-
-      # Undo the operation
-      def undoOperation
-        puts 'UNDO - UAO_ReplaceAll'
-        lOldRootTag, lOldShortcutsList = cloneTagsShortcuts(@OldRootTag, @OldShortcutsList)
-        @Controller.setRootTag_UNDO(lOldRootTag)
-        @Controller.setShortcutsList_UNDO(lOldShortcutsList)
-        @Controller.notifyReplaceAll
-      end
-
-    end
-
-    # Add a new atomic operation in the current undoable transaction
-    #
-    # Parameters:
-    # * *iUndoableAtomicOperation* (_UndoableAtomicOperation_): The atomic operation
-    def atomicOperation(iUndoableAtomicOperation)
-      @CurrentUndoableOperation.AtomicOperations << iUndoableAtomicOperation
-      # Perform it right now
-      iUndoableAtomicOperation.doOperation
     end
 
   end

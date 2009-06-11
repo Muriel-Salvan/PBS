@@ -30,13 +30,12 @@ module PBS
       # ** *selection* (_MultipleSelection_): the current selection.
       def cmdCopy(iParams)
         lSelection = iParams[:selection]
-        lSerializedTags, lSerializedShortcuts = lSelection.getSerializedSelection
+        lSerializedSelection = lSelection.getSerializedSelection
         # If there is something to copy, fill the clipboard with it.
-        if ((!lSerializedShortcuts.empty?) or
-            (!lSerializedTags.empty?))
+        if (!lSerializedSelection.empty?)
           lCopyID = getNewCopyID
           lClipboardData = Tools::DataObjectSelection.new
-          lClipboardData.setData(Wx::ID_COPY, lCopyID, lSerializedTags, lSerializedShortcuts)
+          lClipboardData.setData(Wx::ID_COPY, lCopyID, lSerializedSelection)
           Wx::Clipboard.open do |ioClipboard|
             ioClipboard.data = lClipboardData
           end

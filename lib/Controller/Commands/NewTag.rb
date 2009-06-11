@@ -41,23 +41,11 @@ module PBS
           lParentTagName = lTag.Name
         end
         undoableOperation("Create new Tag in #{lParentTagName}") do
-          # Create an empty Tag that we will edit
-          lNewTag = Tag.new('New Tag', nil, nil)
-          # Now we edit lNewTag
-          lEditTagDialog = EditTagDialog.new(lWindow, lNewTag)
+          lEditTagDialog = EditTagDialog.new(lWindow, nil)
           case lEditTagDialog.show_modal
           when Wx::ID_OK
             lNewName, lNewIcon = lEditTagDialog.getNewData
-            # First check that a Tag like this does not exist already
-            lNewID = lTag.getUniqueID + [lNewName]
-            lAlreadyExistingTag = findTag(lNewID)
-            if (lAlreadyExistingTag == nil)
-              # OK, we can create it for real
-              addNewTag(lTag, Tag.new(lNewName, lNewIcon, nil))
-            else
-              # Oups, already here
-              puts "!!! A Tag named #{lNewName} already exists as a sub-Tag of #{lTag.Name}."
-            end
+            createTag(lTag, lNewName, lNewIcon)
           end
         end
       end

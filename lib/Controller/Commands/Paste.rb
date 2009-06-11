@@ -31,14 +31,14 @@ module PBS
       def cmdPaste(iParams)
         lSelectedTag = iParams[:tag]
         # We are sure that we can paste, everything is already in the @Clipboard_* variables.
-        undoableOperation("Paste #{Tools::MultipleSelection.getDescription(@Clipboard_SerializedTags, @Clipboard_SerializedShortcuts)} in #{lSelectedTag.Name}") do
-          mergeSerializedTagsShortcuts(lSelectedTag, @Clipboard_SerializedTags, @Clipboard_SerializedShortcuts)
+        undoableOperation("Paste #{@Clipboard_SerializedSelection.getDescription} in #{lSelectedTag.Name}") do
+          @Clipboard_SerializedSelection.createSerializedTagsShortcuts(self, lSelectedTag, @CopiedSelection)
         end
         # In case of Cut, we notify the sender back.
         if (@Clipboard_CopyMode == Wx::ID_CUT)
           # Replace data in the clipboard with an acknowledgement
           lClipboardData = Tools::DataObjectSelection.new
-          lClipboardData.setData(Wx::ID_DELETE, @Clipboard_CopyID, nil, nil)
+          lClipboardData.setData(Wx::ID_DELETE, @Clipboard_CopyID, nil)
           Wx::Clipboard.open do |ioClipboard|
             ioClipboard.data = lClipboardData
           end
