@@ -1106,12 +1106,16 @@ module PBS
           iSC, iParentTag = iSCInfo
           # Find the node of the Tag
           lParentNodeID = @TagsToMainTree[iParentTag]
-          # Check each child, and update the one for our Shortcut
-          children(lParentNodeID).each do |iChildNodeID|
-            # If this child is for our SC, update it
-            lID, lObject = get_item_data(iChildNodeID)
-            if (lObject == iSC)
-              updateTreeNode(iChildNodeID)
+          if (lParentNodeID == nil)
+            puts "!!! Normally tag #{iParentTag.Name} should have been registered in the main tree, but unable to retrieve it. Bug ?"
+          else
+            # Check each child, and update the one for our Shortcut
+            children(lParentNodeID).each do |iChildNodeID|
+              # If this child is for our SC, update it
+              lID, lObject = get_item_data(iChildNodeID)
+              if (lObject == iSC)
+                updateTreeNode(iChildNodeID)
+              end
             end
           end
         end

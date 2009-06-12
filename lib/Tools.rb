@@ -252,6 +252,7 @@ module PBS
     # ** *iDialog* (<em>Wx::Dialog</em>): The dialog
     def showModal(iDialogClass, iParentWindow, *iParameters)
       lDialog = iDialogClass.new(iParentWindow, *iParameters)
+      lDialog.centre(Wx::CENTRE_ON_SCREEN|Wx::BOTH)
       lModalResult = lDialog.show_modal
       yield(lModalResult, lDialog)
       # Don't forget to destroy, otherwise we get ObjectPreviouslyDeleted exceptions on exit.

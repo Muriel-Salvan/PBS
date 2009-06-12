@@ -414,6 +414,9 @@ module PBS
       @TCMainTree.evt_left_up do |iEvent|
         onMainTreeSelectionUpdated
       end
+
+      # Resize it as it will always be resized by users having more than 10 shortcuts
+      self.size = [300, 400]
     end
 
   end
