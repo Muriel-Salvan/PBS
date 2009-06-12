@@ -554,11 +554,11 @@ module PBS
           lLocationName = " in #{lTag.Name}"
         end
         undoableOperation("Create new Shortcut#{lLocationName}") do
-          showModal(EditShortcutDialog, lWindow, nil, @RootTag, lShortcutType) do |iModalResult, iDialog|
+          showModal(EditShortcutDialog, lWindow, nil, @RootTag, lShortcutType, lTag) do |iModalResult, iDialog|
             case iModalResult
             when Wx::ID_OK
               lNewContent, lNewMetadata, lNewTags = iDialog.getNewData
-              createShortcut(lShortcutType, lNewContent, lNewMetadata, lNewTags)
+              createShortcut(iTypeID, lNewContent, lNewMetadata, lNewTags)
             end
           end
         end

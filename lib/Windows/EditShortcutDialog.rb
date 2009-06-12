@@ -112,7 +112,8 @@ module PBS
     # * *iSC* (_Shortcut_): The Shortcut containing info to edit (or nil if initial values needed)
     # * *iRootTag* (_Tag_): The root tag
     # * *iType* (_ShortcutType_): The Shortcut Type used (ignored if iSC != nil) [optional = nil]
-    def initialize(iParent, iSC, iRootTag, iType = nil)
+    # * *iInitialTag* (_Tag_): The initial Tag (ignored if iSC != nil) (can be nil for the Root Tag) [optional = nil]
+    def initialize(iParent, iSC, iRootTag, iType = nil, iInitialTag = nil)
       if (iSC == nil)
         @Type = iType
       else
@@ -126,7 +127,11 @@ module PBS
 
       # First create all the panels that will fit in this dialog
       if (iSC == nil)
-        createTagsPanel(self, iRootTag, {})
+        lTags = {}
+        if (iInitialTag != nil)
+          lTags[iInitialTag] = nil
+        end
+        createTagsPanel(self, iRootTag, lTags)
         @ContentMetadataPanel = ContentMetadataPanel.new(self, @Type, iType.createEmptyContent, {'title' => 'New Shortcut', 'icon' => nil})
       else
         createTagsPanel(self, iRootTag, iSC.Tags)
