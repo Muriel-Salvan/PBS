@@ -31,7 +31,7 @@ module PBS
       def cmdOpenMerge(iParams)
         lWindow = iParams[:parentWindow]
         # Display Open dialog
-        showModal(Wx::FileDialog.new, lWindow,
+        showModal(Wx::FileDialog, lWindow,
           :message => 'Open file for merge',
           :style => Wx::FD_OPEN|Wx::FD_FILE_MUST_EXIST,
           :wildcard => 'PBS Shortcuts (*.pbss)|*.pbss'
