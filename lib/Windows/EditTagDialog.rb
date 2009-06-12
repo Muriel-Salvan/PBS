@@ -47,10 +47,11 @@ module PBS
       )
 
       # First create all the panels that will fit in this dialog
+      @MetadataPanel = TagMetadataPanel.new(self)
       if (iTag == nil)
-        @MetadataPanel = TagMetadataPanel.new(self, 'New Tag', nil)
+        @MetadataPanel.setData('New Tag', nil)
       else
-        @MetadataPanel = TagMetadataPanel.new(self, iTag.Name, iTag.Icon)
+        @MetadataPanel.setData(iTag.Name, iTag.Icon)
       end
       lButtonsPanel = createButtonsPanel(self)
       # Fit them all now, as we will use their true sizes to determine proportions in the sizers
@@ -71,8 +72,8 @@ module PBS
     # Return:
     # * _String_: The name
     # * <em>Wx::Bitmap</em>: The icon (can be nil)
-    def getNewData
-      return @MetadataPanel.getNewData
+    def getData
+      return @MetadataPanel.getData
     end
 
   end

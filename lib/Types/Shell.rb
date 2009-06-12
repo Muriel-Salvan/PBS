@@ -9,44 +9,46 @@ module PBS
 
     class Shell < ShortcutType
 
-      TCCmd_ID = 1000
+      # The panel that edits contents from this Shortcut type
+      class EditPanel < Wx::Panel
 
-      # Create the window that edits content associated to this type
-      #
-      # Parameters:
-      # * *iParent* (_Window_): The parent window
-      # * *iContent* (_Object_): The content containing initial values
-      # Return:
-      # * _Panel_: The panel containing controls
-      def createEditPanel(iParent, iContent)
-        rResult = Wx::Panel.new(iParent)
+        # Constructor
+        #
+        # Parameters:
+        # * *iParent* (_Window_): The parent window
+        def initialize(iParent)
+          super(iParent)
 
-        # Create all components
-        lSTCmd = Wx::StaticText.new(rResult, -1, 'Shell command')
-        lTCCmd = Wx::TextCtrl.new(rResult, :id => TCCmd_ID, :value => iContent)
-        lTCCmd.min_size = [300, lTCCmd.min_size.height]
+          # Create all components
+          lSTCmd = Wx::StaticText.new(self, -1, 'Shell command')
+          @TCCmd = Wx::TextCtrl.new(self)
+          @TCCmd.min_size = [300, @TCCmd.min_size.height]
 
-        # Put them in sizers
-        lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
-        rResult.sizer = lMainSizer
-        lMainSizer.add_item([0,0], :proportion => 1)
-        lMainSizer.add_item(lSTCmd, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
-        lMainSizer.add_item(lTCCmd, :flag => Wx::GROW, :proportion => 0)
-        lMainSizer.add_item([0,0], :proportion => 1)
+          # Put them in sizers
+          lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
+          lMainSizer.add_item([0,0], :proportion => 1)
+          lMainSizer.add_item(lSTCmd, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+          lMainSizer.add_item(@TCCmd, :flag => Wx::GROW, :proportion => 0)
+          lMainSizer.add_item([0,0], :proportion => 1)
+          self.sizer = lMainSizer
+        end
 
-        return rResult
-      end
+        # Get the content from the controls
+        #
+        # Return:
+        # * _Object_: The corresponding content, which will be associated to a shortcut
+        def getData
+          return @TCCmd.value
+        end
 
-      # Get the content from the controls given from a panel created through this same plugin
-      #
-      # Parameters:
-      # * *iPanel* (<em>Wx::Panel</em>): The panel containing values
-      # Return:
-      # * _Object_: The corresponding content, which will be associated to a shortcut
-      def createContentFromPanel(iPanel)
-        rContent = iPanel.find_window_by_id(TCCmd_ID).value
+        # Set the Panel's contents based on a given content
+        #
+        # Parameters:
+        # * *iContent* (_Object_): The content containing values to put in the panel
+        def setData(iContent)
+          @TCCmd.value = iContent
+        end
 
-        return rContent
       end
 
       # Get the default icon file name associated to this type

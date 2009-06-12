@@ -23,8 +23,9 @@ module PBS
   ID_STATS = 1002
   ID_DEVDEBUG = 1003
   # Following constants are used in dialogs (for Buttons IDs and so return values)
-  ID_MERGE = 2000
-  ID_KEEP = 2001
+  ID_MERGE_EXISTING = 2000
+  ID_MERGE_CONFLICTING = 2001
+  ID_KEEP = 2002
   # Following constants are base integers for plugins related commands.
   ID_IMPORT_BASE = 6000
   ID_IMPORT_MERGE_BASE = 7000
@@ -155,46 +156,61 @@ module PBS
     # Return:
     # * _Tag_: Tag that is a doublon of the data given, or nil otherwise.
     # * _Integer_: Action taken in case of doublon, or nil otherwise
+    # * _String_: The new Tag name to consider
+    # * <em>Wx::Bitmap</em>: The new icon to consider
     def checkTagUnicity(iParentTag, iTagName, iIcon, iTagToIgnore = nil)
       rDoublon = nil
       rAction = nil
+      rNewTagName = iTagName
+      rNewIcon = iIcon
 
-      iParentTag.Children.each do |ioChildTag|
-        if ((ioChildTag != iTagToIgnore) and
-            (tagSameAs?(ioChildTag, iTagName, iIcon)))
-          # It already exists. Check options to know what to do.
-          case @Options[:tagsConflict]
-          when TAGSCONFLICT_ASK
-            # Ask for replacement or cancellation
+      # If it was asked before to always keep both Tags in case of conflict, don't even bother
+      if (@CurrentOperationTagsConflicts != ID_KEEP)
+        iParentTag.Children.each do |ioChildTag|
+          if ((ioChildTag != iTagToIgnore) and
+              (tagSameAs?(ioChildTag, iTagName, iIcon)))
             rDoublon = ioChildTag
-            showModal(ResolveTagConflictDialog, nil, ioChildTag, iTagName, iIcon) do |iModalResult, iDialog|
-              rAction = iModalResult
-              case iModalResult
-              when ID_MERGE
-                # Take values from the dialog, and put them into the existing Tag
-                lName, lIcon = iDialog.getNewData
-                updateTag(ioChildTag, lName, lIcon, ioChildTag.Children)
+            # It already exists. Check options to know what to do.
+            if ((@Options[:tagsConflict] == TAGSCONFLICT_ASK) and
+                (@CurrentOperationTagsConflicts == nil))
+              # Ask for replacement or cancellation
+              showModal(ResolveTagConflictDialog, nil, ioChildTag, iTagName, iIcon) do |iModalResult, iDialog|
+                rAction = iModalResult
+                if (iDialog.applyToAll?)
+                  @CurrentOperationTagsConflicts = rAction
+                end
+                case iModalResult
+                when ID_MERGE_EXISTING, ID_MERGE_CONFLICTING
+                  # Take values from the dialog, and put them into the existing Tag
+                  lName, lIcon = iDialog.getData
+                  updateTag(ioChildTag, lName, lIcon, ioChildTag.Children)
+                when ID_KEEP
+                  rNewTagName, rNewIcon = iDialog.getData
+                end
               end
+            elsif ((@Options[:tagsConflict] == TAGSCONFLICT_MERGE_EXISTING) or
+                   (@CurrentOperationTagsConflicts == ID_MERGE_EXISTING))
+              rAction = ID_MERGE_EXISTING
+            elsif ((@Options[:tagsConflict] == TAGSCONFLICT_MERGE_CONFLICTING) or
+                   (@CurrentOperationTagsConflicts == ID_MERGE_CONFLICTING))
+              updateTag(ioChildTag, iTagName, iIcon, ioChildTag.Children)
+              rAction = ID_MERGE_CONFLICTING
+            elsif ((@Options[:tagsConflict] == TAGSCONFLICT_CANCEL) or
+                   (@CurrentOperationTagsConflicts == Wx::ID_CANCEL))
+              @CurrentTransactionErrors << "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
+              rAction = Wx::ID_CANCEL
+            elsif (@Options[:tagsConflict] == TAGSCONFLICT_CANCEL_ALL)
+              @CurrentTransactionErrors << "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
+              @CurrentTransactionToBeCancelled = true
+              rAction = Wx::ID_CANCEL
+            else
+              puts "!!! Unknown decision to take concerning a Tags conflict: the option :tagsConflict is #{@Options[:tagsConflict]}, and the user decision to always apply is #{@CurrentOperationTagsConflicts}. Bug ?"
             end
-          when TAGSCONFLICT_MERGE_EXISTING
-            rAction = ID_MERGE
-          when TAGSCONFLICT_MERGE_CONFLICTING
-            updateTag(ioChildTag, iTagName, iIcon, ioChildTag.Children)
-            rAction = ID_MERGE
-          when TAGSCONFLICT_CANCEL
-            @CurrentTransactionErrors << "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
-            rAction = Wx::ID_CANCEL
-          when TAGSCONFLICT_CANCEL_ALL
-            @CurrentTransactionErrors << "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
-            @CurrentTransactionToBeCancelled = true
-            rAction = Wx::ID_CANCEL
-          else
-            puts "!!! Unknown value for option :tagsConflict: #{@Options[:tagsConflict]}. Bug ?"
           end
         end
       end
 
-      return rDoublon, rAction
+      return rDoublon, rAction, rNewTagName, rNewIcon
     end
 
     # Test if a given data does not violate unicity constraints for a Shortcut if it was to be added
@@ -208,50 +224,65 @@ module PBS
     # Return:
     # * _Shortcut_: Shortcut that is a doublon of the data given, or nil otherwise.
     # * _Integer_: Action taken in case of doublon, or nil otherwise
+    # * _Object_: The new content to consider
+    # * <em>map<String,Object></em>: The new metadata to consider
     def checkShortcutUnicity(iTypeName, iContent, iMetadata, iTags, iShortcutToIgnore = nil)
       rDoublon = nil
       rAction = nil
+      rNewContent = iContent
+      rNewMetadata = iMetadata
 
-      @ShortcutsList.each do |ioSC|
-        if ((ioSC != iShortcutToIgnore) and
-            (ioSC.Type.pluginName == iTypeName) and
-            (shortcutSameAs?(ioSC,  iContent, iMetadata)))
-          rDoublon = ioSC
-          # It already exists. Check options to know what to do.
-          case @Options[:shortcutsConflict]
-          when SHORTCUTSCONFLICT_ASK
-            showModal(ResolveShortcutConflictDialog, nil, ioSC, iContent, iMetadata) do |iModalResult, iDialog|
-              rAction = iModalResult
-              case iModalResult
-              when ID_MERGE
-                # Take values from the dialog, then modify the current Shortcut
-                lContent, lMetadata = iDialog.getNewData
-                lNewTags = iTags.clone
-                lNewTags.merge!(ioSC.Tags)
-                updateShortcut(ioSC, lContent, lMetadata, lNewTags)
+      # If it was asked before to always keep both Shortcuts in case of conflict, don't even bother
+      if (@CurrentOperationShortcutsConflicts != ID_KEEP)
+        @ShortcutsList.each do |ioSC|
+          if ((ioSC != iShortcutToIgnore) and
+              (ioSC.Type.pluginName == iTypeName) and
+              (shortcutSameAs?(ioSC,  iContent, iMetadata)))
+            rDoublon = ioSC
+            # It already exists. Check options to know what to do.
+            if ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_ASK) and
+                (@CurrentOperationShortcutsConflicts == nil))
+              showModal(ResolveShortcutConflictDialog, nil, ioSC, iContent, iMetadata) do |iModalResult, iDialog|
+                rAction = iModalResult
+                if (iDialog.applyToAll?)
+                  @CurrentOperationShortcutsConflicts = rAction
+                end
+                case iModalResult
+                when ID_MERGE_EXISTING, ID_MERGE_CONFLICTING
+                  # Take values from the dialog, then modify the current Shortcut
+                  lContent, lMetadata = iDialog.getData
+                  lNewTags = iTags.clone
+                  lNewTags.merge!(ioSC.Tags)
+                  updateShortcut(ioSC, lContent, lMetadata, lNewTags)
+                when ID_KEEP
+                  rNewContent, rNewMetadata = iDialog.getData
+                end
               end
+            elsif ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_MERGE_EXISTING) or
+                   (@CurrentOperationShortcutsConflicts == ID_MERGE_EXISTING))
+              rAction = ID_MERGE_EXISTING
+            elsif ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_MERGE_CONFLICTING) or
+                   (@CurrentOperationShortcutsConflicts == ID_MERGE_CONFLICTING))
+              lNewTags = iTags.clone
+              lNewTags.merge!(ioSC.Tags)
+              updateShortcut(ioSC, iContent, iMetadata, lNewTags)
+              rAction = ID_MERGE_CONFLICTING
+            elsif ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_CANCEL) or
+                   (@CurrentOperationShortcutsConflicts == Wx::ID_CANCEL))
+              @CurrentTransactionErrors << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
+              rAction = Wx::ID_CANCEL
+            elsif (@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_CANCEL_ALL)
+              @CurrentTransactionErrors << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
+              @CurrentTransactionToBeCancelled = true
+              rAction = Wx::ID_CANCEL
+            else
+              puts "!!! Unknown decision to take concerning a Shortcuts conflict: the option :shortcutsConflict is #{@Options[:shortutsConflict]}, and the user decision to always apply is #{@CurrentOperationShortcutsConflicts}. Bug ?"
             end
-          when SHORTCUTSCONFLICT_MERGE_EXISTING
-            rAction = ID_MERGE
-          when SHORTCUTSCONFLICT_MERGE_CONFLICTING
-            lNewTags = iTags.clone
-            lNewTags.merge!(ioSC.Tags)
-            updateShortcut(ioSC, iContent, iMetadata, lNewTags)
-            rAction = ID_MERGE
-          when SHORTCUTSCONFLICT_CANCEL
-            @CurrentTransactionErrors << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
-            rAction = Wx::ID_CANCEL
-          when SHORTCUTSCONFLICT_CANCEL_ALL
-            @CurrentTransactionErrors << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
-            @CurrentTransactionToBeCancelled = true
-            rAction = Wx::ID_CANCEL
-          else
-            puts "!!! Unknown value for option :shortcutsConflict: #{@Options[:shortcutsConflict]}. Bug ?"
           end
         end
       end
 
-      return rDoublon, rAction
+      return rDoublon, rAction, rNewContent, rNewMetadata
     end
 
     # Method that sends notifications to registered GUIs that implement desired methods
@@ -557,7 +588,7 @@ module PBS
           showModal(EditShortcutDialog, lWindow, nil, @RootTag, lShortcutType, lTag) do |iModalResult, iDialog|
             case iModalResult
             when Wx::ID_OK
-              lNewContent, lNewMetadata, lNewTags = iDialog.getNewData
+              lNewContent, lNewMetadata, lNewTags = iDialog.getData
               createShortcut(iTypeID, lNewContent, lNewMetadata, lNewTags)
             end
           end
@@ -578,6 +609,8 @@ module PBS
       @RedoStack = []
       @CurrentTransactionErrors = []
       @CurrentTransactionToBeCancelled = false
+      @CurrentOperationTagsConflicts = nil
+      @CurrentOperationShortcutsConflicts = nil
 
       # Local Copy/Cut management
       @CopiedSelection = nil

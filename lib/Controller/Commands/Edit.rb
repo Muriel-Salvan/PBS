@@ -44,7 +44,7 @@ module PBS
             showModal(EditTagDialog, lWindow, lObject) do |iModalResult, iDialog|
               case iModalResult
               when Wx::ID_OK
-                lNewName, lNewIcon = iDialog.getNewData
+                lNewName, lNewIcon = iDialog.getData
                 updateTag(lObject, lNewName, lNewIcon, lObject.Children)
               end
             end
@@ -55,7 +55,7 @@ module PBS
             showModal(EditShortcutDialog, lWindow, lObject, @RootTag) do |iModalResult, iDialog|
               case iModalResult
               when Wx::ID_OK
-                lNewContent, lNewMetadata, lNewTags = iDialog.getNewData
+                lNewContent, lNewMetadata, lNewTags = iDialog.getData
                 updateShortcut(lObject, lNewContent, lNewMetadata, lNewTags)
               end
             end

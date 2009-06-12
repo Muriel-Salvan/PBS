@@ -449,9 +449,7 @@ module PBS
           when ID_TAG
             if (lNewName != lObject.Name)
               @Controller.undoableOperation("Edit Tag's name #{lObject.Name}") do
-                if (!@Controller.updateTag(lObject, lNewName, lObject.Icon, lObject.Children))
-                  iEvent.veto
-                end
+                @Controller.updateTag(lObject, lNewName, lObject.Icon, lObject.Children)
               end
             end
           when ID_SHORTCUT
@@ -459,15 +457,15 @@ module PBS
               @Controller.undoableOperation("Edit Shortcut's name #{lObject.Metadata['title']}") do
                 lNewMetadata = lObject.Metadata.clone
                 lNewMetadata['title'] = lNewName
-                if (!@Controller.updateShortcut(lObject, lObject.Content, lNewMetadata, lObject.Tags))
-                  iEvent.veto
-                end
+                @Controller.updateShortcut(lObject, lObject.Content, lNewMetadata, lObject.Tags)
               end
             end
           else
             puts "!!! We are editing an item of unknown ID: #{lID}. Bug ?"
           end
         end
+        # We always veto the event, as the label was forcefully modified by notifiers during this event
+        iEvent.veto
       end
 
       # Giving tool tips about items

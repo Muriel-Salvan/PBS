@@ -126,16 +126,17 @@ module PBS
       )
 
       # First create all the panels that will fit in this dialog
+      @ContentMetadataPanel = ContentMetadataPanel.new(self, @Type)
       if (iSC == nil)
         lTags = {}
         if (iInitialTag != nil)
           lTags[iInitialTag] = nil
         end
         createTagsPanel(self, iRootTag, lTags)
-        @ContentMetadataPanel = ContentMetadataPanel.new(self, @Type, iType.createEmptyContent, {'title' => 'New Shortcut', 'icon' => nil})
+        @ContentMetadataPanel.setData(iType.createEmptyContent, {'title' => 'New Shortcut', 'icon' => nil})
       else
         createTagsPanel(self, iRootTag, iSC.Tags)
-        @ContentMetadataPanel = ContentMetadataPanel.new(self, @Type, iSC.Content, iSC.Metadata)
+        @ContentMetadataPanel.setData(iSC.Content, iSC.Metadata)
       end
       lButtonsPanel = createButtonsPanel(self)
       # Fit them all now, as we will use their true sizes to determine proportions in the sizers
@@ -171,8 +172,8 @@ module PBS
     # * _Object_: The Content
     # * <em>map<String,Object></em>: The Metadata
     # * <em>map<Tag,nil></em>: The Tags
-    def getNewData
-      rNewContent, rNewMetadata = @ContentMetadataPanel.getNewData
+    def getData
+      rNewContent, rNewMetadata = @ContentMetadataPanel.getData
       rNewTags = createTagsFromPanel
 
       return rNewContent, rNewMetadata, rNewTags

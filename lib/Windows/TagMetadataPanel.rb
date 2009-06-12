@@ -33,18 +33,16 @@ module PBS
     #
     # Parameters:
     # * *iParent* (_Window_): The parent window
-    # * *iName* (_String_): The Tag name
-    # * *iIcon* (<em>Wx::Bitmap</em>): The icon
-    def initialize(iParent, iName, iIcon)
+    def initialize(iParent)
       super(iParent)
 
       # This attribute will be changed only if the icon is changed.
       # It is used instead of the Wx::BitmapButton::bitmap_label because it can be nil, and in this case we don't want to replace it with the default icon internally.
-      @Icon = iIcon
+      @Icon = nil
       
       # Create all components
       lSTTitle = Wx::StaticText.new(self, -1, 'Title')
-      @TCTitle = Wx::TextCtrl.new(self, :value => iName)
+      @TCTitle = Wx::TextCtrl.new(self)
       @TCTitle.min_size = [300, @TCTitle.min_size.height]
       lSTIcon = Wx::StaticText.new(self, -1, 'Icon')
       @BBIcon = Wx::BitmapButton.new(self, -1, Wx::Bitmap.new)
@@ -76,9 +74,6 @@ module PBS
       lMainSizer.add_item([0,0], :proportion => 1)
       self.sizer = lMainSizer
 
-      # Fit correctly depending on icon's size
-      setBBIcon
-      
     end
 
     # Get the new data from the components
@@ -86,8 +81,19 @@ module PBS
     # Return:
     # * _String_: The name
     # * <em>Wx::Bitmap</em>: The icon (can be nil)
-    def getNewData
+    def getData
       return @TCTitle.value, @Icon
+    end
+
+    # Set the data in the components
+    #
+    # Parameters:
+    # * *iName* (_String_): The name
+    # * *iIcon* (<em>Wx::Bitmap</em>): The icon (can be nil)
+    def setData(iName, iIcon)
+      @TCTitle.value = iName
+      @Icon = iIcon
+      setBBIcon
     end
 
   end

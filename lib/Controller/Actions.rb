@@ -19,9 +19,11 @@ module PBS
       puts "= #{iOperationTitle} ..."
       # Create the current Undo context
       @CurrentUndoableOperation = Controller::UndoableOperation.new(iOperationTitle)
-      # Reset the transaction error
+      # Reset the transaction context
       @CurrentTransactionErrors = []
       @CurrentTransactionToBeCancelled = false
+      @CurrentOperationTagsConflicts = nil
+      @CurrentOperationShortcutsConflicts = nil
       # Call the command code
       yield
       # Check possible errors
@@ -68,11 +70,11 @@ module PBS
       rTag = nil
 
       ensureUndoableOperation("Create Tag #{iTagName}") do
-        rTag, lAction = checkTagUnicity(iParentTag, iTagName, iIcon)
+        rTag, lAction, lNewTagName, lNewIcon = checkTagUnicity(iParentTag, iTagName, iIcon)
         if ((rTag == nil) or
             (lAction == ID_KEEP))
           # OK, create it
-          rTag = atomicOperation(Controller::UAO_CreateTag.new(self, iParentTag, iTagName, iIcon))
+          rTag = atomicOperation(Controller::UAO_CreateTag.new(self, iParentTag, lNewTagName, lNewIcon))
           setCurrentFileModified
         end
       end
@@ -109,13 +111,14 @@ module PBS
       if ((ioTag.Name != iNewName) or
           (ioTag.Icon != iNewIcon))
         ensureUndoableOperation("Update Tag #{ioTag.Name}") do
-          lDoublon, lAction = checkTagUnicity(ioTag.Parent, iNewName, iNewIcon, ioTag)
+          lDoublon, lAction, lNewTagName, lNewIcon = checkTagUnicity(ioTag.Parent, iNewName, iNewIcon, ioTag)
           if ((lDoublon == nil) or
               (lAction == ID_KEEP))
-            atomicOperation(Controller::UAO_UpdateTag.new(self, ioTag, iNewName, iNewIcon, iNewChildren))
+            atomicOperation(Controller::UAO_UpdateTag.new(self, ioTag, lNewTagName, lNewIcon, iNewChildren))
             setCurrentFileModified
             rChanged = true
-          elsif (lAction == ID_MERGE)
+          elsif ((lAction == ID_MERGE_EXISTING) or
+                 (lAction == ID_MERGE_CONFLICTING))
             # We have to change the children and the Shortcuts belonging to ioTag, to make them belonging to lDoublon
             # Change Shortcuts first
             @ShortcutsList.each do |ioShortcut|
@@ -155,7 +158,7 @@ module PBS
       rShortcut = nil
 
       ensureUndoableOperation("Create Shortcut #{iMetadata['title']}") do
-        rShortcut, lAction = checkShortcutUnicity(iTypeName, iContent, iMetadata, iTags)
+        rShortcut, lAction, lNewContent, lNewMetadata = checkShortcutUnicity(iTypeName, iContent, iMetadata, iTags)
         if ((rShortcut == nil) or
             (lAction == ID_KEEP))
           # Create it
@@ -163,7 +166,7 @@ module PBS
           if (lType == nil)
             puts "!!! Unknown type named #{iTypeName}. Cannot create Shortcut #{iMetadata['title']}."
           else
-            rShortcut = atomicOperation(Controller::UAO_CreateShortcut.new(self, lType, iContent, iMetadata, iTags))
+            rShortcut = atomicOperation(Controller::UAO_CreateShortcut.new(self, lType, lNewContent, lNewMetadata, iTags))
             setCurrentFileModified
           end
         end
@@ -201,13 +204,14 @@ module PBS
           (ioSC.Tags != iNewTags))
         # First find if we don't violate unicity constraints
         ensureUndoableOperation("Update Shortcut #{ioSC.Metadata['title']}") do
-          lDoublon, lAction = checkShortcutUnicity(ioSC.Type.pluginName, iNewContent, iNewMetadata, iNewTags, ioSC)
+          lDoublon, lAction, lNewContent, lNewMetadata = checkShortcutUnicity(ioSC.Type.pluginName, iNewContent, iNewMetadata, iNewTags, ioSC)
           if ((lDoublon == nil) or
               (lAction == ID_KEEP))
-            atomicOperation(Controller::UAO_UpdateShortcut.new(self, ioSC, iNewContent, iNewMetadata, iNewTags))
+            atomicOperation(Controller::UAO_UpdateShortcut.new(self, ioSC, lNewContent, lNewMetadata, iNewTags))
             setCurrentFileModified
             rChanged = true
-          elsif (lAction == ID_MERGE)
+          elsif ((lAction == ID_MERGE_EXISTING) or
+                 (lAction == ID_MERGE_CONFLICTING))
             # We have to delete the Shortcut we were updating, as it has been merged in lDoublon
             deleteShortcut(ioSC)
             rChanged = true

@@ -44,7 +44,7 @@ module PBS
           showModal(EditTagDialog, lWindow, nil) do |iModalResult, iDialog|
             case iModalResult
             when Wx::ID_OK
-              lNewName, lNewIcon = iDialog.getNewData
+              lNewName, lNewIcon = iDialog.getData
               createTag(lTag, lNewName, lNewIcon)
             end
           end
