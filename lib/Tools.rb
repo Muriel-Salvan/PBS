@@ -255,8 +255,11 @@ module PBS
       lDialog.centre(Wx::CENTRE_ON_SCREEN|Wx::BOTH)
       lModalResult = lDialog.show_modal
       yield(lModalResult, lDialog)
-      # Don't forget to destroy, otherwise we get ObjectPreviouslyDeleted exceptions on exit.
-      lDialog.destroy
+      # If we destroy the window, we get SegFaults during execution when mouse hovers some toolbar icons and moves (except if we disable GC: in this case it works perfectly fine, but consumes tons of memory).
+      # If we don't destroy, we get ObjectPreviouslyDeleted exceptions on exit.
+      # So the least harmful is to not destroy it.
+      # TODO: Find a good solution
+      #lDialog.destroy
     end
 
     # Get a bitmap/icon from a file.

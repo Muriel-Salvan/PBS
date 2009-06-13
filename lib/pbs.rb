@@ -7,6 +7,13 @@ require 'optparse'
 require 'rubygems'
 require 'wx'
 
+# Disabling the Garbage Collector prevents several main WxRuby bugs:
+# * The Drag'n'Drop from the main tree does not cause SegFaults anymore.
+# * Destroying Windows manually does not cause SegFaults anymore during random events.
+# * Not destroying Windows manually does not cause ObjectPreviouslyDeleted exceptions on exit.
+# However, disabling GC does increase memory consumption of around 30Mb every 5 minutes of usage.
+#GC.disable
+
 # Add this path to the load path. This allows anybody to execute PBS from any directory, even not the current one.
 $LOAD_PATH << File.dirname(__FILE__)
 

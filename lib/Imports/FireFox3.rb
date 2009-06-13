@@ -209,6 +209,8 @@ module PBS
           case iIconType
           when 'image/x-icon'
             lBitmapType = Wx::BITMAP_TYPE_ICO
+          when 'image/bmp'
+            lBitmapType = Wx::BITMAP_TYPE_BMP
           end
           # Read the file
           lIconBitmap = Wx::Bitmap.from_image(Wx::Image.new(lIconFileName, lBitmapType))

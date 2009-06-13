@@ -133,7 +133,6 @@ module PBS
               lSelection,
               lCopyMode,
               @Controller.DragSelection,
-              nil,
               nil
             )
             if (lPasteOK)
