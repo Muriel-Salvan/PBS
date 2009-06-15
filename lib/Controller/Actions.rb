@@ -28,11 +28,17 @@ module PBS
       yield
       # Check possible errors
       if (!@CurrentTransactionErrors.empty?)
+        lErrorsText = nil
+        if (@CurrentTransactionErrors.size > MAX_ERRORS_PER_DIALOG)
+          lErrorsText = "Showing only #{MAX_ERRORS_PER_DIALOG} first errors:\n* #{@CurrentTransactionErrors[0..MAX_ERRORS_PER_DIALOG-1].join("\n* ")}"
+        else
+          lErrorsText = "* #{@CurrentTransactionErrors.join("\n* ")}"
+        end
         # Display errors
         showModal(Wx::MessageDialog, nil,
-          @CurrentTransactionErrors.join("\n"),
-          "Errors during #{iOperationTitle}",
-          :style => Wx::OK
+          lErrorsText,
+          "#{@CurrentTransactionErrors.size} error(s) during #{iOperationTitle}",
+          :style => Wx::OK|Wx::ICON_HAND
         ) do |iModalResult, iDialog|
           # Nothing to do
         end

@@ -21,22 +21,95 @@ module PBS
         set_icon(makeIcon("#{$PBSRootDir}/Graphics/Icon.png"), 'PBS')
       end
 
+      # Method that adds a Tag to a menu
+      # This method just creates hierarchical menus of Tags, ignoring Shortcuts
+      #
+      # Parameters:
+      # * *iTag* (_Tag_): Tag to add to the menu
+      # * *ioMenu* (<em>Wx::Menu</em>): Menu to add the Tag to
+      # * *oTagsToMenu* (<em>map<Tag,Wx::Menu></em>): Correspondance between Tags and menu
+      def addTagToMenu(iTag, ioMenu, oTagsToMenu)
+        # The sub menu of this Tag
+        lTagMenu = Wx::Menu.new
+        ioMenu.append_sub_menu(lTagMenu, iTag.Name)
+        # Register it
+        oTagsToMenu[iTag] = lTagMenu
+        # Create children menus
+        # First, create a quick index to sort them alphabetically
+        # map< String, list< Tag > >
+        lIndexedTags = {}
+        iTag.Children.each do |iChildTag|
+          if (lIndexedTags[iChildTag.Name] == nil)
+            lIndexedTags[iChildTag.Name] = []
+          end
+          lIndexedTags[iChildTag.Name] << iChildTag
+        end
+        # Then create them
+        lIndexedTags.keys.sort.each do |iChildName|
+          lIndexedTags[iChildName].each do |iChildTag|
+            addTagToMenu(iChildTag, lTagMenu, oTagsToMenu)
+          end
+        end
+      end
+
       # Method called when invoking the menu
       #
       # Return:
       # * <em>Wx::Menu</em>: The menu to display
       def create_popup_menu
+        # We have to create the menu each time, as WxRuby then destroys it.
+        # If we try to reuse it, we'll get into some ObjectPreviouslyDeleted exceptions when invoking the menu a second time.
         rMenu = Wx::Menu.new
 
-        # TODO: Create the menu correctly
-        @Controller.addMenuCommand(self, rMenu, Wx::ID_EDIT) do |iEvent, oValidator|
-          oValidator.authorizeCmd(
-            :parentWindow => nil,
-            :objectID => ID_SHORTCUT,
-            :object => @Controller.ShortcutsList[0]
-          )
+        # Parse all Tags
+        # Keep a correspondance between each Tag and the corresponding menu, to add Shortcuts after
+        # map< Tag, Wx::Menu >
+        lTagsToMenu = {}
+        @Controller.RootTag.Children.each do |iTag|
+          addTagToMenu(iTag, rMenu, lTagsToMenu)
         end
-        rMenu.append_separator
+        # And now instantiate Shortcuts
+        # Create a quick index to sort them alphabetically
+        # map< String, list< Shortcut > >
+        lIndexedShortcuts = {}
+        @Controller.ShortcutsList.each do |iShortcut|
+          lName = iShortcut.Metadata['title']
+          if (lIndexedShortcuts[lName] == nil)
+            lIndexedShortcuts[lName] = []
+          end
+          lIndexedShortcuts[lName] << iShortcut
+        end
+        # then create them
+        lIndexedShortcuts.keys.sort.each do |iName|
+          lIndexedShortcuts[iName].each do |iShortcut|
+            # The list of menu items instantiated for this Shortcut, with the corresponding parent menu
+            # map< Wx::MenuItem, Wx::Menu >
+            lMenuItems = {}
+            if (iShortcut.Tags.empty?)
+              # Create only 1 item in the root
+              lMenuItems[Wx::MenuItem.new(rMenu, Wx::ID_ANY)] = rMenu
+            else
+              iShortcut.Tags.each do |iTag, iNil|
+                # Retrieve the corresponding menu, and create an item inside
+                lParentMenu = lTagsToMenu[iTag]
+                lMenuItems[Wx::MenuItem.new(lParentMenu, Wx::ID_ANY)] = lParentMenu
+              end
+            end
+            # And now format each item the same way
+            lMenuItems.each do |ioMenuItem, ioParentMenu|
+              ioMenuItem.text = iShortcut.Metadata['title']
+              ioMenuItem.help = iShortcut.getContentSummary
+              ioMenuItem.bitmap = iShortcut.getIcon
+              # Insert it
+              ioParentMenu.append_item(ioMenuItem)
+              # Set its event
+              evt_menu(ioMenuItem) do |iEvent|
+                # We run the Shortcut
+                iShortcut.run
+              end
+            end
+          end
+        end
 
         return rMenu
       end

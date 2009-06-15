@@ -321,6 +321,22 @@ module PBS
       @Tags = iTags
     end
 
+    # Get the associated icon.
+    # Even if it was set to nil, the default icon will be returned.
+    # This method ensures a valid Wx::Bitmap object.
+    #
+    # Return:
+    # * <em>Wx::Bitmap</em>: The icon
+    def getIcon
+      rIcon = @Metadata['icon']
+
+      if (rIcon == nil)
+        rIcon = @Type.getIcon
+      end
+
+      return rIcon
+    end
+
     # Get the summary of its content.
     # This could be used in tool tips for example.
     #
@@ -341,6 +357,11 @@ module PBS
       @Tags.each do |iTag, iNil|
         puts "  +-#{iTag.Name}"
       end
+    end
+
+    # Method that runs the Shortcut
+    def run
+      @Type.run(@Content)
     end
 
     # !!! Following methods have to be used ONLY by UAO_* classes.

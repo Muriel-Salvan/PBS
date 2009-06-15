@@ -79,6 +79,14 @@ module PBS
         return iContent
       end
 
+      # Run a given content
+      #
+      # Parameters:
+      # * *iContent* (_Object_): Content created by this type
+      def run(iContent)
+        IO.popen(iContent)
+      end
+
     end
 
   end

@@ -766,19 +766,10 @@ module PBS
         lIdxImage = @ImageListManager.getImageIndex(lImageID) do
           if (lFlags == 0)
             # Just return the original icon, without modifications
-            if (lObject.Metadata['icon'] != nil)
-              next lObject.Metadata['icon']
-            else
-              next lObject.Type.getIcon
-            end
+            next lObject.getIcon
           else
             # We will apply some layers, so clone it first
-            rBitmap = nil
-            if (lObject.Metadata['icon'] != nil)
-              rBitmap = lObject.Metadata['icon'].clone
-            else
-              rBitmap = lObject.Type.getIcon.clone
-            end
+            rBitmap = lObject.getIcon.clone
             applyBitmapLayers(rBitmap, lFlags)
             next rBitmap
           end

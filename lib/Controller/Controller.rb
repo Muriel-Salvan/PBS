@@ -53,6 +53,10 @@ module PBS
   SHORTCUTSCONFLICT_CANCEL = 3
   SHORTCUTSCONFLICT_CANCEL_ALL = 4
 
+  # Global constants
+  # Number of errors showing in a single dialog
+  MAX_ERRORS_PER_DIALOG = 10
+
   # This class stores session information, and relays info from model to gui.
   # * Stores the main data (Shortcuts/Tags)
   # * Handles Undo/Redo management.
