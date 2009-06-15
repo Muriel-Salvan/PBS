@@ -31,7 +31,6 @@ module PBS
   ID_IMPORT_MERGE_BASE = 7000
   ID_EXPORT_BASE = 8000
   ID_NEW_SHORTCUT_BASE = 9000
-  ID_INTEGRATION_BASE = 10000
 
   # Following constants are used in options
   TAGSUNICITY_NONE = 0
@@ -570,6 +569,17 @@ module PBS
       @Merging = false
     end
 
+    # Command that launches the export plugin
+    #
+    # Parameters:
+    # * *iExportID* (_String_): The export plugin ID
+    # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
+    # ** *iParentWindow* (<em>Wx::Window</em>): The parent window
+    def cmdExport(iExportID, iParams)
+      # Get the plugin
+      @ExportPlugins[iExportID].execute(self, iParams[:parentWindow])
+    end
+
     # Command that creates a new Shortcut.
     #
     # Parameters:
@@ -710,13 +720,19 @@ end
       end
       # Create commands for each export plugin
       @ExportPlugins.each do |iExportID, iExport|
+        lTitle = iExport.getTitle
         @Commands[ID_EXPORT_BASE + iExport.index] = {
-          :title => iExportID,
+          :title => lTitle,
           :help => "Export Shortcuts to #{iExportID}",
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Export.png"),
-          :method => :cmdExport, # TODO
+          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/#{iExport.getIconSubPath}"),
+          :method => "cmdExport#{iExportID}".to_sym,
           :accelerator => nil
         }
+        eval("
+def cmdExport#{iExportID}(iParams)
+  cmdExport('#{iExportID}', iParams)
+end
+")
       end
       # Create commands for each type plugin
       @TypesPlugins.each do |iTypeID, iType|
@@ -733,16 +749,6 @@ def cmdNewShortcut#{iTypeID}(iParams)
   cmdNewShortcut('#{iTypeID}', iParams)
 end
 ")
-      end
-      # Create commands for each integration plugin
-      @IntegrationPlugins.each do |iIntID, iInt|
-        @Commands[ID_INTEGRATION_BASE + iInt.index] = {
-          :title => iIntID,
-          :help => "Configure integration plugin #{iIntID}",
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdIntegrationConfig, # TODO
-          :accelerator => nil
-        }
       end
       # Create dynamic attributes for @Commands
       @Commands.each do |iCommandID, iCommandParams|

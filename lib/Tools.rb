@@ -262,6 +262,16 @@ module PBS
       #lDialog.destroy
     end
 
+    # Return a valid file name based on a String
+    #
+    # Parameters:
+    # * *iName* (_String_): The initial string
+    # Return:
+    # * _String_: The valid file name
+    def getValidFileName(iName)
+      return iName.gsub(/[\\\/:\*?"<>|]/,'_')
+    end
+
     # Get a bitmap/icon from a file.
     # If no type has been provided, it detects the type of icon based on the file extension.
     #

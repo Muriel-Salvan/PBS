@@ -239,7 +239,11 @@ module PBS
       lFileMenu.append_sub_menu(lImportMergeMenu, 'Import and Merge')
       lExportMenu = Wx::Menu.new
       @Controller.ExportPlugins.each do |iExportID, iExport|
-        addMenuCommand(lExportMenu, ID_EXPORT_BASE + iExport.index)
+        addMenuCommand(lExportMenu, ID_EXPORT_BASE + iExport.index) do |iEvent, oValidator|
+          oValidator.authorizeCmd(
+            :parentWindow => self
+          )
+        end
       end
       lFileMenu.append_sub_menu(lExportMenu, 'Export')
       lFileMenu.append_separator
