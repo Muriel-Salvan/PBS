@@ -356,7 +356,11 @@ module PBS
       # Help menu
       lHelpMenu = Wx::Menu.new
       addMenuCommand(lHelpMenu, Wx::ID_HELP)
-      addMenuCommand(lHelpMenu, Wx::ID_ABOUT)
+      addMenuCommand(lHelpMenu, Wx::ID_ABOUT) do |iEvent, oValidator|
+        oValidator.authorizeCmd(
+          :parentWindow => self
+        )
+      end
 
       # Create the menu bar
       lMenu = Wx::MenuBar.new

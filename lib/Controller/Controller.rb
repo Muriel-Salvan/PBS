@@ -683,13 +683,6 @@ module PBS
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Help.png"),
           :method => :cmdHelp, # TODO
           :accelerator => nil
-        },
-        Wx::ID_ABOUT => {
-          :title => 'About',
-          :help => 'Give information about PBS',
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Image1.png"),
-          :method => :cmdAbout, # TODO
-          :accelerator => nil
         }
       })
       # Create commands for each import plugin

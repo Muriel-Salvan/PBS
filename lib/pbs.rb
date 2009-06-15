@@ -21,6 +21,10 @@ module PBS
 
   # Program version
   $PBS_VERSION = '0.0.1.20090430'
+  # Tags linked to this version
+  $PBS_VERSION_TAGS = [
+    'Alpha'
+  ]
 
   # Root dir used as a based for images directories, plugins to be required...
   $PBSRootDir = File.dirname(__FILE__)
