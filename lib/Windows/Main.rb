@@ -3,7 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'Tools.rb'
 require 'Windows/PBSTreeCtrl.rb'
 
 module PBS

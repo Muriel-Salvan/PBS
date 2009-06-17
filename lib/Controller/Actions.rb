@@ -311,33 +311,37 @@ module PBS
     # * *iParams* (<em>map<Symbol,Object></em>): The parameters to give the command (nil if no parameters) [optional = nil]
     def executeCommand(iCommandID, iParams = nil)
       lCommand = @Commands[iCommandID]
-      if (lCommand[:plugin] == nil)
-        showModal(Wx::MessageDialog, nil,
-          "This command (#{iCommandID}) has not yet been implemented. Sorry.",
-          :caption => 'Not yet implemented',
-          :style => Wx::OK|Wx::ICON_EXCLAMATION
-        ) do |iModalResult, iDialog|
-          # Nothing to do
-        end
-      elsif (iParams == nil)
-        # Check that the command did not need any parameters first
-        if ((lCommand[:parameters] != nil) and
-            (!lCommand[:parameters].empty?))
-          puts "!!! Command #{iCommandID} should be called with parameters, but the GUI did not pass any. Please correct GUI code or command plugin parameters."
-        end
-        # Call the command method without parameters
-        lCommand[:plugin].execute(self)
+      if (lCommand == nil)
+        puts "!!! Command #{iCommandID} is not registered. Can't execute it. Please check command plugins."
       else
-        if (lCommand[:parameters] != nil)
-          # Check that all parameters have been set
-          lCommand[:parameters].each do |iParameterSymbol|
-            if (!iParams.has_key?(iParameterSymbol))
-              puts "!!! Missing parameter #{iParameterSymbol.to_s} set by the GUI for command #{iCommandID}. Please correct GUI code or command plugin parameters."
+        if (lCommand[:plugin] == nil)
+          showModal(Wx::MessageDialog, nil,
+            "This command (#{iCommandID}) has not yet been implemented. Sorry.",
+            :caption => 'Not yet implemented',
+            :style => Wx::OK|Wx::ICON_EXCLAMATION
+          ) do |iModalResult, iDialog|
+            # Nothing to do
+          end
+        elsif (iParams == nil)
+          # Check that the command did not need any parameters first
+          if ((lCommand[:parameters] != nil) and
+              (!lCommand[:parameters].empty?))
+            puts "!!! Command #{iCommandID} should be called with parameters, but the GUI did not pass any. Please correct GUI code or command plugin parameters."
+          end
+          # Call the command method without parameters
+          lCommand[:plugin].execute(self)
+        else
+          if (lCommand[:parameters] != nil)
+            # Check that all parameters have been set
+            lCommand[:parameters].each do |iParameterSymbol|
+              if (!iParams.has_key?(iParameterSymbol))
+                puts "!!! Missing parameter #{iParameterSymbol.to_s} set by the GUI for command #{iCommandID}. Please correct GUI code or command plugin parameters."
+              end
             end
           end
+          # Call the command method with the parameters given by the validator
+          lCommand[:plugin].execute(self, iParams)
         end
-        # Call the command method with the parameters given by the validator
-        lCommand[:plugin].execute(self, iParams)
       end
     end
 

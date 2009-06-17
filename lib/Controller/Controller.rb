@@ -3,7 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'Tools.rb'
 require 'Controller/Actions.rb'
 require 'Controller/Notifiers.rb'
 require 'Controller/GUIHelpers.rb'
@@ -626,9 +625,17 @@ module PBS
     # ** *ioCommand* (<em>map<Symbol,Object></em>): The command description, free to be updated
     def updateCommand(iCommandID)
       lCommand = @Commands[iCommandID]
-      lOldCommand = lCommand.clone
+      lOldCommand = nil
+      if (lCommand == nil)
+        puts "!!! Command #{iCommandID} is not registered. Check command plugins."
+        # Provide an empty command for the code block to execute correctly.
+        lCommand = {}
+      else
+        lOldCommand = lCommand.clone
+      end
       yield(lCommand)
-      if (lCommand != lOldCommand)
+      if ((lOldCommand != nil) and
+          (lCommand != lOldCommand))
         updateImpactedAppearance(iCommandID)
       end
     end
