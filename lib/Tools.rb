@@ -22,6 +22,32 @@ module PBS
   # No reference to Wx should present in here
   module Tools
 
+    # Map that gives equivalents of accent characters.
+    # This is used to compare strings without accents
+    # map< String,
+    STR_ACCENTS_MAPPING = {
+      'A' => [192,193,194,195,196,197].pack('U*'),
+      'a' => [224,225,226,227,228,229,230].pack('U*'),
+      'AE' => [306].pack('U*'),
+      'ae' => [346].pack('U*'),
+      'C' => [199].pack('U*'),
+      'c' => [231].pack('U*'),
+      'E' => [200,201,202,203].pack('U*'),
+      'e' => [232,233,234,235].pack('U*'),
+      'I' => [314,315,316,317].pack('U*'),
+      'i' => [354,355,356,357].pack('U*'),
+      'N' => [321].pack('U*'),
+      'n' => [361].pack('U*'),
+      'O' => [210,211,212,213,214,216].pack('U*'),
+      'o' => [242,243,244,245,246,248].pack('U*'),
+      'OE' => [188].pack('U*'),
+      'oe' => [189].pack('U*'),
+      'U' => [331,332,333,334].pack('U*'),
+      'u' => [371,372,373,374].pack('U*'),
+      'Y' => [335].pack('U*'),
+      'y' => [375,377].pack('U*')
+    }
+
     # The class that assign dynamically images to a given TreeCtrl items
     class ImageListManager
 
@@ -241,6 +267,59 @@ module PBS
 
     end
 
+    # Create a String converting accents characters to their equivalent without accent.
+    #
+    # Parameters:
+    # * *iString* (_String_): The string to convert
+    # Return:
+    # * _String_: The converted string
+    def convertAccentsString(iString)
+      rConverted = iString.clone
+
+      STR_ACCENTS_MAPPING.each do |iReplacement, iAccents|
+        rConverted.gsub!(Regexp.new("[#{iAccents}]", nil, 'U'), iReplacement)
+      end
+
+      return rConverted
+    end
+
+    # Dump a Tag
+    #
+    # Parameters:
+    # * *iTag* (_Tag_): The Tag to dump
+    # * *iPrefix* (_String_): Prefix of each dump line [optional = '']
+    # * *iLastItem* (_Boolean_): Is this item the last one of the list it belongs to ? [optional = true]
+    def dumpTag(iTag, iPrefix = '', iLastItem = true)
+      puts "#{iPrefix}+-#{iTag.Name} (@#{iTag.object_id})"
+      if (iLastItem)
+        lChildPrefix = "#{iPrefix}  "
+      else
+        lChildPrefix = "#{iPrefix}| "
+      end
+      lIdx = 0
+      iTag.Children.each do |iChildTag|
+        dumpTag(iChildTag, lChildPrefix, lIdx == iTag.Children.size - 1)
+        lIdx += 1
+      end
+    end
+
+    # Dump a Shortcuts list
+    #
+    # Parameters:
+    # * *iShortcutsList* (<em>list<Shortcut></em>): The Shortcuts list to dump
+    def dumpShortcutsList(iShortcutsList)
+      iShortcutsList.each do |iSC|
+        puts "=== #{iSC.Metadata['title']} (@#{iSC.object_id})"
+        puts "  = Type: #{iSC.Type.inspect}"
+        puts "  = Metadata: #{iSC.Metadata.inspect}"
+        puts "  = Content: #{iSC.Content.inspect}"
+        puts "  = #{iSC.Tags.size} Tags:"
+        iSC.Tags.each do |iTag, iNil|
+          puts "  = - #{iTag.Name} (@#{iTag.object_id})"
+        end
+      end
+    end
+
     # Display a dialog in modal mode, ensuring it is destroyed afterwards.
     #
     # Parameters:
@@ -270,6 +349,65 @@ module PBS
     # * _String_: The valid file name
     def getValidFileName(iName)
       return iName.gsub(/[\\\/:\*?"<>|]/,'_')
+    end
+
+    # Create a standard URI for a given bitmap
+    # If the bitmap is nil, return an empty URI with header.
+    #
+    # Parameters:
+    # * *iBitmap* (<em>Wx::Bitmap</em>): The bitmap to encode (can be nil)
+    # Return:
+    # * _String_: The corresponding URI
+    def getBitmapStandardURI(iBitmap)
+      rEncodedBitmap = 'data:image/png;base64,'
+
+      if (iBitmap != nil)
+        # We encode it in base 64, then remove the \n
+        rEncodedBitmap += [ iBitmap.getSerialized ].pack('m').split("\n").join
+      end
+
+      return rEncodedBitmap
+    end
+
+    # Create a bitmap based on a standard URI
+    # The data string can have an empty content (but still a header) to identify a nil bitmap (used to indicate sometimes default bitmaps)
+    # Currently it supports only images encoded in Base64 format.
+    #
+    # Parameters:
+    # * *iIconData* (_String_): The icon data
+    # Return:
+    # * <em>Wx::Bitmap</em>: The corresponding bitmap, or nil otherwise
+    def createBitmapFromStandardURI(iIconData)
+      # See if we can read the icon
+      rIconBitmap = nil
+
+      lMatchData = iIconData.match(/data:image\/(.*);base64,(.*)/)
+      if (lMatchData != nil)
+        lImageExt = lMatchData[1]
+        if (lImageExt == 'x-icon')
+          lImageExt = 'ico'
+        end
+        # Here we unpack the string in a base64 encoding.
+        lIconInternalData = lMatchData[2].unpack('m')[0]
+        if (!lMatchData[2].empty?)
+          # Require a temporary file
+          lFileName = "#{Dir.tmpdir}/#{object_id}.#{lImageExt}"
+          File.open(lFileName, 'wb') do |oFile|
+            oFile.write(lIconInternalData)
+          end
+          # Read it
+          begin
+            rIconBitmap = Wx::Bitmap.new(lFileName)
+          rescue Exception
+            puts "!!! Unable to read bitmap data of format #{lImageExt}: #{$!}. Ignoring this bitmap."
+            rIconBitmap = nil
+          end
+          # Delete the temporary file
+          File.unlink(lFileName)
+        end
+      end
+
+      return rIconBitmap
     end
 
     # Get a bitmap/icon from a file.

@@ -30,12 +30,12 @@ module PBS
               if (!@Clipboard_AlreadyProcessingDelete)
                 # Ensure that the loop will not come here again for this item.
                 @Clipboard_AlreadyProcessingDelete = true
-                cmdDelete({
-                    :parentWindow => nil,
-                    :selection => @CopiedSelection,
-                    :deleteTaggedShortcuts => false,
-                    :deleteOrphanShortcuts => false
-                  })
+                executeCommand(Wx::ID_DELETE, {
+                  :parentWindow => nil,
+                  :selection => @CopiedSelection,
+                  :deleteTaggedShortcuts => false,
+                  :deleteOrphanShortcuts => false
+                })
                 # Then empty the clipboard.
                 Wx::Clipboard.open do |ioClipboard|
                   ioClipboard.clear

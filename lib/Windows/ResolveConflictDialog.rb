@@ -26,11 +26,11 @@ module PBS
       rResult = Wx::Panel.new(iParent)
 
       # Create buttons
-      lBMergeExisting = Wx::Button.new(rResult, -1, 'Merge using existing values')
-      lBMergeConflicting = Wx::Button.new(rResult, -1, 'Merge using new values')
+      lBMergeExisting = Wx::Button.new(rResult, Wx::ID_ANY, 'Merge using existing values')
+      lBMergeConflicting = Wx::Button.new(rResult, Wx::ID_ANY, 'Merge using new values')
       lBKeep = Wx::Button.new(rResult, ID_KEEP, 'Keep both')
       lBCancel = Wx::Button.new(rResult, Wx::ID_CANCEL, 'Cancel')
-      @CBApplyToAll = Wx::CheckBox.new(rResult, -1, 'Remember decision for future conflicts during this operation')
+      @CBApplyToAll = Wx::CheckBox.new(rResult, Wx::ID_ANY, 'Remember decision for future conflicts during this operation')
 
       # Put them in sizers
       lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
@@ -100,7 +100,7 @@ module PBS
 
       # First create all the panels that will fit in this dialog
       # This is done calling the methods to be implemented by inherited class
-      lSBExisting = Wx::StaticBox.new(self, -1, "Existing #{iObjectTypeName}")
+      lSBExisting = Wx::StaticBox.new(self, Wx::ID_ANY, "Existing #{iObjectTypeName}")
       @ExistingObjectPanel = getExistingPanel
       # Set it read-only
       @ExistingObjectPanel.children.each do |iChildWindow|
@@ -112,10 +112,10 @@ module PBS
           end
         end
       end
-      lSBConflicting = Wx::StaticBox.new(self, -1, "Conflicting #{iObjectTypeName}")
+      lSBConflicting = Wx::StaticBox.new(self, Wx::ID_ANY, "Conflicting #{iObjectTypeName}")
       @ConflictingObjectPanel = getConflictingPanel
       lButtonsPanel = createButtonsPanel(self)
-      lBTransfer = Wx::BitmapButton.new(self, -1, TRANSFER_ICON)
+      lBTransfer = Wx::BitmapButton.new(self, Wx::ID_ANY, TRANSFER_ICON)
 
       # Then put everything in place using sizers
 

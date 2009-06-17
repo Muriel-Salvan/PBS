@@ -115,11 +115,12 @@ module PBS
         if (lButton != nil)
           @Controller.setToolbarButtonGUIEnabled(lButton, ID_NEW_TAG, lTagOpEnabled)
         end
-        @Controller.TypesPlugins.each do |iTypeID, iType|
-          @Controller.setMenuItemGUIEnabled(@NewShortcutMenu, ID_NEW_SHORTCUT_BASE + iType.index, lTagOpEnabled)
-          lButton = @ToolBar.find_by_id(ID_NEW_SHORTCUT_BASE + iType.index)
+        @Controller.TypesPlugins.each do |iTypeID, iTypeInfo|
+          lIdxID = ID_NEW_SHORTCUT_BASE + iTypeInfo[:index]
+          @Controller.setMenuItemGUIEnabled(@NewShortcutMenu, lIdxID, lTagOpEnabled)
+          lButton = @ToolBar.find_by_id(lIdxID)
           if (lButton != nil)
-            @Controller.setToolbarButtonGUIEnabled(lButton, ID_NEW_SHORTCUT_BASE + iType.index, lTagOpEnabled)
+            @Controller.setToolbarButtonGUIEnabled(lButton, lIdxID, lTagOpEnabled)
           end
         end
         # Group Paste:
@@ -137,7 +138,7 @@ module PBS
     # * *iSelection* (_MultipleSelection_): The selection (nil for the Root Tag)
     def refreshPaste(iSelection)
       lPasteEnabled = false
-      lErrors = nil
+      lErrors = []
       if (@Controller.Clipboard_CopyMode != nil)
         lLocalSelection = nil
         if (@Controller.Clipboard_CopyID == @Controller.CopiedID)
@@ -152,18 +153,18 @@ module PBS
         )
       end
       @Controller.setMenuItemGUIEnabled(@EditMenu, Wx::ID_PASTE, lPasteEnabled)
-      if (lErrors != nil)
-        @Controller.setMenuItemGUITitle(@EditMenu, Wx::ID_PASTE, "Unable to paste: #{lErrors.join(' & ')}")
-      else
+      if (lErrors.empty?)
         @Controller.setMenuItemGUITitle(@EditMenu, Wx::ID_PASTE, nil)
+      else
+        @Controller.setMenuItemGUITitle(@EditMenu, Wx::ID_PASTE, "Unable to paste: #{lErrors.join(' & ')}")
       end
       lButton = @ToolBar.find_by_id(Wx::ID_PASTE)
       if (lButton != nil)
         @Controller.setToolbarButtonGUIEnabled(lButton, Wx::ID_PASTE, lPasteEnabled)
-        if (lErrors != nil)
-          @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_PASTE, "Unable to paste: #{lErrors.join(' & ')}")
-        else
+        if (lErrors.empty?)
           @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_PASTE, nil)
+        else
+          @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_PASTE, "Unable to paste: #{lErrors.join(' & ')}")
         end
       end
     end
@@ -189,9 +190,9 @@ module PBS
 
       # The close event
       evt_close do |iEvent|
-        @Controller.cmdExit(
+        @Controller.executeCommand(Wx::ID_EXIT, {
           :parentWindow => self
-        )
+        })
       end
 
       # Create the main treeview
@@ -220,8 +221,8 @@ module PBS
       end
       lFileMenu.append_separator
       lImportMenu = Wx::Menu.new
-      @Controller.ImportPlugins.each do |iImportID, iImport|
-        addMenuCommand(lImportMenu, ID_IMPORT_BASE + iImport.index) do |iEvent, oValidator|
+      @Controller.ImportPlugins.each do |iImportID, iImportInfo|
+        addMenuCommand(lImportMenu, ID_IMPORT_BASE + iImportInfo[:index]) do |iEvent, oValidator|
           oValidator.authorizeCmd(
             :parentWindow => self
           )
@@ -229,8 +230,8 @@ module PBS
       end
       lFileMenu.append_sub_menu(lImportMenu, 'Import')
       lImportMergeMenu = Wx::Menu.new
-      @Controller.ImportPlugins.each do |iImportID, iImport|
-        addMenuCommand(lImportMergeMenu, ID_IMPORT_MERGE_BASE + iImport.index) do |iEvent, oValidator|
+      @Controller.ImportPlugins.each do |iImportID, iImportInfo|
+        addMenuCommand(lImportMergeMenu, ID_IMPORT_MERGE_BASE + iImportInfo[:index]) do |iEvent, oValidator|
           oValidator.authorizeCmd(
             :parentWindow => self
           )
@@ -238,8 +239,8 @@ module PBS
       end
       lFileMenu.append_sub_menu(lImportMergeMenu, 'Import and Merge')
       lExportMenu = Wx::Menu.new
-      @Controller.ExportPlugins.each do |iExportID, iExport|
-        addMenuCommand(lExportMenu, ID_EXPORT_BASE + iExport.index) do |iEvent, oValidator|
+      @Controller.ExportPlugins.each do |iExportID, iExportInfo|
+        addMenuCommand(lExportMenu, ID_EXPORT_BASE + iExportInfo[:index]) do |iEvent, oValidator|
           oValidator.authorizeCmd(
             :parentWindow => self
           )
@@ -325,8 +326,8 @@ module PBS
         end
       end
       @NewShortcutMenu = Wx::Menu.new
-      @Controller.TypesPlugins.each do |iTypeID, iType|
-        addMenuCommand(@NewShortcutMenu, ID_NEW_SHORTCUT_BASE + iType.index) do |iEvent, oValidator|
+      @Controller.TypesPlugins.each do |iTypeID, iTypeInfo|
+        addMenuCommand(@NewShortcutMenu, ID_NEW_SHORTCUT_BASE + iTypeInfo[:index]) do |iEvent, oValidator|
           # Here, we are sure the selection is on 1 Tag only (maybe the root)
           if (@TCMainTree.isRootTagOnlySelected?)
             oValidator.authorizeCmd(

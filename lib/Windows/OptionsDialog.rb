@@ -22,8 +22,8 @@ module PBS
         super(iParent)
 
         # Create components
-        lSBTags = Wx::StaticBox.new(self, -1, 'Tags')
-        @RBTagsKey = Wx::RadioBox.new(self, -1, 'Tags conflict key based on',
+        lSBTags = Wx::StaticBox.new(self, Wx::ID_ANY, 'Tags')
+        @RBTagsKey = Wx::RadioBox.new(self, Wx::ID_ANY, 'Tags conflict key based on',
           :choices => [
             'None',
             'Name only',
@@ -31,7 +31,7 @@ module PBS
           ],
           :style => Wx::RA_SPECIFY_ROWS
         )
-        @RBTagsAction = Wx::RadioBox.new(self, -1, 'Action to take in case of Tags conflict',
+        @RBTagsAction = Wx::RadioBox.new(self, Wx::ID_ANY, 'Action to take in case of Tags conflict',
           :choices => [
             'Ask user',
             'Merge using existing values',
@@ -41,8 +41,8 @@ module PBS
           ],
           :style => Wx::RA_SPECIFY_ROWS
         )
-        lSBShortcuts = Wx::StaticBox.new(self, -1, 'Shortcuts')
-        @RBShortcutsKey = Wx::RadioBox.new(self, -1, 'Shortcuts conflict key based on',
+        lSBShortcuts = Wx::StaticBox.new(self, Wx::ID_ANY, 'Shortcuts')
+        @RBShortcutsKey = Wx::RadioBox.new(self, Wx::ID_ANY, 'Shortcuts conflict key based on',
           :choices => [
             'None',
             'Name only',
@@ -52,7 +52,7 @@ module PBS
           ],
           :style => Wx::RA_SPECIFY_ROWS
         )
-        @RBShortcutsAction = Wx::RadioBox.new(self, -1, 'Action to take in case of Shortcuts conflict',
+        @RBShortcutsAction = Wx::RadioBox.new(self, Wx::ID_ANY, 'Action to take in case of Shortcuts conflict',
           :choices => [
             'Ask user',
             'Merge using existing values',

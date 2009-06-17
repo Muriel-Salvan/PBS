@@ -278,7 +278,7 @@ module PBS
       # * *iPosition* (<em>Wx::Point</em>): Position to give to the window
       # * *iTimeout* (_Integer_): Timeout in milliseconds before destruction
       def initialize(iParent, iToolTip, iPosition, iTimeout)
-        super(iParent, -1, iToolTip,
+        super(iParent, Wx::ID_ANY, iToolTip,
           :style => Wx::FRAME_TOOL_WINDOW|Wx::FRAME_NO_TASKBAR|Wx::FRAME_FLOAT_ON_PARENT,
           :pos => iParent.client_to_screen(iPosition)
         )
@@ -289,7 +289,7 @@ module PBS
         lWidth, lHeight, lDescent, lExternalLeading = get_text_extent(iToolTip)
 
         # Create the label
-        lSTToolTip = Wx::StaticText.new(self, -1, iToolTip)
+        lSTToolTip = Wx::StaticText.new(self, Wx::ID_ANY, iToolTip)
         # Center it in the frame
         lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
         lMainSizer.add_item([0,BORDER_SIZE/2], :proportion => 1)
@@ -407,12 +407,12 @@ module PBS
           # Check result
           if (lDropResult == Wx::DRAG_MOVE)
             # We delete the selection we have just dragged
-            @Controller.cmdDelete({
-                :parentWindow => nil,
-                :selection => lSelection,
-                :deleteTaggedShortcuts => false,
-                :deleteOrphanShortcuts => false
-              })
+            @Controller.executeCommand(Wx::ID_DELETE, {
+              :parentWindow => nil,
+              :selection => lSelection,
+              :deleteTaggedShortcuts => false,
+              :deleteOrphanShortcuts => false
+            })
           end
           # Remove dragging image
           @DragImage.end_drag
@@ -484,6 +484,31 @@ module PBS
         lMousePosition = Wx::Point.new(iEvent.x, iEvent.y)
         notifyMouseChangedItems(0, lMousePosition)
       end
+    end
+
+    # Compare 2 items for sort
+    #
+    # Parameters:
+    # * *iItemID1* (_Integer_): First item ID
+    # * *iItemID2* (_Integer_): Second item ID
+    # Return:
+    # * _Integer: (First item - Second item)
+    def on_compare_items(iItemID1, iItemID2)
+      rCompare = 0
+
+      lID1, lObject1 = get_item_data(iItemID1)
+      lID2, lObject2 = get_item_data(iItemID2)
+      if ((lID1 == ID_TAG) and
+          (lID2 == ID_SHORTCUT))
+        rCompare = -1
+      elsif ((lID1 == ID_SHORTCUT) and
+             (lID2 == ID_TAG))
+        rCompare = 1
+      else
+        rCompare = (convertAccentsString(get_item_text(iItemID1).upcase) <=> convertAccentsString(get_item_text(iItemID2).upcase))
+      end
+
+      return rCompare
     end
 
     # Notify that the mouse is not on the same item anymore
@@ -766,10 +791,10 @@ module PBS
         lIdxImage = @ImageListManager.getImageIndex(lImageID) do
           if (lFlags == 0)
             # Just return the original icon, without modifications
-            next lObject.getIcon
+            next @Controller.getShortcutIcon(lObject)
           else
             # We will apply some layers, so clone it first
-            rBitmap = lObject.getIcon.clone
+            rBitmap = @Controller.getShortcutIcon(lObject).clone
             applyBitmapLayers(rBitmap, lFlags)
             next rBitmap
           end
@@ -782,6 +807,11 @@ module PBS
       if ($PBS_DevDebug)
         # Add some debugging info
         set_item_text(iItemID, "#{get_item_text(iItemID)} (NodeID=#{iItemID}, ID=#{lID}, Object=#{lObject})")
+      end
+      # Now that this item has changed, sort its parent
+      lParentItemID = get_item_parent(iItemID)
+      if (lParentItemID != 0)
+        sort_children(lParentItemID)
       end
     end
 

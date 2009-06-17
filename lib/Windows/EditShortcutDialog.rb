@@ -41,7 +41,7 @@ module PBS
     def createTagsPanel(iParent, iRootTag, iSelectedTags)
       @TagsPanel = Wx::Panel.new(iParent)
       # Create components
-      lSTTags = Wx::StaticText.new(@TagsPanel, -1, 'Tags')
+      lSTTags = Wx::StaticText.new(@TagsPanel, Wx::ID_ANY, 'Tags')
       # Create the tree
       @TCTags = Wx::TreeCtrl.new(@TagsPanel)
       @RootID = @TCTags.add_root('     ')
@@ -111,9 +111,10 @@ module PBS
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iSC* (_Shortcut_): The Shortcut containing info to edit (or nil if initial values needed)
     # * *iRootTag* (_Tag_): The root tag
+    # * *iController* (_Controller_): The Controller
     # * *iType* (_ShortcutType_): The Shortcut Type used (ignored if iSC != nil) [optional = nil]
     # * *iInitialTag* (_Tag_): The initial Tag (ignored if iSC != nil) (can be nil for the Root Tag) [optional = nil]
-    def initialize(iParent, iSC, iRootTag, iType = nil, iInitialTag = nil)
+    def initialize(iParent, iSC, iRootTag, iController, iType = nil, iInitialTag = nil)
       if (iSC == nil)
         @Type = iType
       else
@@ -126,7 +127,7 @@ module PBS
       )
 
       # First create all the panels that will fit in this dialog
-      @ContentMetadataPanel = ContentMetadataPanel.new(self, @Type)
+      @ContentMetadataPanel = ContentMetadataPanel.new(self, @Type, iController)
       if (iSC == nil)
         lTags = {}
         if (iInitialTag != nil)

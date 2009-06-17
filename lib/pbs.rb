@@ -12,7 +12,7 @@ require 'wx'
 # * Destroying Windows manually does not cause SegFaults anymore during random events.
 # * Not destroying Windows manually does not cause ObjectPreviouslyDeleted exceptions on exit.
 # However, disabling GC does increase memory consumption of around 30Mb every 5 minutes of usage.
-#GC.disable
+GC.disable
 
 # Add this path to the load path. This allows anybody to execute PBS from any directory, even not the current one.
 $LOAD_PATH << File.dirname(__FILE__)
@@ -75,8 +75,14 @@ module PBS
 end
 
 # Require those files after having defined $PBSRootDir, as it will be used during require
-require 'Model/Model.rb'
+# The model
+require 'Model/Common.rb'
+require 'Model/Tag.rb'
+require 'Model/Shortcut.rb'
+require 'Model/MultipleSelection.rb'
+# The controller
 require 'Controller/Controller.rb'
+# The view
 require 'Windows/Main.rb'
 
 # Be prepared to be just a library: don't do anything unless called explicitly

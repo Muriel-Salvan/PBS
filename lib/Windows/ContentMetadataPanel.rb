@@ -19,7 +19,7 @@ module PBS
       def setBBIcon
         lIconBitmap = @Icon
         if (lIconBitmap == nil)
-          lIconBitmap = @Type.getIcon
+          lIconBitmap = @Controller.TypesPlugins[@Type.pluginName][:bitmap]
         end
         @BBIcon.bitmap_label = lIconBitmap
         if (lIconBitmap.is_ok)
@@ -35,20 +35,22 @@ module PBS
       # Parameters:
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window
       # * *iType* (_ShortcutType_): The Shortcut Type used
-      def initialize(iParentWindow, iType)
+      # * *iController* (_Controller_): The Controller
+      def initialize(iParentWindow, iType, iController)
         super(iParentWindow)
 
         @Type = iType
+        @Controller = iController
         # @Icon will be changed only if the icon is changed.
         # It is used instead of the Wx::BitmapButton::bitmap_label because it can be nil, and in this case we don't want to replace it with the default icon internally.
         @Icon = nil
 
         # Create all components
-        lSTTitle = Wx::StaticText.new(self, -1, 'Title')
+        lSTTitle = Wx::StaticText.new(self, Wx::ID_ANY, 'Title')
         @TCTitle = Wx::TextCtrl.new(self)
         @TCTitle.min_size = [300, @TCTitle.min_size.height]
-        lSTIcon = Wx::StaticText.new(self, -1, 'Icon')
-        @BBIcon = Wx::BitmapButton.new(self, -1, Wx::Bitmap.new)
+        lSTIcon = Wx::StaticText.new(self, Wx::ID_ANY, 'Icon')
+        @BBIcon = Wx::BitmapButton.new(self, Wx::ID_ANY, Wx::Bitmap.new)
         evt_button(@BBIcon) do |iEvent|
           # display the icon chooser dialog
           showModal(ChooseIconDialog, self, @BBIcon.bitmap_label) do |iModalResult, iDialog|
@@ -108,13 +110,14 @@ module PBS
     # Parameters:
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iType* (_ShortcutType_): The Shortcut Type used
-    def initialize(iParent, iType)
+    # * *iController* (_Controller_): The Controller
+    def initialize(iParent, iType, iController)
       super(iParent)
 
       @Type = iType
       # First create all the panels that will fit in this panel
       @ContentPanel = eval("#{@Type.class}::EditPanel.new(self)")
-      @MetadataPanel = MetadataPanel.new(self, @Type)
+      @MetadataPanel = MetadataPanel.new(self, @Type, iController)
 
       # Then put everything in place using sizers
       # Fit them all now, as we will use their true sizes to determine proportions in the sizers

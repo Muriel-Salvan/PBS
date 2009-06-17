@@ -27,19 +27,19 @@ module PBS
     attr_reader :ShortcutsList
 
     # Types plugins
-    #   map< String, Object >
+    #   map< String, map< Symbol, Object > >
     attr_reader :TypesPlugins
 
     # Import plugins
-    #   map< String, Object >
+    #   map< String, map< Symbol, Object > >
     attr_reader :ImportPlugins
 
     # Export plugins
-    #   map< String, Object >
+    #   map< String, map< Symbol, Object > >
     attr_reader :ExportPlugins
 
     # Integration plugins
-    #   map< String, Object >
+    #   map< String, map< Symbol, Object > >
     attr_reader :IntegrationPlugins
 
     # The current type of copy (Wx::ID_COPY or Wx::ID_CUT)
@@ -77,6 +77,32 @@ module PBS
     # Options
     #   map< Symbol, Object >
     attr_reader :Options
+
+    # The Undo stack
+    #   list< Controller::UndoableOperation >
+    attr_reader :UndoStack
+
+    # The Redo stack
+    #   list< Controller::UndoableOperation >
+    attr_reader :RedoStack
+
+    # Get the icon associated to a Shortcut.
+    # Even if it was set to nil, the default icon will be returned.
+    # This method ensures a valid Wx::Bitmap object will be returned.
+    #
+    # Parameters:
+    # * *iShortcut* (_Shortcut_): The Shortcut
+    # Return:
+    # * <em>Wx::Bitmap</em>: The icon
+    def getShortcutIcon(iShortcut)
+      rIcon = iShortcut.Metadata['icon']
+
+      if (rIcon == nil)
+        rIcon = @TypesPlugins[iShortcut.Type.pluginName][:bitmap]
+      end
+
+      return rIcon
+    end
 
   end
 

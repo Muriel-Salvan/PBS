@@ -187,7 +187,7 @@ module PBS
       rResult = Wx::Panel.new(iParent)
 
       # Create buttons
-      lBAdd = Wx::Button.new(rResult, -1, 'Add ...')
+      lBAdd = Wx::Button.new(rResult, Wx::ID_ANY, 'Add ...')
       lBOK = Wx::Button.new(rResult, Wx::ID_OK, 'OK')
       lBCancel = Wx::Button.new(rResult, Wx::ID_CANCEL, 'Cancel')
 

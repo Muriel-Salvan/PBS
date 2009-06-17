@@ -3,7 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'Model/Model.rb'
 require 'Tools.rb'
 require 'Controller/Actions.rb'
 require 'Controller/Notifiers.rb'
@@ -74,6 +73,103 @@ module PBS
     include Notifiers
     # Module defining UAO
     include UndoableAtomicOperations
+
+    # Class used to factorize import commands
+    class ImportCommand
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iImportPluginName* (_String_): The import plugin ID
+      # * *iMerge* (_Boolean_): Do we instantiate a command that merges data ?
+      def initialize(iImportPluginName, iMerge)
+        @ImportPluginName = iImportPluginName
+        @Merge = iMerge
+      end
+
+      # Command that imports data from an import plugin
+      #
+      # Parameters:
+      # * *ioController* (_Controller_): The data model controller
+      # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
+      # ** *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
+      def execute(ioController, iParams)
+        if (@Merge)
+          ioController.Merging = true
+        end
+        ioController.ImportPlugins[@ImportPluginName][:plugin].execute(ioController, iParams[:parentWindow])
+        if (@Merge)
+          ioController.Merging = false
+        end
+      end
+
+    end
+
+    # Class used to factorize export commands
+    class ExportCommand
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iExportPluginName* (_String_): The export plugin ID
+      def initialize(iExportPluginName)
+        @ExportPluginName = iExportPluginName
+      end
+
+      # Command that exports data to an export plugin
+      #
+      # Parameters:
+      # * *iController* (_Controller_): The data model controller
+      # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
+      # ** *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
+      def execute(iController, iParams)
+        iController.ExportPlugins[@ExportPluginName][:plugin].execute(iController, iParams[:parentWindow])
+      end
+
+    end
+
+    # Class used to factorize new Shortcut commands
+    class NewShortcutCommand
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iTypePluginName* (_String_): The type plugin ID
+      def initialize(iTypePluginName)
+        @TypePluginName = iTypePluginName
+      end
+
+      # Command that creates a new Shortcut via the corresponding Type plugin
+      #
+      # Parameters:
+      # * *ioController* (_Controller_): The data model controller
+      # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
+      # ** *tag* (_Tag_): Tag in which we create the new Tag (can be nil for no Tag)
+      # ** *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
+      def execute(ioController, iParams)
+        lWindow = iParams[:parentWindow]
+        lTag = iParams[:tag]
+        lShortcutTypeInfo = ioController.TypesPlugins[@TypePluginName]
+        if (lShortcutTypeInfo == nil)
+          puts "!!! Shortcut Type #{@TypePluginName} should have been registered, but unable to retrieve it."
+        else
+          lLocationName = ''
+          if (lTag != nil)
+            lLocationName = " in #{lTag.Name}"
+          end
+          ioController.undoableOperation("Create new Shortcut#{lLocationName}") do
+            showModal(EditShortcutDialog, lWindow, nil, @RootTag, self, lShortcutTypeInfo[:plugin], lTag) do |iModalResult, iDialog|
+              case iModalResult
+              when Wx::ID_OK
+                lNewContent, lNewMetadata, lNewTags = iDialog.getData
+                ioController.createShortcut(@TypePluginName, lNewContent, lNewMetadata, lNewTags)
+              end
+            end
+          end
+        end
+      end
+
+    end
 
     # This class is given to each GUI callback that wants to invoke some commands.
     # Developers of GUI plugins can use it to give GUI dependent parameters to the generic commands.
@@ -149,6 +245,10 @@ module PBS
 
     end
 
+    # Do we merge the next command launched ?
+    #   Boolean
+    attr_accessor :Merging
+
     # Test if a given data does not violate unicity constraints for a Tag if it was to be added
     #
     # Parameters:
@@ -219,7 +319,7 @@ module PBS
     # Test if a given data does not violate unicity constraints for a Shortcut if it was to be added
     #
     # Parameters:
-    # * *iTypeName* (_String_): The type name
+    # * *iType* (_ShortcutType_): The type
     # * *iContent* (_Object_): The content
     # * *iMetadata* (<em>map<String,Object></em>): The metadata
     # * *iTags* (<em>map<Tag,nil></em>): The set of Tags
@@ -229,7 +329,7 @@ module PBS
     # * _Integer_: Action taken in case of doublon, or nil otherwise
     # * _Object_: The new content to consider
     # * <em>map<String,Object></em>: The new metadata to consider
-    def checkShortcutUnicity(iTypeName, iContent, iMetadata, iTags, iShortcutToIgnore = nil)
+    def checkShortcutUnicity(iType, iContent, iMetadata, iTags, iShortcutToIgnore = nil)
       rDoublon = nil
       rAction = nil
       rNewContent = iContent
@@ -239,13 +339,13 @@ module PBS
       if (@CurrentOperationShortcutsConflicts != ID_KEEP)
         @ShortcutsList.each do |ioSC|
           if ((ioSC != iShortcutToIgnore) and
-              (ioSC.Type.pluginName == iTypeName) and
+              (ioSC.Type == iType) and
               (shortcutSameAs?(ioSC,  iContent, iMetadata)))
             rDoublon = ioSC
             # It already exists. Check options to know what to do.
             if ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_ASK) and
                 (@CurrentOperationShortcutsConflicts == nil))
-              showModal(ResolveShortcutConflictDialog, nil, ioSC, iContent, iMetadata) do |iModalResult, iDialog|
+              showModal(ResolveShortcutConflictDialog, nil, ioSC, iContent, iMetadata, self) do |iModalResult, iDialog|
                 rAction = iModalResult
                 if (iDialog.applyToAll?)
                   @CurrentOperationShortcutsConflicts = rAction
@@ -263,6 +363,9 @@ module PBS
               end
             elsif ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_MERGE_EXISTING) or
                    (@CurrentOperationShortcutsConflicts == ID_MERGE_EXISTING))
+              lNewTags = iTags.clone
+              lNewTags.merge!(rDoublon.Tags)
+              updateShortcut(rDoublon, rDoublon.Content, rDoublon.Metadata, lNewTags)
               rAction = ID_MERGE_EXISTING
             elsif ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_MERGE_CONFLICTING) or
                    (@CurrentOperationShortcutsConflicts == ID_MERGE_CONFLICTING))
@@ -312,8 +415,8 @@ module PBS
 
     # Register Integration plugins
     def registerIntegrationPluginsGUIs
-      @IntegrationPlugins.each do |iName, iPlugin|
-        registerGUI(iPlugin)
+      @IntegrationPlugins.each do |iName, iPluginInfo|
+        registerGUI(iPluginInfo[:plugin])
       end
     end
 
@@ -338,7 +441,7 @@ module PBS
         lTitle += "\t#{getStringForAccelerator(lCommand[:accelerator])}"
       end
       ioMenuItem.text = lTitle
-      ioMenuItem.help = lCommand[:help]
+      ioMenuItem.help = lCommand[:description]
       ioMenuItem.bitmap = lCommand[:bitmap]
       # Insert it
       oMenu.insert(iMenuItemPos, ioMenuItem)
@@ -350,34 +453,20 @@ module PBS
         oMenu.enable(iCommandID, false)
       end
       # Set its event
-      if (self.methods.include?(lCommand[:method].to_s))
-        iEvtWindow.evt_menu(ioMenuItem) do |iEvent|
-          # If a block has been given, call the command validator
-          if (iFetchParametersCode != nil)
-            lValidator = CommandValidator.new
-            iFetchParametersCode.call(iEvent, lValidator)
-            if (lValidator.Params != nil)
-              # Call the command method with the parameters given by the validator
-              send(lCommand[:method], lValidator.Params)
-            elsif (lValidator.Error != nil)
-              puts "!!! #{lValidator.Error}"
-            else
-              puts '!!! The Command Validator did not return any error, and did not set any parameters either. Skipping the command.'
-            end
+      iEvtWindow.evt_menu(ioMenuItem) do |iEvent|
+        # If a block has been given, call the command validator
+        if (iFetchParametersCode != nil)
+          lValidator = CommandValidator.new
+          iFetchParametersCode.call(iEvent, lValidator)
+          if (lValidator.Params != nil)
+            executeCommand(iCommandID, lValidator.Params)
+          elsif (lValidator.Error != nil)
+            puts "!!! #{lValidator.Error}"
           else
-            # Call the command method without parameters
-            send(lCommand[:method])
+            puts '!!! The Command Validator did not return any error, and did not set any parameters either. Skipping the command.'
           end
-        end
-      else
-        iEvtWindow.evt_menu(ioMenuItem) do |iEvent|
-          showModal(Wx::MessageDialog, nil,
-            "This command (#{lTitle}) has not yet been implemented. Sorry.",
-            :caption => 'Not yet implemented',
-            :style => Wx::OK|Wx::ICON_EXCLAMATION
-          ) do |iModalResult, iDialog|
-            # Nothing to do
-          end
+        else
+          executeCommand(iCommandID)
         end
       end
     end
@@ -473,7 +562,7 @@ module PBS
       end
       lToolbar.set_tool_normal_bitmap(lCommandID, iCommand[:bitmap])
       lToolbar.set_tool_short_help(lCommandID, lTitle)
-      lToolbar.set_tool_long_help(lCommandID, iCommand[:help])
+      lToolbar.set_tool_long_help(lCommandID, iCommand[:description])
       lEnabled = ((iCommand[:enabled]) and
                   ((iParams[:GUIEnabled] == nil) or
                    (iParams[:GUIEnabled])))
@@ -544,72 +633,6 @@ module PBS
       end
     end
 
-    # Command that launches the import plugin
-    #
-    # Parameters:
-    # * *iImportID* (_String_): The import plugin ID
-    # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-    # ** *iParentWindow* (<em>Wx::Window</em>): The parent window
-    def cmdImport(iImportID, iParams)
-      # Get the plugin
-      @ImportPlugins[iImportID].execute(self, iParams[:parentWindow])
-    end
-
-    # Command that launches the import plugin and merges its result
-    #
-    # Parameters:
-    # * *iImportID* (_String_): The import plugin ID
-    # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-    # ** *iParentWindow* (<em>Wx::Window</em>): The parent window
-    def cmdImportMerge(iImportID, iParams)
-      # Note that it will be useless to ask for discard confirmation, as we will not discard anything
-      @Merging = true
-      # Get the plugin
-      @ImportPlugins[iImportID].execute(self, iParams[:parentWindow])
-      @Merging = false
-    end
-
-    # Command that launches the export plugin
-    #
-    # Parameters:
-    # * *iExportID* (_String_): The export plugin ID
-    # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-    # ** *iParentWindow* (<em>Wx::Window</em>): The parent window
-    def cmdExport(iExportID, iParams)
-      # Get the plugin
-      @ExportPlugins[iExportID].execute(self, iParams[:parentWindow])
-    end
-
-    # Command that creates a new Shortcut.
-    #
-    # Parameters:
-    # * *iTypeID* (_String_): The type plugin ID
-    # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-    # ** *tag* (_Tag_): Tag in which we create the new Tag (can be nil for no Tag)
-    # ** *parentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
-    def cmdNewShortcut(iTypeID, iParams)
-      lWindow = iParams[:parentWindow]
-      lTag = iParams[:tag]
-      lShortcutType = @TypesPlugins[iTypeID]
-      if (lShortcutType == nil)
-        puts "!!! Shortcut Type #{iTypeID} should have been registered, but unable to retrieve it."
-      else
-        lLocationName = ''
-        if (lTag != nil)
-          lLocationName = " in #{lTag.Name}"
-        end
-        undoableOperation("Create new Shortcut#{lLocationName}") do
-          showModal(EditShortcutDialog, lWindow, nil, @RootTag, lShortcutType, lTag) do |iModalResult, iDialog|
-            case iModalResult
-            when Wx::ID_OK
-              lNewContent, lNewMetadata, lNewTags = iDialog.getData
-              createShortcut(iTypeID, lNewContent, lNewMetadata, lNewTags)
-            end
-          end
-        end
-      end
-    end
-
     # Constructor
     def initialize
       # Opened file context
@@ -618,12 +641,19 @@ module PBS
       @Merging = false
 
       # Undo/Redo management
+      # Controller::UndoableOperation
       @CurrentUndoableOperation = nil
+      # list< Controller::UndoableOperation >
       @UndoStack = []
+      # list< Controller::UndoableOperation >
       @RedoStack = []
+      # list< String >
       @CurrentTransactionErrors = []
+      # Boolean
       @CurrentTransactionToBeCancelled = false
+      # Integer
       @CurrentOperationTagsConflicts = nil
+      # Integer
       @CurrentOperationShortcutsConflicts = nil
 
       # Local Copy/Cut management
@@ -652,105 +682,123 @@ module PBS
       @ImportPlugins = readPlugins('Imports')
       @ExportPlugins = readPlugins('Exports')
       @IntegrationPlugins = readPlugins('Integration', self)
+      @CommandPlugins = readPlugins('Commands')
       @RegisteredGUIs = []
 
       # Create the commands info
-      # This variable will contain every possible command that is then translated into menu items, toolbars, accelerators ...
+      # This variable maps each command ID with its info, including:
+      # * :title (_String_): The title
+      # * :description (_String_): The description
+      # * :bitmap (<em>Wx::Bitmap</em>): The bitmap
+      # * :accelerator (<em>[Integer,Integer]</em>): The accelerator key (Modifier and Key)
+      # * :parameters (<em>list<Symbol></em>): The list of parameters the GUIs must set before calling the command
+      # * :plugin (_Object_): The plugin that executes the command
+      # map< Integer, map< Symbol, Object > >
       @Commands = {}
-      # Controller Plugins: those plugins define modules that are included in the Controller.
-      readControllerPlugins('Commands').each do |iCommandPluginName|
-        eval("registerCmd#{iCommandPluginName}(@Commands)")
+      @CommandPlugins.each do |iPluginName, iCommandPluginInfo|
+        lCommandID = iCommandPluginInfo[:commandID]
+        if (lCommandID == nil)
+          puts "!!! Command plugin #{iPluginName} does not declare any command ID. Ignoring it. Please check the pluginInfo method from this plugin."
+        else
+          if (@Commands[lCommandID] == nil)
+            @Commands[lCommandID] = {
+              :title => iCommandPluginInfo[:title],
+              :description => iCommandPluginInfo[:description],
+              :bitmap => iCommandPluginInfo[:bitmap],
+              :accelerator => iCommandPluginInfo[:accelerator],
+              :parameters => iCommandPluginInfo[:parameters],
+              :plugin => iCommandPluginInfo[:plugin]
+            }
+          else
+            puts "!!! Command #{lCommandID} was already registered. There is a conflict in the commands. Please check command IDs returned by the pluginInfo methods of command plugins."
+          end
+        end
       end
 
+      # Create commands for each import plugin
+      @ImportPlugins.each do |iImportID, iImportInfo|
+        @Commands[ID_IMPORT_BASE + iImportInfo[:index]] = {
+          :title => "Import from #{iImportInfo[:title]}",
+          :description => iImportInfo[:description],
+          :bitmap => iImportInfo[:bitmap],
+          :plugin => ImportCommand.new(iImportID, false),
+          :accelerator => nil,
+          :parameters => [
+            :parentWindow
+          ]
+        }
+        @Commands[ID_IMPORT_MERGE_BASE + iImportInfo[:index]] = {
+          :title => "Import and merge from #{iImportInfo[:title]}",
+          :description => iImportInfo[:description],
+          :bitmap => iImportInfo[:bitmap],
+          :plugin => ImportCommand.new(iImportID, true),
+          :accelerator => nil,
+          :parameters => [
+            :parentWindow
+          ]
+        }
+      end
+      # Create commands for each export plugin
+      @ExportPlugins.each do |iExportID, iExportInfo|
+        @Commands[ID_EXPORT_BASE + iExportInfo[:index]] = {
+          :title => "Export to #{iExportInfo[:title]}",
+          :description => iExportInfo[:description],
+          :bitmap => iExportInfo[:bitmap],
+          :plugin => ExportCommand.new(iExportID),
+          :accelerator => nil,
+          :parameters => [
+            :parentWindow
+          ]
+        }
+      end
+      # Create commands for each type plugin
+      @TypesPlugins.each do |iTypeID, iTypeInfo|
+        @Commands[ID_NEW_SHORTCUT_BASE + iTypeInfo[:index]] = {
+          :title => iTypeInfo[:title],
+          :description => "Create a new Shortcut of type #{iTypeInfo[:description]}",
+          :bitmap => iTypeInfo[:bitmap],
+          :plugin => NewShortcutCommand.new(iTypeID),
+          :accelerator => nil,
+          :parameters => [
+            :tag,
+            :parentWindow
+          ]
+        }
+      end
+
+      # Create Commands not yet implemented
+      # TODO: Implement them
       @Commands.merge!({
         Wx::ID_FIND => {
           :title => 'Find',
-          :help => 'Find a Shortcut',
+          :description => 'Find a Shortcut',
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Find.png"),
-          :method => :cmdFind, # TODO
           :accelerator => [ Wx::MOD_CMD, 'f'[0] ]
         },
         ID_STATS => {
           :title => 'Stats',
-          :help => 'Give statistics on your Shortcuts use',
+          :description => 'Give statistics on your Shortcuts use',
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Stats.png"),
-          :method => :cmdStats, # TODO
           :accelerator => nil
         },
         Wx::ID_HELP => {
           :title => 'User manual',
-          :help => 'Display help file',
+          :description => 'Display help file',
           :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Help.png"),
-          :method => :cmdHelp, # TODO
           :accelerator => nil
         }
       })
-      # Create commands for each import plugin
-      @ImportPlugins.each do |iImportID, iImport|
-        lTitle = iImport.getTitle
-        @Commands[ID_IMPORT_BASE + iImport.index] = {
-          :title => lTitle,
-          :help => "Import Shortcuts from #{iImportID}",
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/#{iImport.getIconSubPath}"),
-          :method => "cmdImport#{iImportID}".to_sym,
-          :accelerator => nil
-        }
-        @Commands[ID_IMPORT_MERGE_BASE + iImport.index] = {
-          :title => lTitle,
-          :help => "Import Shortcuts from #{iImportID} and merge with existing",
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/#{iImport.getIconSubPath}"),
-          :method => "cmdImportMerge#{iImportID}".to_sym,
-          :accelerator => nil
-        }
-        eval("
-def cmdImport#{iImportID}(iParams)
-  cmdImport('#{iImportID}', iParams)
-end
-def cmdImportMerge#{iImportID}(iParams)
-  cmdImportMerge('#{iImportID}', iParams)
-end
-")
-      end
-      # Create commands for each export plugin
-      @ExportPlugins.each do |iExportID, iExport|
-        lTitle = iExport.getTitle
-        @Commands[ID_EXPORT_BASE + iExport.index] = {
-          :title => lTitle,
-          :help => "Export Shortcuts to #{iExportID}",
-          :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/#{iExport.getIconSubPath}"),
-          :method => "cmdExport#{iExportID}".to_sym,
-          :accelerator => nil
-        }
-        eval("
-def cmdExport#{iExportID}(iParams)
-  cmdExport('#{iExportID}', iParams)
-end
-")
-      end
-      # Create commands for each type plugin
-      @TypesPlugins.each do |iTypeID, iType|
-        @Commands[ID_NEW_SHORTCUT_BASE + iType.index] = {
-          :title => iTypeID,
-          :help => "Create a new Shortcut of type #{iTypeID}",
-          :bitmap => iType.getIcon,
-          :method => "cmdNewShortcut#{iTypeID}".to_sym,
-          :accelerator => nil
-        }
-        # Define the cmd functions
-        eval("
-def cmdNewShortcut#{iTypeID}(iParams)
-  cmdNewShortcut('#{iTypeID}', iParams)
-end
-")
-      end
-      # Create dynamic attributes for @Commands
-      @Commands.each do |iCommandID, iCommandParams|
-        iCommandParams[:enabled] = true
-        iCommandParams[:registeredMenuItems] = []
-        iCommandParams[:registeredToolbarButtons] = []
+
+      # Create dynamic parameters of commands
+      @Commands.each do |iCommandID, ioCommandInfo|
+        ioCommandInfo.merge!({
+          :enabled => true,
+          :registeredMenuItems => [],
+          :registeredToolbarButtons => []
+        })
       end
 
-      # Create the base of the data model
+      # Create the base of the data model:
       # * The root Tag
       #   Tag
       @RootTag = Tag.new('Root', nil)
@@ -759,13 +807,12 @@ end
       @ShortcutsList = []
 
       # Create a sample data set
+      # TODO: Delete this before delivering
       # Tags
       lTag1 = createTag(@RootTag, 'Tag1', nil)
       lTag1_1 = createTag(lTag1, 'Tag1.1', nil)
       lTag1_2 = createTag(lTag1, 'Tag1.2', nil)
       lTag2 = createTag(@RootTag, 'Tag2', nil)
-
-      # Shortcuts
       createShortcut(
         'URL',
         'www.google.com',
@@ -792,70 +839,52 @@ end
       )
     end
 
-    # Read plugins that define modules to be included in the Controller
-    #
-    # Parameters:
-    # * *iPluginsID* (_String_): The plugins identifier
-    # Return:
-    # * <em>list<String></em>: The list of plugin names included
-    def readControllerPlugins(iPluginsID)
-      rPluginsList = []
-
-      # Read all commands that are present in the file system
-      Dir.glob("#{$PBSRootDir}/Controller/#{iPluginsID}/*.rb").each do |iFileName|
-        lPluginName = File.basename(iFileName)[0..-4]
-        lRequireName = "Controller/#{iPluginsID}/#{lPluginName}.rb"
-        begin
-          require lRequireName
-          begin
-            # We include and register it
-            self.class.module_eval("include #{iPluginsID}::#{lPluginName}")
-            rPluginsList << lPluginName
-          rescue Exception
-            puts "!!! Error while including controller plugin (#{lRequireName}): #{$!}"
-            puts "!!! Check that module PBS::#{iPluginsID}::#{lPluginName} has been correctly defined in it."
-            puts '!!! This plugin will be ignored.'
-            puts $!.backtrace.join("\n")
-          end
-        rescue Exception
-          puts "!!! Error while loading one of the controller plugins (#{lRequireName}): #{$!}"
-          puts '!!! This plugin will be ignored.'
-          puts $!.backtrace.join("\n")
-        end
-      end
-
-      return rPluginsList
-    end
-
     # Read the plugins identified by a given ID, and return a map of the instantiated plugins.
     #
     # Parameters:
     # * *iPluginsID* (_String_): The plugins identifier
-    # * *iParams* (<em>list<Object></em>): Additional parameters [optional]
+    # * *iParams* (<em>list<Object></em>): Additional parameters to give to the plugin constructor [optional]
     # Return:
-    # * <em>map< String, Object ></em>: The map of retrieved plugins
+    # * <em>map< String, map< Symbol, Object > ></em>: The map of retrieved plugins
     def readPlugins(iPluginsID, *iParams)
       # Get the different types
       # map< String, Object >
       rPlugins = {}
       lIdxPlugin = 0
-      Dir.glob("#{$PBSRootDir}/#{iPluginsID}/*.rb").each do |iFileName|
+      Dir.glob("#{$PBSRootDir}/Plugins/#{iPluginsID}/*.rb").each do |iFileName|
         lPluginName = File.basename(iFileName)[0..-4]
-        lRequireName = "#{iPluginsID}/#{lPluginName}.rb"
+        lRequireName = "Plugins/#{iPluginsID}/#{lPluginName}.rb"
         begin
           require lRequireName
           begin
             lPlugin = eval("#{iPluginsID}::#{lPluginName}.new(*iParams)")
-            rPlugins[lPluginName] = lPlugin
-            # Create metadata on the plugin itself
+            # Get the info of the plugin, and complete it
+            lPluginInfo = {
+              :title => lPluginName,
+              :description => lPluginName,
+              :bitmapName => 'Plugin.png',
+            }
+            if (lPlugin.class.method_defined?(:pluginInfo))
+              lPluginInfo.merge!(lPlugin.pluginInfo)
+            else
+              puts "!!! Plugin #{lPluginName} does not have any pluginInfo method."
+            end
+            # Create dynamic content of the plugin info
+            lPluginInfo.merge!({
+              :bitmap => Wx::Bitmap.new("#{$PBSRootDir}/Graphics/#{lPluginInfo[:bitmapName]}"),
+              :plugin => lPlugin,
+              :index => lIdxPlugin
+            })
+            # Set the plugin info
+            rPlugins[lPluginName] = lPluginInfo
+            # Add the method pluginName to the object, as it can be useful later
             lPlugin.instance_eval("
-def index
-return #{lIdxPlugin}
-end
 def pluginName
-return '#{lPluginName}'
+  return '#{lPluginName}'
 end
-")
+"
+            )
+            # And go on
             lIdxPlugin += 1
           rescue Exception
             puts "!!! Error while instantiating one of the #{iPluginsID} plugin (#{lRequireName}): #{$!}"
@@ -1030,43 +1059,6 @@ end
         end
       else
         yield
-      end
-    end
-
-    # Dump a Tag
-    #
-    # Parameters:
-    # * *iTag* (_Tag_): The Tag to dump
-    # * *iPrefix* (_String_): Prefix of each dump line [optional = '']
-    # * *iLastItem* (_Boolean_): Is this item the last one of the list it belongs to ? [optional = true]
-    def dumpTag(iTag, iPrefix = '', iLastItem = true)
-      puts "#{iPrefix}+-#{iTag.Name} (@#{iTag.object_id})"
-      if (iLastItem)
-        lChildPrefix = "#{iPrefix}  "
-      else
-        lChildPrefix = "#{iPrefix}| "
-      end
-      lIdx = 0
-      iTag.Children.each do |iChildTag|
-        dumpTag(iChildTag, lChildPrefix, lIdx == iTag.Children.size - 1)
-        lIdx += 1
-      end
-    end
-
-    # Dump a Shortcuts list
-    #
-    # Parameters:
-    # * *iShortcutsList* (<em>list<Shortcut></em>): The Shortcuts list to dump
-    def dumpShortcutsList(iShortcutsList)
-      iShortcutsList.each do |iSC|
-        puts "=== #{iSC.Metadata['title']} (@#{iSC.object_id})"
-        puts "  = Type: #{iSC.Type.inspect}"
-        puts "  = Metadata: #{iSC.Metadata.inspect}"
-        puts "  = Content: #{iSC.Content.inspect}"
-        puts "  = #{iSC.Tags.size} Tags:"
-        iSC.Tags.each do |iTag, iNil|
-          puts "  = - #{iTag.Name} (@#{iTag.object_id})"
-        end
       end
     end
 

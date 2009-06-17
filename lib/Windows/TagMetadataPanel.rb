@@ -41,11 +41,11 @@ module PBS
       @Icon = nil
       
       # Create all components
-      lSTTitle = Wx::StaticText.new(self, -1, 'Title')
+      lSTTitle = Wx::StaticText.new(self, Wx::ID_ANY, 'Title')
       @TCTitle = Wx::TextCtrl.new(self)
       @TCTitle.min_size = [300, @TCTitle.min_size.height]
-      lSTIcon = Wx::StaticText.new(self, -1, 'Icon')
-      @BBIcon = Wx::BitmapButton.new(self, -1, Wx::Bitmap.new)
+      lSTIcon = Wx::StaticText.new(self, Wx::ID_ANY, 'Icon')
+      @BBIcon = Wx::BitmapButton.new(self, Wx::ID_ANY, Wx::Bitmap.new)
       evt_button(@BBIcon) do |iEvent|
         # display the icon chooser dialog
         showModal(ChooseIconDialog, self, @BBIcon.bitmap_label) do |iModalResult, iDialog|

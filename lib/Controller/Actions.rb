@@ -163,15 +163,16 @@ module PBS
       # First find if we don't violate unicity constraints
       rShortcut = nil
 
-      ensureUndoableOperation("Create Shortcut #{iMetadata['title']}") do
-        rShortcut, lAction, lNewContent, lNewMetadata = checkShortcutUnicity(iTypeName, iContent, iMetadata, iTags)
-        if ((rShortcut == nil) or
-            (lAction == ID_KEEP))
-          # Create it
-          lType = @TypesPlugins[iTypeName]
-          if (lType == nil)
-            puts "!!! Unknown type named #{iTypeName}. Cannot create Shortcut #{iMetadata['title']}."
-          else
+      lTypeInfo = @TypesPlugins[iTypeName]
+      if (lTypeInfo == nil)
+        puts "!!! Unknown type named #{iTypeName}. Cannot create Shortcut #{iMetadata['title']}."
+      else
+        lType = lTypeInfo[:plugin]
+        ensureUndoableOperation("Create Shortcut #{iMetadata['title']}") do
+          rShortcut, lAction, lNewContent, lNewMetadata = checkShortcutUnicity(lType, iContent, iMetadata, iTags)
+          if ((rShortcut == nil) or
+              (lAction == ID_KEEP))
+            # Create it
             rShortcut = atomicOperation(Controller::UAO_CreateShortcut.new(self, lType, lNewContent, lNewMetadata, iTags))
             setCurrentFileModified
           end
@@ -210,7 +211,7 @@ module PBS
           (ioSC.Tags != iNewTags))
         # First find if we don't violate unicity constraints
         ensureUndoableOperation("Update Shortcut #{ioSC.Metadata['title']}") do
-          lDoublon, lAction, lNewContent, lNewMetadata = checkShortcutUnicity(ioSC.Type.pluginName, iNewContent, iNewMetadata, iNewTags, ioSC)
+          lDoublon, lAction, lNewContent, lNewMetadata = checkShortcutUnicity(ioSC.Type, iNewContent, iNewMetadata, iNewTags, ioSC)
           if ((lDoublon == nil) or
               (lAction == ID_KEEP))
             atomicOperation(Controller::UAO_UpdateShortcut.new(self, ioSC, lNewContent, lNewMetadata, iNewTags))
@@ -301,6 +302,43 @@ module PBS
       end
 
       return rSaved
+    end
+    
+    # Execute a given command
+    #
+    # Parameters:
+    # * *iCommandID* (_Integer_): The command ID
+    # * *iParams* (<em>map<Symbol,Object></em>): The parameters to give the command (nil if no parameters) [optional = nil]
+    def executeCommand(iCommandID, iParams = nil)
+      lCommand = @Commands[iCommandID]
+      if (lCommand[:plugin] == nil)
+        showModal(Wx::MessageDialog, nil,
+          "This command (#{iCommandID}) has not yet been implemented. Sorry.",
+          :caption => 'Not yet implemented',
+          :style => Wx::OK|Wx::ICON_EXCLAMATION
+        ) do |iModalResult, iDialog|
+          # Nothing to do
+        end
+      elsif (iParams == nil)
+        # Check that the command did not need any parameters first
+        if ((lCommand[:parameters] != nil) and
+            (!lCommand[:parameters].empty?))
+          puts "!!! Command #{iCommandID} should be called with parameters, but the GUI did not pass any. Please correct GUI code or command plugin parameters."
+        end
+        # Call the command method without parameters
+        lCommand[:plugin].execute(self)
+      else
+        if (lCommand[:parameters] != nil)
+          # Check that all parameters have been set
+          lCommand[:parameters].each do |iParameterSymbol|
+            if (!iParams.has_key?(iParameterSymbol))
+              puts "!!! Missing parameter #{iParameterSymbol.to_s} set by the GUI for command #{iCommandID}. Please correct GUI code or command plugin parameters."
+            end
+          end
+        end
+        # Call the command method with the parameters given by the validator
+        lCommand[:plugin].execute(self, iParams)
+      end
     end
 
   end

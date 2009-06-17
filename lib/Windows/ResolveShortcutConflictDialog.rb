@@ -18,10 +18,12 @@ module PBS
     # * *iSC* (_Shortcut_): The Shortcut containing existing info
     # * *iContent* (_Object_): The content issuing a conflict
     # * *iMetadata* (<em>map<String,Object></em>): The Metadata issuing a conflict
-    def initialize(iParent, iSC, iContent, iMetadata)
+    # * *iController* (_Controller_): The Controller
+    def initialize(iParent, iSC, iContent, iMetadata, iController)
       @SC = iSC
       @Content = iContent
       @Metadata = iMetadata
+      @Controller = iController
       super(iParent, 'Shortcut',
         :title => "Resolve Shortcut conflict (#{iSC.Type.pluginName})",
         :style => Wx::DEFAULT_DIALOG_STYLE|Wx::RESIZE_BORDER|Wx::MAXIMIZE_BOX
@@ -33,7 +35,7 @@ module PBS
     # Return:
     # * <em>Wx::Panel</em>: The panel containing existing data
     def getExistingPanel
-      rPanel = ContentMetadataPanel.new(self, @SC.Type)
+      rPanel = ContentMetadataPanel.new(self, @SC.Type, @Controller)
 
       rPanel.setData(@SC.Content, @SC.Metadata)
 
@@ -45,7 +47,7 @@ module PBS
     # Return:
     # * <em>Wx::Panel</em>: The panel containing conflicting data
     def getConflictingPanel
-      rPanel = ContentMetadataPanel.new(self, @SC.Type)
+      rPanel = ContentMetadataPanel.new(self, @SC.Type, @Controller)
       
       rPanel.setData(@Content, @Metadata)
 
