@@ -16,7 +16,7 @@ module PBS
     # Parameters:
     # * *iOperationTitle* (_String_): Title of the operation to perform to display as undo
     def undoableOperation(iOperationTitle)
-      puts "= #{iOperationTitle} ..."
+      logInfo "= #{iOperationTitle} ..."
       # Create the current Undo context
       @CurrentUndoableOperation = Controller::UndoableOperation.new(iOperationTitle)
       # Reset the transaction context
@@ -60,7 +60,7 @@ module PBS
       end
       # Clear the current transaction
       @CurrentUndoableOperation = nil
-      puts "= ... #{iOperationTitle}"
+      logInfo "= ... #{iOperationTitle}"
     end
 
     # Create a Tag if it does not exist already, and return it.
@@ -165,7 +165,7 @@ module PBS
 
       lTypeInfo = @TypesPlugins[iTypeName]
       if (lTypeInfo == nil)
-        puts "!!! Unknown type named #{iTypeName}. Cannot create Shortcut #{iMetadata['title']}."
+        logBug "Unknown type named #{iTypeName}. Cannot create Shortcut #{iMetadata['title']}."
       else
         lType = lTypeInfo[:plugin]
         ensureUndoableOperation("Create Shortcut #{iMetadata['title']}") do
@@ -312,7 +312,7 @@ module PBS
     def executeCommand(iCommandID, iParams = nil)
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        puts "!!! Command #{iCommandID} is not registered. Can't execute it. Please check command plugins."
+        logBug "Command #{iCommandID} is not registered. Can't execute it. Please check command plugins."
       else
         if (lCommand[:plugin] == nil)
           showModal(Wx::MessageDialog, nil,
@@ -326,7 +326,7 @@ module PBS
           # Check that the command did not need any parameters first
           if ((lCommand[:parameters] != nil) and
               (!lCommand[:parameters].empty?))
-            puts "!!! Command #{iCommandID} should be called with parameters, but the GUI did not pass any. Please correct GUI code or command plugin parameters."
+            logBug "Command #{iCommandID} should be called with parameters, but the GUI did not pass any. Please correct GUI code or command plugin parameters."
           end
           # Call the command method without parameters
           lCommand[:plugin].execute(self)
@@ -335,7 +335,7 @@ module PBS
             # Check that all parameters have been set
             lCommand[:parameters].each do |iParameterSymbol|
               if (!iParams.has_key?(iParameterSymbol))
-                puts "!!! Missing parameter #{iParameterSymbol.to_s} set by the GUI for command #{iCommandID}. Please correct GUI code or command plugin parameters."
+                logBug "Missing parameter #{iParameterSymbol.to_s} set by the GUI for command #{iCommandID}. Please correct GUI code or command plugin parameters."
               end
             end
           end

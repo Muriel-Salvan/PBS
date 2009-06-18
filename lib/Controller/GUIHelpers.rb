@@ -21,7 +21,7 @@ module PBS
           if (iCommand[:accelerator] != nil)
             lCommand = @Commands[iCommandID]
             if (lCommand == nil)
-              puts "!!! Unknown command of ID #{iCommandID}. Ignoring it from the accelerator table."
+              logBug "Unknown command of ID #{iCommandID}. Ignoring it from the accelerator table."
             else
               @AcceleratorTable << Wx::AcceleratorEntry.new(lCommand[:accelerator][0], lCommand[:accelerator][1], iCommandID)
             end
@@ -44,7 +44,7 @@ module PBS
     def addMenuCommand(iEvtWindow, ioMenu, iCommandID, iParams = {}, &iFetchParametersCode)
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        puts "!!! Unknown command of ID #{iCommandID}. Ignoring it from the menu."
+        logBug "Unknown command of ID #{iCommandID}. Ignoring it from the menu."
       else
         lMenuItem = Wx::MenuItem.new(ioMenu, iCommandID)
         lCommand[:registeredMenuItems] << [ lMenuItem, iEvtWindow, iFetchParametersCode, iParams ]
@@ -65,7 +65,7 @@ module PBS
 
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        puts "!!! Unknown command of ID #{iCommandID}. Ignoring it from the toolbar."
+        logBug "Unknown command of ID #{iCommandID}. Ignoring it from the toolbar."
       else
         rButton = iToolbar.add_item(lCommand[:bitmap], :id => iCommandID)
         lCommand[:registeredToolbarButtons] << [ rButton, iParams ]

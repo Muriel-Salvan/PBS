@@ -125,7 +125,7 @@ module PBS
         when 'Shell'
           oFile << "<LI><A HREF=\"#{iShortcut.Content}\" TYPE=\"#{lTypeName}\" ICON=\"#{getBitmapStandardURI(iShortcut.Metadata['icon'])}\">#{iShortcut.Metadata['title']}</A></LI>\n"
         else
-          puts "!!! Unknown Shortcut type for HTML export plugin: #{lTypeName}. Using its content summary."
+          logErr "Unknown Shortcut type for HTML export plugin: #{lTypeName}. Using its content summary. Need to adapt HTML plugin."
           oFile << "<LI><A HREF=\"#{iShortcut.Type.getContentSummary(iShortcut.Content)}\" TYPE=\"#{lTypeName}\" ICON=\"#{getBitmapStandardURI(iShortcut.Metadata['icon'])}\">#{iShortcut.Metadata['title']}</A></LI>\n"
         end
       end

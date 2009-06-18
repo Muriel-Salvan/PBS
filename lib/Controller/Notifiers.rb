@@ -46,7 +46,7 @@ module PBS
                 @Clipboard_AlreadyProcessingDelete = false
               end
             else
-              puts '!!! We have been notified of a clipboard Cut acknowledgement, but no item was marked as to be Cut. Bug ?'
+              logBug 'We have been notified of a clipboard Cut acknowledgement, but no item was marked as to be Cut.'
             end
           end
           # Deactivate the Paste command
@@ -60,7 +60,7 @@ module PBS
           when Wx::ID_COPY
             lCopyName = 'Copy'
           else
-            puts "!!! Unsupported copy type from the clipboard: #{@Clipboard_CopyMode}. Bug ?"
+            logBug "Unsupported copy mode from the clipboard: #{@Clipboard_CopyMode}."
           end
           if (@Clipboard_CopyID != @CopiedID)
             # Here, we have another application of PBS that has put data in the clipboard. It is not us anymore.

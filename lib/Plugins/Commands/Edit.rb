@@ -75,7 +75,7 @@ module PBS
             end
           end
         else
-          puts "!!! Unable to edit object of ID #{lObjectID}. Bug ?"
+          logBug "Unable to edit object of ID #{lObjectID}."
         end
       end
 

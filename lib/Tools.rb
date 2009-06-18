@@ -165,7 +165,7 @@ module PBS
         when DataObjectSelection.getDataFormat
           @Data = iData
         else
-          puts "!!! Set unknown format: #{iFormat}"
+          logBug "Set unknown format: #{iFormat}"
         end
       end
 
@@ -184,7 +184,7 @@ module PBS
         when DataObjectSelection.getDataFormat
           rData = @Data
         else
-          puts "!!! Asked unknown format: #{iFormat}"
+          logBug "Asked unknown format: #{iFormat}"
         end
 
         return rData
@@ -206,7 +206,7 @@ module PBS
         when DataObjectSelection.getDataFormat
           rDataSize = @Data.length
         else
-          puts "!!! Asked unknown format for size: #{iFormat}"
+          logBug "Asked unknown format for size: #{iFormat}"
         end
 
         return rDataSize
@@ -267,6 +267,91 @@ module PBS
 
     end
 
+    # Log a bug
+    # This is called when there is a bug in the program. It has been set in many places to detect bugs.
+    #
+    # Parameters:
+    # * *iMsg* (_String_): Message to log
+    def logBug(iMsg)
+      lCallers = []
+      caller[0..-2].each do |iCallerLine|
+        lCallers << iCallerLine.gsub($PBSRootDir, '')
+      end
+      lCompleteMsg = "Bug: #{iMsg}\nStack:\n#{lCallers.join("\n")}\nNormally you should never encounter this message. Please fill a bug report to PBS with this information to make sure it will be corrected in future releases. Thanks."
+      # Log into stderr
+      $stderr << "!!! BUG !!! #{lCompleteMsg}\n"
+      if ($PBS_LogFile != nil)
+        logFile(lCompleteMsg)
+      end
+      # Display dialog
+      showModal(Wx::MessageDialog, nil,
+        lCompleteMsg,
+        :caption => 'Bug',
+        :style => Wx::OK|Wx::ICON_EXCLAMATION
+      ) do |iModalResult, iDialog|
+        # Nothing to do
+      end
+    end
+
+    # Log an error.
+    # Those errors can be normal, as they mainly depend on external factors (lost connection, invalid user file...)
+    #
+    # Parameters:
+    # * *iMsg* (_String_): Message to log
+    def logErr(iMsg)
+      # Log into stderr
+      $stderr << "!!! ERR !!! #{iMsg}\n"
+      if ($PBS_LogFile != nil)
+        logFile(iMsg)
+      end
+      # Display dialog
+      showModal(Wx::MessageDialog, nil,
+        iMsg,
+        :caption => 'Error',
+        :style => Wx::OK|Wx::ICON_ERROR
+      ) do |iModalResult, iDialog|
+        # Nothing to do
+      end
+    end
+
+    # Log an info.
+    # This is just common journal.
+    #
+    # Parameters:
+    # * *iMsg* (_String_): Message to log
+    def logInfo(iMsg)
+      # Log into stdout
+      $stdout << "#{iMsg}\n"
+      if ($PBS_LogFile != nil)
+        logFile(iMsg)
+      end
+    end
+
+    # Log a debugging info.
+    # This is used when debug is activated
+    #
+    # Parameters:
+    # * *iMsg* (_String_): Message to log
+    def logDebug(iMsg)
+      # Log into stdout
+      if ($PBS_DevDebug)
+        $stdout << "#{iMsg}\n"
+      end
+      if ($PBS_LogFile != nil)
+        logFile(iMsg)
+      end
+    end
+
+    # Log a message in the log file
+    #
+    # Parameters:
+    # * *iMsg* (_String_): The message to log
+    def logFile(iMsg)
+      File.open($PBS_LogFile, 'a+') do |oFile|
+        oFile << "#{Time.now.gmtime.strftime('%Y/%m/%d %H:%M:%S')} - #{iMsg}\n"
+      end
+    end
+
     # Create a String converting accents characters to their equivalent without accent.
     #
     # Parameters:
@@ -283,14 +368,18 @@ module PBS
       return rConverted
     end
 
-    # Dump a Tag
+    # Dump a Tag in a string
     #
     # Parameters:
     # * *iTag* (_Tag_): The Tag to dump
     # * *iPrefix* (_String_): Prefix of each dump line [optional = '']
     # * *iLastItem* (_Boolean_): Is this item the last one of the list it belongs to ? [optional = true]
+    # Return:
+    # * _String_: The tag dumped
     def dumpTag(iTag, iPrefix = '', iLastItem = true)
-      puts "#{iPrefix}+-#{iTag.Name} (@#{iTag.object_id})"
+      rDump = ''
+
+      rDump += "#{iPrefix}+-#{iTag.Name} (@#{iTag.object_id})\n"
       if (iLastItem)
         lChildPrefix = "#{iPrefix}  "
       else
@@ -298,26 +387,36 @@ module PBS
       end
       lIdx = 0
       iTag.Children.each do |iChildTag|
-        dumpTag(iChildTag, lChildPrefix, lIdx == iTag.Children.size - 1)
+        rDump += dumpTag(iChildTag, lChildPrefix, lIdx == iTag.Children.size - 1)
         lIdx += 1
       end
+
+      return rDump
     end
 
     # Dump a Shortcuts list
     #
     # Parameters:
     # * *iShortcutsList* (<em>list<Shortcut></em>): The Shortcuts list to dump
+    # Return:
+    # * _String_: The string of Shortcuts dumped
     def dumpShortcutsList(iShortcutsList)
+      rDump = ''
+
+      lIdx = 0
       iShortcutsList.each do |iSC|
-        puts "=== #{iSC.Metadata['title']} (@#{iSC.object_id})"
-        puts "  = Type: #{iSC.Type.inspect}"
-        puts "  = Metadata: #{iSC.Metadata.inspect}"
-        puts "  = Content: #{iSC.Content.inspect}"
-        puts "  = #{iSC.Tags.size} Tags:"
-        iSC.Tags.each do |iTag, iNil|
-          puts "  = - #{iTag.Name} (@#{iTag.object_id})"
+        rDump += "+-#{iSC.Metadata['title']} (@#{iSC.object_id})\n"
+        lPrefix = nil
+        if (lIdx == iShortcutsList.size-1)
+          lPrefix = '  '
+        else
+          lPrefix = '| '
         end
+        rDump += iSC.dump(lPrefix)
+        lIdx += 1
       end
+
+      return rDump
     end
 
     # Display a dialog in modal mode, ensuring it is destroyed afterwards.
@@ -399,7 +498,7 @@ module PBS
           begin
             rIconBitmap = Wx::Bitmap.new(lFileName)
           rescue Exception
-            puts "!!! Unable to read bitmap data of format #{lImageExt}: #{$!}. Ignoring this bitmap."
+            logBug "Unable to read bitmap data of format #{lImageExt}: #{$!}. Ignoring this bitmap."
             rIconBitmap = nil
           end
           # Delete the temporary file
@@ -445,7 +544,7 @@ module PBS
         when '.ICO', '.CUR', '.ANI', '.EXE', '.DLL'
           lBitmapType = Wx::BITMAP_TYPE_ICO
         else
-          puts "!!! Unable to determine the bitmap type corresponding to extension #{File.extname(iFileName).upcase}. Assuming ICO."
+          logBug "Unable to determine the bitmap type corresponding to extension #{File.extname(iFileName).upcase}. Assuming ICO."
           lBitmapType = Wx::BITMAP_TYPE_ICO
         end
       end
@@ -467,7 +566,7 @@ module PBS
             lTempFileToDelete = true
           end
         rescue Exception
-          puts "!!! Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
+          logErr "Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
           lCancel = true
         end
       else
@@ -484,7 +583,7 @@ module PBS
             lFTPConnection.close
             lTempFileToDelete = true
           rescue Exception
-            puts "!!! Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
+            logerr "Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
             lCancel = true
           end
         end
@@ -502,7 +601,7 @@ module PBS
           begin
             rBitmap.copy_from_icon(Wx::Icon.new(lIconID, Wx::BITMAP_TYPE_ICO))
           rescue Exception
-            puts "!!! Error while loading icon from #{lIconID}: #{$!}. Ignoring it."
+            logBug "Error while loading icon from #{lIconID}: #{$!}. Ignoring it."
             rBitmap = nil
           end
         else

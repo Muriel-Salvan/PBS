@@ -16,6 +16,8 @@ module Wx
 
   class Bitmap
 
+    include PBS::Tools
+
     # Get the serialized content.
     # Equivalent to marshal_dump (could be renamed if only load_file could work)
     #
@@ -32,7 +34,7 @@ module Wx
         end
         File.unlink(lFileName)
       else
-        puts "!!! Error while loading data from temporary file: #{lFileName}."
+        logBug "Error while loading data from temporary file: #{lFileName}."
       end
 
       return rData
@@ -52,7 +54,7 @@ module Wx
       if (load_file(lFileName, Wx::BITMAP_TYPE_PNG))
         File.unlink(lFileName)
       else
-        puts "!!! Error while loading data from temporary file: #{lFileName}."
+        logBug "Error while loading data from temporary file: #{lFileName}."
       end
     end
 

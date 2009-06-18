@@ -12,7 +12,7 @@ require 'wx'
 # * Destroying Windows manually does not cause SegFaults anymore during random events.
 # * Not destroying Windows manually does not cause ObjectPreviouslyDeleted exceptions on exit.
 # However, disabling GC does increase memory consumption of around 30Mb every 5 minutes of usage.
-#GC.disable
+GC.disable
 
 # Add this path to the load path. This allows anybody to execute PBS from any directory, even not the current one.
 $LOAD_PATH << File.dirname(__FILE__)
@@ -63,10 +63,15 @@ module PBS
   def self.getOptions
     rOptions = OptionParser.new
 
-    rOptions.banner = 'pbs.rb [-d|--devdebug]'
+    rOptions.banner = 'pbs.rb [-d|--devdebug] [-l|--log <Logfile>]'
     rOptions.on('-d', '--devdebug',
       'Set developer debug interface.') do
       $PBS_DevDebug = true
+    end
+    rOptions.on('-l', '--log <Logfile>', String,
+      '<Logfile>: Name of a file to log into.',
+      'Set log file.') do |iArg|
+      $PBS_LogFile = iArg
     end
 
     return rOptions
@@ -89,8 +94,9 @@ require 'Windows/Main.rb'
 
 # Be prepared to be just a library: don't do anything unless called explicitly
 if (__FILE__ == $0)
-  # Default switches, that can be altered with command line options
+  # Default variables, that can be altered with command line options
   $PBS_DevDebug = false
+  $PBS_LogFile = nil
   # Parse command line arguments
   lOptions = PBS::getOptions
   lSuccess = true

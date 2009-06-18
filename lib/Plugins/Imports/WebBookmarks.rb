@@ -119,7 +119,7 @@ module PBS
             lNewTags
           )
         else
-          puts "!!! File #{iFileName} does not define any URL (could not find any line 'URL='). Ignoring this file."
+          logBug "File #{iFileName} does not define any URL (could not find any line 'URL='). Ignoring this file."
         end
       end
 

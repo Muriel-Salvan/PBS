@@ -40,7 +40,7 @@ module PBS
         def initialize(iFileName)
           @FaviconsDB = nil
           if (File.exists?(iFileName))
-            puts "!!! Favicons database #{iFileName} does not exist. Shortcuts will be created without favicons."
+            logErr "Favicons database #{iFileName} does not exist. Shortcuts will be created without favicons."
             # First get the database storing favicons
             @FaviconsDB = SQLite3::Database.new(iFileName)
             # As we open a large file (often around 50Mb for Google Chrome favicons), we increase the cache size.
@@ -80,7 +80,7 @@ module PBS
                 end
               end
             rescue Exception
-              puts "!!! Error while reading favicon for server #{iServerURL}: #{$!}"
+              logBug "Error while reading favicon for server #{iServerURL}: #{$!}"
               rBitmap = nil
             end
           end
@@ -114,11 +114,11 @@ module PBS
         # Get the profile path from the environment
         lProfileDir = ENV['USERPROFILE']
         if (lProfileDir == nil)
-          puts '!!! The environment variable USERPROFILE is not set. Impossible to get Google Chrome bookmarks.'
+          logErr 'The environment variable USERPROFILE is not set. Impossible to get Google Chrome bookmarks.'
         else
           lBookmarksFileName = "#{lProfileDir}/Local Settings/Application Data/Google/Chrome/User Data/Default/Bookmarks"
           if (!File.exists?(lBookmarksFileName))
-            puts "!!! Bookmarks file #{lBookmarksFileName} does not exist."
+            logErr "Bookmarks file #{lBookmarksFileName} does not exist."
           else
             # OK, now we open it and import its content
             ioController.undoableOperation('Import bookmarks from Google Chrome') do
@@ -158,7 +158,7 @@ module PBS
         begin
           lBookmarks = eval(lFileContent)
         rescue Exception
-          puts "!!! Error while reading the bookmarks content from file #{iFileName}: #{$!}."
+          logBug "Error while reading the bookmarks content from file #{iFileName}: #{$!}."
           lCancel = true
         end
         if (!lCancel)
@@ -195,7 +195,7 @@ module PBS
             # Check an eventual file (in this case, no icon)
             lMatch = lURL.match(/^(file):\/\/([^\/]*).*$/)
             if (lMatch == nil)
-              puts "!!! Impossible to get the server name of URL #{lURL}. There will be no favicon for Shortcut #{lTitle}"
+              logBug "Impossible to get the server name of URL #{lURL}. There will be no favicon for Shortcut #{lTitle}."
             end
           else
             lIconBitmap = iFaviconsProvider.getFavicon("#{lMatch[1]}://#{lMatch[2]}")
@@ -225,7 +225,7 @@ module PBS
             importGoogleChromItem(ioController, iFaviconsProvider, iChildItem, lNewTag)
           end
         else
-          puts "!!! Unknown Item Type: #{iItem['type']}. Ignoring item #{iItem['name']}."
+          logBug "Unknown Item Type: #{iItem['type']}. Ignoring item #{iItem['name']}."
         end
       end
 

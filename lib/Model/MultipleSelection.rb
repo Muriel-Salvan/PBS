@@ -8,12 +8,18 @@ module PBS
   # Class that stores a selection of several Tags and Shortcuts alltogether
   class MultipleSelection
 
+    include Tools
+
     # Class that stores a multiple selection serialized (ready to be marshalled in a file, clipboard...)
     class Serialized
+
+      include Tools
 
       # Class used to serialize data of a Tag.
       # This class is used to represent the complete data of a Tag, without any reference (other than IDs) to external objects.
       class Tag
+
+        include Tools
 
         # The name of the Tag
         #    String
@@ -86,7 +92,7 @@ module PBS
           @Children.each do |iChildTagID|
             lChildSerializedTag = iSerializedTags[iChildTagID]
             if (lChildSerializedTag == nil)
-              puts "!!! Tag ID #{iChildTagID} should be part of the selection, but unable to retrieve it. Bug ?"
+              logBug "Tag ID #{iChildTagID} should be part of the selection, but unable to retrieve it."
             else
               lChildSerializedTag.createTag(ioController, lNewTag, iSerializedTags, ioShortcutsTags)
             end
@@ -295,7 +301,7 @@ module PBS
         @SelectedTags.each do |iTagID|
           lSerializedTag = @Tags[iTagID]
           if (lSerializedTag == nil)
-            puts "!!! Tag of ID #{iTagID} should be part of the serialized data, but unable to retrieve it. Bug ?"
+            logBug "Tag of ID #{iTagID} should be part of the serialized data, but unable to retrieve it."
           else
             # Now we can create it
             lSerializedTag.createTag(ioController, iParentTag, @Tags, lShortcutsTags)
@@ -318,7 +324,7 @@ module PBS
             # External source: create from the serialized data completely.
             lSerializedShortcut = @Shortcuts[iShortcutID]
             if (lSerializedShortcut == nil)
-              puts "!!! Normally Shortcut of ID #{iShortcutID} should be part of the serialized selection, but unable to retrieve it. Bug ?"
+              logBug "Normally Shortcut of ID #{iShortcutID} should be part of the serialized selection, but unable to retrieve it."
             else
               lSerializedShortcut.createShortcut(ioController, iTagsSet)
             end
@@ -326,7 +332,7 @@ module PBS
             # Local source: reuse the same Shortcut
             lShortcut = iLocalSelection.SerializedShortcutsIDs[iShortcutID]
             if (lShortcut == nil)
-              puts "!!! Normally Shortcut of ID #{iShortcutID} should be part of the local selection, but unable to retrieve it. Bug ?"
+              logBug "Normally Shortcut of ID #{iShortcutID} should be part of the local selection, but unable to retrieve it."
             else
               # Merge Tags
               lNewTags = iTagsSet
@@ -510,7 +516,7 @@ module PBS
         elsif (@SelectedPrimaryTags.size == 1)
           lTag = @SelectedPrimaryTags[0]
           if (lTag == nil)
-            puts "!!! Tag #{@SelectedPrimaryTags[0].Name} was selected, but does not exist in the data. Bug ?"
+            logBug "Tag #{@SelectedPrimaryTags[0].Name} was selected, but does not exist in the data."
             rDescription = 'Error'
           else
             rDescription = "Tag #{lTag.Name}"
@@ -522,7 +528,7 @@ module PBS
         if (@SelectedPrimaryShortcuts.size == 1)
           lSC = @SelectedPrimaryShortcuts[0][0]
           if (lSC == nil)
-            puts "!!! Shortcut #{@SelectedPrimaryShortcuts[0][0].Metadata['title']} was selected, but does not exist in the data. Bug ?"
+            logBug "Shortcut #{@SelectedPrimaryShortcuts[0][0].Metadata['title']} was selected, but does not exist in the data."
             rDescription = 'Error'
           else
             rDescription = "Shortcut #{lSC.Metadata['title']}"

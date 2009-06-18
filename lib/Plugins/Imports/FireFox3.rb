@@ -16,6 +16,8 @@ module PBS
 
     class FireFox3
 
+      include Tools
+
       # Give the description of this plugin
       #
       # Return:
@@ -40,7 +42,7 @@ module PBS
         # Get the profile path from the environment
         lProfileDir = ENV['USERPROFILE']
         if (lProfileDir == nil)
-          puts '!!! The environment variable USERPROFILE is not set. Impossible to get Google Chrome bookmarks.'
+          logErr 'The environment variable USERPROFILE is not set. Unable to get FireFox 3 bookmarks.'
         else
           # Find the FireFox profiles dir
           lBookmarksFileName = nil
@@ -48,10 +50,10 @@ module PBS
             lBookmarksFileName = "#{iProfileDir}/places.sqlite"
           end
           if (lBookmarksFileName == nil)
-            puts "!!! Can't find profile dir in #{lProfileDir}/Application Data/Mozilla/Firefox/Profiles/*.default"
+            logErr "Can't find profile dir in #{lProfileDir}/Application Data/Mozilla/Firefox/Profiles/*.default"
           else
             if (!File.exists?(lBookmarksFileName))
-              puts "!!! Bookmarks file #{lBookmarksFileName} does not exist."
+              logErr "Bookmarks file #{lBookmarksFileName} does not exist."
             else
               # OK, now we open it and import its content
               ioController.undoableOperation('Import bookmarks from FireFox 3') do
@@ -97,9 +99,7 @@ module PBS
         if (iFolders[iParentID] != nil)
           lParentTag = iFolders[iParentID][3]
         end
-        if (lParentTag == nil)
-          puts "!!! Bookmark #{iTitle} belongs to folder ID #{iParentID}, which is unknown. Bookmark \"#{iTitle}\" will be added with no Tag."
-        end
+        # It is possible that lParentTag == nil, if the folder is unknown. Some folders are system specific ones, and so in those cases (very seldom) the Shortcut will be added in the root.
         lNewTags = {}
         # Beware the root Tag
         if (lParentTag != nil)

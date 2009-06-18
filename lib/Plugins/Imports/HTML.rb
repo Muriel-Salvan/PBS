@@ -183,7 +183,7 @@ module PBS
               when 'Shell'
                 lContent = iChildElement.attributes['href'].to_s
               else
-                puts "!!! Unknown link type: #{lTypeName}. Ignoring it."
+                logBug "Unknown link type: #{lTypeName}. Ignoring it."
               end
               if (lContent != nil)
                 lIconURL = iChildElement.attributes['icon_uri'].to_s
@@ -213,7 +213,7 @@ module PBS
               rHeaderJustDefined = false
             end
           else
-            p "!!! Unknown Tag: #{iChildElement.name}. Content: #{iChildElement.content}"
+            logBug "Unknown Tag: #{iChildElement.name}. Content: #{iChildElement.content}"
           end
         end
 

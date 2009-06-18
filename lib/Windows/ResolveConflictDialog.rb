@@ -9,6 +9,8 @@ module PBS
   # This is meant to be inherited to give objects specificities.
   class ResolveConflictDialog < Wx::Dialog
 
+    include Tools
+
     # Those constants differentiate which panel has been chosen by the user
     CHOOSE_EXISTING = 0
     CHOOSE_CONFLICTING = 1
@@ -158,7 +160,7 @@ module PBS
       when CHOOSE_CONFLICTING
         return @ConflictingObjectPanel.getData
       else
-        puts "!!! Unknown choice of conflicting dialog: #{@MergeChoose}. Bug ?"
+        logBug "Unknown choice of conflicting dialog: #{@MergeChoose}."
         return @ConflictingObjectPanel.getData
       end
     end

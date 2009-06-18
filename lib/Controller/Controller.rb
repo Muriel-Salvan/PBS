@@ -150,7 +150,7 @@ module PBS
         lTag = iParams[:tag]
         lShortcutTypeInfo = ioController.TypesPlugins[@TypePluginName]
         if (lShortcutTypeInfo == nil)
-          puts "!!! Shortcut Type #{@TypePluginName} should have been registered, but unable to retrieve it."
+          logBug "Shortcut Type #{@TypePluginName} should have been registered, but unable to retrieve it."
         else
           lLocationName = ''
           if (lTag != nil)
@@ -306,7 +306,7 @@ module PBS
               @CurrentTransactionToBeCancelled = true
               rAction = Wx::ID_CANCEL
             else
-              puts "!!! Unknown decision to take concerning a Tags conflict: the option :tagsConflict is #{@Options[:tagsConflict]}, and the user decision to always apply is #{@CurrentOperationTagsConflicts}. Bug ?"
+              logBug "Unknown decision to take concerning a Tags conflict: the option :tagsConflict is #{@Options[:tagsConflict]}, and the user decision to always apply is #{@CurrentOperationTagsConflicts}."
             end
           end
         end
@@ -381,7 +381,7 @@ module PBS
               @CurrentTransactionToBeCancelled = true
               rAction = Wx::ID_CANCEL
             else
-              puts "!!! Unknown decision to take concerning a Shortcuts conflict: the option :shortcutsConflict is #{@Options[:shortutsConflict]}, and the user decision to always apply is #{@CurrentOperationShortcutsConflicts}. Bug ?"
+              logBug "Unknown decision to take concerning a Shortcuts conflict: the option :shortcutsConflict is #{@Options[:shortutsConflict]}, and the user decision to always apply is #{@CurrentOperationShortcutsConflicts}."
             end
           end
         end
@@ -396,7 +396,7 @@ module PBS
     # * *iMethod* (_Symbol_): The method to call in the registered GUIs
     # * *iParams* (<em>list<Object></em>): Parameters to give the method
     def notifyRegisteredGUIs(iMethod, *iParams)
-      puts "Notify GUIs for #{iMethod.to_s}"
+      logInfo "Notify GUIs for #{iMethod.to_s}"
       @RegisteredGUIs.each do |iRegisteredGUI|
         if (iRegisteredGUI.respond_to?(iMethod))
           iRegisteredGUI.send(iMethod, *iParams)
@@ -460,9 +460,9 @@ module PBS
           if (lValidator.Params != nil)
             executeCommand(iCommandID, lValidator.Params)
           elsif (lValidator.Error != nil)
-            puts "!!! #{lValidator.Error}"
+            logErr lValidator.Error
           else
-            puts '!!! The Command Validator did not return any error, and did not set any parameters either. Skipping the command.'
+            logBug 'The Command Validator did not return any error, and did not set any parameters either. Skipping the command.'
           end
         else
           executeCommand(iCommandID)
@@ -517,7 +517,7 @@ module PBS
     def findRegisteredMenuItemParams(iMenu, iCommandID)
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        puts "!!! Unknown command of ID #{iCommandID}. Ignoring action."
+        logBug "Unknown command of ID #{iCommandID}. Ignoring action."
       else
         # find the registered menu item
         lFound = false
@@ -536,7 +536,7 @@ module PBS
           end
         end
         if (!lFound)
-          puts "!!! Failed to retrieve the registered menu item for command ID #{iCommandID} under menu #{iMenu}. Bug ?"
+          logBug "Failed to retrieve the registered menu item for command ID #{iCommandID} under menu #{iMenu}."
         end
       end
     end
@@ -578,7 +578,7 @@ module PBS
     def findRegisteredToolbarButtonParams(iToolbarButton, iCommandID)
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        puts "!!! Unknown command of ID #{iCommandID}. Ignoring action."
+        logBug "Unknown command of ID #{iCommandID}. Ignoring action."
       else
         # Find the toolbar button
         lFound = false
@@ -596,7 +596,7 @@ module PBS
           end
         end
         if (!lFound)
-          puts "!!! Failed to retrieve the registered toolbar button for command ID #{iCommandID}. Bug ?"
+          logBug "Failed to retrieve the registered toolbar button for command ID #{iCommandID}."
         end
       end
     end
@@ -627,7 +627,7 @@ module PBS
       lCommand = @Commands[iCommandID]
       lOldCommand = nil
       if (lCommand == nil)
-        puts "!!! Command #{iCommandID} is not registered. Check command plugins."
+        logBug "Command #{iCommandID} is not registered. Check command plugins."
         # Provide an empty command for the code block to execute correctly.
         lCommand = {}
       else
@@ -705,7 +705,7 @@ module PBS
       @CommandPlugins.each do |iPluginName, iCommandPluginInfo|
         lCommandID = iCommandPluginInfo[:commandID]
         if (lCommandID == nil)
-          puts "!!! Command plugin #{iPluginName} does not declare any command ID. Ignoring it. Please check the pluginInfo method from this plugin."
+          logBug "Command plugin #{iPluginName} does not declare any command ID. Ignoring it. Please check the pluginInfo method from this plugin."
         else
           if (@Commands[lCommandID] == nil)
             @Commands[lCommandID] = {
@@ -717,7 +717,7 @@ module PBS
               :plugin => iCommandPluginInfo[:plugin]
             }
           else
-            puts "!!! Command #{lCommandID} was already registered. There is a conflict in the commands. Please check command IDs returned by the pluginInfo methods of command plugins."
+            logBug "Command #{lCommandID} was already registered. There is a conflict in the commands. Please check command IDs returned by the pluginInfo methods of command plugins."
           end
         end
       end
@@ -813,37 +813,6 @@ module PBS
       #   list< Shortcut >
       @ShortcutsList = []
 
-      # Create a sample data set
-      # TODO: Delete this before delivering
-      # Tags
-      lTag1 = createTag(@RootTag, 'Tag1', nil)
-      lTag1_1 = createTag(lTag1, 'Tag1.1', nil)
-      lTag1_2 = createTag(lTag1, 'Tag1.2', nil)
-      lTag2 = createTag(@RootTag, 'Tag2', nil)
-      createShortcut(
-        'URL',
-        'www.google.com',
-        { 'title' => 'Google' },
-        { lTag1 => nil, lTag2 => nil }
-      )
-      createShortcut(
-        'Shell',
-        'notepad',
-        { 'title' => 'Bloc-notes' },
-        { lTag1_1 => nil }
-      )
-      createShortcut(
-        'Shell',
-        'calc',
-        { 'title' => 'Calculatrice' },
-        {}
-      )
-      createShortcut(
-        'Shell',
-        'irb',
-        { 'title' => 'Ruby' },
-        { lTag1_1 => nil }
-      )
     end
 
     # Read the plugins identified by a given ID, and return a map of the instantiated plugins.
@@ -874,7 +843,7 @@ module PBS
             if (lPlugin.class.method_defined?(:pluginInfo))
               lPluginInfo.merge!(lPlugin.pluginInfo)
             else
-              puts "!!! Plugin #{lPluginName} does not have any pluginInfo method."
+              logBug "Plugin #{lPluginName} does not have any pluginInfo method."
             end
             # Create dynamic content of the plugin info
             lPluginInfo.merge!({
@@ -894,15 +863,10 @@ end
             # And go on
             lIdxPlugin += 1
           rescue Exception
-            puts "!!! Error while instantiating one of the #{iPluginsID} plugin (#{lRequireName}): #{$!}"
-            puts "!!! Check that class PBS::#{iPluginsID}::#{lPluginName} has been correctly defined in it."
-            puts '!!! This plugin will be ignored.'
-            puts $!.backtrace.join("\n")
+            logBug "Error while instantiating one of the #{iPluginsID} plugin (#{lRequireName}): #{$!}\nCheck that class PBS::#{iPluginsID}::#{lPluginName} has been correctly defined in it.\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
           end
         rescue Exception
-          puts "!!! Error while loading one of the #{iPluginsID} plugin (#{lRequireName}): #{$!}"
-          puts '!!! This plugin will be ignored.'
-          puts $!.backtrace.join("\n")
+          logBug "Error while loading one of the #{iPluginsID} plugin (#{lRequireName}): #{$!}\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
         end
       end
 
@@ -937,7 +901,7 @@ end
           end
         end
       else
-        puts "!!! Unknown value for option :tagsUnicity: #{@Options[:tagsUnicity]}. Bug ?"
+        logBug "Unknown value for option :tagsUnicity: #{@Options[:tagsUnicity]}."
       end
 
       return rSame
@@ -1021,7 +985,7 @@ end
         rSame = ((iShortcut.Content == iOtherContent) and
                  (metadataSameAs?(iShortcut.Metadata, iOtherMetadata)))
       else
-        puts "!!! Unknown value for option :shortcutsUnicity: #{@Options[:shortcutsUnicity]}. Bug ?"
+        logBug "Unknown value for option :shortcutsUnicity: #{@Options[:shortcutsUnicity]}."
       end
 
       return rSame
@@ -1060,7 +1024,7 @@ end
     def ensureUndoableOperation(iDefaultTitle)
       if (@CurrentUndoableOperation == nil)
         # Create a default undoable operation
-        puts "!!! Operation \"#{iDefaultTitle}\" was not protected by undoableOperation, and it modifies some data. Create a default UndoableOperation."
+        logBug "Operation \"#{iDefaultTitle}\" was not protected by undoableOperation, and it modifies some data. Create a default UndoableOperation."
         undoableOperation(iDefaultTitle) do
           yield
         end

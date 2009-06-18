@@ -92,7 +92,7 @@ URL=#{iShortcut.Content}
 "
           end
         else
-          puts "!!! Can't create a file for Shortcuts of type #{iShortcut.Type.pluginName}."
+          logErr "Can't create a file for Shortcuts of type #{iShortcut.Type.pluginName}. Need to adapt the Files plugin to this Shortcuts' type."
         end
       end
 

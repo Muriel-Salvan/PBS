@@ -61,7 +61,7 @@ module PBS
           lXML = REXML::Document.new(iFile)
           lTagsElement = lXML.root.elements['tags']
           if (lTagsElement == nil)
-            puts "!!! XML file does not have a \"tags\" tag. Invalid XML file, ignoring it."
+            logErr "XML file does not have a \"tags\" tag. Invalid XML file, ignoring it."
           else
             # Keep a correspondance between the IDs given to Tags and the real Tags associated to it
             # map< Integer, Tag >
@@ -70,7 +70,7 @@ module PBS
             # And now the Shortcuts
             lShortcutsElement = lXML.root.elements['shortcuts']
             if (lShortcutsElement == nil)
-              puts "!!! XML file does not have a \"shortcuts\" tag. Invalid XML file, ignoring it."
+              logErr "XML file does not have a \"shortcuts\" tag. Invalid XML file, ignoring it."
             else
               lShortcutsElement.elements.each do |iShortcutElement|
                 lTypeName = iShortcutElement.attributes['type']
@@ -83,7 +83,7 @@ module PBS
                 iShortcutElement.elements['tags'].elements.each do |iTagElement|
                   lTag = lIDsToTags[iTagElement.attributes['id'].to_i]
                   if (lTag == nil)
-                    puts "!!! Shortcut #{iShortcutElement.attributes['name']} was referencing Tag of ID #{iTagElement.attributes['id'].to_i}, but no Tag was registered under this ID in the XML file. Ignoring this Tag."
+                    logBug "Shortcut #{iShortcutElement.attributes['name']} was referencing Tag of ID #{iTagElement.attributes['id'].to_i}, but no Tag was registered under this ID in the XML file. Ignoring this Tag."
                   else
                     lTags[lTag] = nil
                   end

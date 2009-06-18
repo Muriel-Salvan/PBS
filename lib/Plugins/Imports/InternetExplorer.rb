@@ -11,6 +11,8 @@ module PBS
 
     class InternetExplorer
 
+      include Tools
+
       # Give the description of this plugin
       #
       # Return:
@@ -39,7 +41,7 @@ module PBS
             lRegType, lFavoritesPath = iReg.read('Favorites')
           end
         rescue Exception
-          puts "!!! Unable to get the favorites path: #{$!}."
+          logErr "Unable to get the favorites path: #{$!}."
           lFavoritesPath = nil
         end
         if (lFavoritesPath != nil)
@@ -51,7 +53,7 @@ module PBS
               end
             end
           else
-            puts "!!! Import plugin WebBookmarks not found. InternetExplorer import depends on it."
+            logBug "Import plugin WebBookmarks not found. InternetExplorer import depends on it."
           end
         end
       end

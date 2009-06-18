@@ -37,10 +37,10 @@ module PBS
       # Parameters:
       # * *ioController* (_Controller_): The data model controller
       def execute(ioController)
-        puts "=== Tags:"
-        dumpTag(ioController.RootTag)
-        puts "=== Shortcuts:"
-        dumpShortcutsList(ioController.ShortcutsList)
+        logDebug "=== Tags:"
+        logDebug dumpTag(ioController.RootTag)
+        logDebug "=== Shortcuts:"
+        logDebug dumpShortcutsList(ioController.ShortcutsList)
         ioController.notifyRegisteredGUIs(:onDevDebug)
       end
 

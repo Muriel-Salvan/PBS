@@ -215,10 +215,10 @@ module PBS
                 @BitmapsList << lBitmap
                 notifyBitmapsListChanged
               else
-                puts "!!! Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
+                logErr "Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
               end
             rescue
-              puts "!!! Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
+              logErr "Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
             end
           end
         end
@@ -311,7 +311,7 @@ module PBS
           @BitmapsList << createBitmapFromFile(iFileName)
         rescue Exception
           # Happens if a file not understandeable by Wx::Bitmap appears in the directory. Nothing serious.
-          puts "!!! Error while reading file #{iFileName}: #{$!}. Ignoring this file."
+          logErr "Error while reading file #{iFileName}: #{$!}. Ignoring this file."
         end
       end
 

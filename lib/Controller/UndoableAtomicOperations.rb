@@ -58,6 +58,8 @@ module PBS
     # Class that creates a new Tag as a child of an existing one
     class UAO_CreateTag < UndoableAtomicOperation
 
+      include Tools
+
       # Constructor
       #
       # Parameters:
@@ -77,7 +79,7 @@ module PBS
       # Return:
       # * _Tag_: The newly created Tag
       def doOperation
-        puts "UAO_CreateTag #{@NewTag.Name}"
+        logDebug "UAO_CreateTag #{@NewTag.Name}"
         lOldChildrenList = @ParentTag.Children.clone
         @ParentTag._UNDO_addChild(@NewTag)
         @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
@@ -87,7 +89,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_CreateTag #{@NewTag.Name}"
+        logDebug "UNDO - UAO_CreateTag #{@NewTag.Name}"
         lOldChildrenList = @ParentTag.Children.clone
         @ParentTag._UNDO_deleteChild(@NewTag)
         @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
@@ -97,6 +99,8 @@ module PBS
 
     # Class that deletes a Tag
     class UAO_DeleteTag < UndoableAtomicOperation
+
+      include Tools
 
       # Constructor
       #
@@ -112,7 +116,7 @@ module PBS
 
       # Perform the operation
       def doOperation
-        puts "UAO_DeleteTag #{@Tag.Name}"
+        logDebug "UAO_DeleteTag #{@Tag.Name}"
         lOldChildrenList = @ParentTag.Children.clone
         @ParentTag._UNDO_deleteChild(@Tag)
         @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
@@ -120,7 +124,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_DeleteTag #{@Tag.Name}"
+        logDebug "UNDO - UAO_DeleteTag #{@Tag.Name}"
         lOldChildrenList = @ParentTag.Children.clone
         @ParentTag._UNDO_addChild(@Tag)
         @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
@@ -130,6 +134,8 @@ module PBS
 
     # Class that modifies a Tag
     class UAO_UpdateTag < UndoableAtomicOperation
+
+      include Tools
 
       # Constructor
       #
@@ -177,7 +183,7 @@ module PBS
 
       # Perform the operation
       def doOperation
-        puts "UAO_UpdateTag #{@OldName}"
+        logDebug "UAO_UpdateTag #{@OldName}"
         if ((@NewName != nil) or
             (@NewIcon != nil) or
             (@OldIcon != nil))
@@ -206,7 +212,7 @@ module PBS
       # Undo the operation
       def undoOperation
         # Retrieve the Shortcut
-        puts "UNDO - UAO_UpdateTag #{@NewName}"
+        logDebug "UNDO - UAO_UpdateTag #{@NewName}"
         if ((@OldName != nil) or
             (@OldIcon != nil) or
             (@NewIcon != nil))
@@ -236,6 +242,8 @@ module PBS
 
     # Class that creates a new Shortcut
     class UAO_CreateShortcut < UndoableAtomicOperation
+      
+      include Tools
 
       # Constructor
       #
@@ -256,7 +264,7 @@ module PBS
       # Return:
       # * _Shortcut_: The newly created Shortcut
       def doOperation
-        puts "UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
+        logDebug "UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
         @Controller._UNDO_addShortcut(@NewShortcut)
         @Controller.notifyShortcutCreate(@NewShortcut)
 
@@ -265,7 +273,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
+        logDebug "UNDO - UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
         @Controller._UNDO_deleteShortcut(@NewShortcut)
         @Controller.notifyShortcutDelete(@NewShortcut)
       end
@@ -274,6 +282,8 @@ module PBS
 
     # Class that deletes a Shortcut
     class UAO_DeleteShortcut < UndoableAtomicOperation
+
+      include Tools
 
       # Constructor
       #
@@ -288,14 +298,14 @@ module PBS
 
       # Perform the operation
       def doOperation
-        puts "UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
+        logDebug "UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
         @Controller._UNDO_deleteShortcut(@Shortcut)
         @Controller.notifyShortcutDelete(@Shortcut)
       end
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
+        logDebug "UNDO - UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
         @Controller._UNDO_addShortcut(@Shortcut)
         @Controller.notifyShortcutCreate(@Shortcut)
       end
@@ -304,6 +314,8 @@ module PBS
 
     # Class that modifies a Shortcut
     class UAO_UpdateShortcut < UndoableAtomicOperation
+
+      include Tools
 
       # Constructor
       #
@@ -343,7 +355,7 @@ module PBS
 
       # Perform the operation
       def doOperation
-        puts "UAO_ModifySC #{@Shortcut.Metadata['title']}"
+        logDebug "UAO_ModifySC #{@Shortcut.Metadata['title']}"
         if (@NewContent != nil)
           @Shortcut._UNDO_setContent(@NewContent)
         end
@@ -363,7 +375,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_ModifySC #{@Shortcut.Metadata['title']}"
+        logDebug "UNDO - UAO_ModifySC #{@Shortcut.Metadata['title']}"
         if (@OldContent != nil)
           @Shortcut._UNDO_setContent(@OldContent)
         end
@@ -386,6 +398,8 @@ module PBS
     # Class that sets current file as modified
     class UAO_SetFileModified < UndoableAtomicOperation
 
+      include Tools
+
       # Constructor
       #
       # Parameters:
@@ -398,14 +412,14 @@ module PBS
 
       # Perform the operation
       def doOperation
-        puts 'UAO_SetFileModified'
+        logDebug 'UAO_SetFileModified'
         @Controller._UNDO_setCurrentOpenedFileModified(true)
         @Controller.notifyCurrentOpenedFileUpdate
       end
 
       # Undo the operation
       def undoOperation
-        puts 'UNDO - UAO_SetFileModified'
+        logDebug 'UNDO - UAO_SetFileModified'
         @Controller._UNDO_setCurrentOpenedFileModified(@OldModifiedFlag)
         @Controller.notifyCurrentOpenedFileUpdate
       end
@@ -414,6 +428,8 @@ module PBS
 
     # Class that changes the name of the opened file
     class UAO_ChangeFile < UndoableAtomicOperation
+
+      include Tools
 
       # Constructor
       #
@@ -430,7 +446,7 @@ module PBS
 
       # Perform the operation
       def doOperation
-        puts "UAO_ChangeFile #{@NewFileName}"
+        logDebug "UAO_ChangeFile #{@NewFileName}"
         @Controller._UNDO_setCurrentOpenedFileName(@NewFileName)
         @Controller._UNDO_setCurrentOpenedFileModified(false)
         @Controller.notifyCurrentOpenedFileUpdate
@@ -438,7 +454,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        puts "UNDO - UAO_ChangeFile #{@NewFileName}"
+        logDebug "UNDO - UAO_ChangeFile #{@NewFileName}"
         @Controller._UNDO_setCurrentOpenedFileName(@OldFileName)
         @Controller._UNDO_setCurrentOpenedFileModified(@OldFileModified)
         @Controller.notifyCurrentOpenedFileUpdate

@@ -126,7 +126,7 @@ module PBS
             when Wx::DRAG_COPY
               lCopyMode = Wx::ID_COPY
             else
-              put "!!! Unknown suggested result: #{iSuggestedResult}"
+              logBug "Unknown suggested result: #{iSuggestedResult}"
             end
             lPasteOK, lErrors = isPasteAuthorized?(
               @Controller,
@@ -219,7 +219,7 @@ module PBS
         when Wx::DRAG_COPY
           lCopyMode = Wx::ID_COPY
         else
-          put "!!! Unknown suggested result: #{iSuggestedResult}"
+          logBug "Unknown suggested result: #{iSuggestedResult}"
         end
         lPasteOK, lErrors = isPasteAuthorized?(
           @Controller,
@@ -234,10 +234,7 @@ module PBS
           end
           return iSuggestedResult
         else
-          puts "!!! Can't drop because of #{lErrors.size} errors:"
-          lErrors.each do |iError|
-            puts "!!! #{iError}"
-          end
+          logErr "Can't drop because of #{lErrors.size} errors:\n#{lErrors.join("\n")}"
           return Wx::DRAG_NONE
         end
       end
@@ -460,7 +457,7 @@ module PBS
               end
             end
           else
-            puts "!!! We are editing an item of unknown ID: #{lID}. Bug ?"
+            logBug "We are editing an item of unknown ID: #{lID}."
           end
         end
         # We always veto the event, as the label was forcefully modified by notifiers during this event
@@ -549,7 +546,7 @@ module PBS
         when ID_SHORTCUT
           lToolTip = lObject.getContentSummary
         else
-          puts "!!! Asking tool tip for an item of unknwown ID: #{lID}. Ignoring it. Bug ?"
+          logBug "Asking tool tip for an item of unknwown ID: #{lID}. Ignoring it."
         end
       end
       if (@LastToolTip != nil)
@@ -801,7 +798,7 @@ module PBS
         end
         set_item_image(iItemID, lIdxImage)
       else
-        puts "!!! Tree node #{iItemID} has unknown ID (#{lID}). It will be marked in the tree. Bug ?"
+        logBug "Tree node #{iItemID} has unknown ID (#{lID}). It will be marked in the tree."
         set_item_text(iItemID, "!!! Unknown Data ID (Node ID: #{iItemID}, Data ID: #{lID}) !!!")
       end
       if ($PBS_DevDebug)
@@ -831,13 +828,13 @@ module PBS
         # Remove a Tag reference
         lNodeID = @TagsToMainTree.delete(lObject)
         if (lNodeID != iNodeID)
-          puts "!!! We are removing node ID #{iNodeID}, referenced for Tag #{lObject.Name}, but this Tag ID was registered for another node of ID #{lNodeID}."
+          logBug "We are removing node ID #{iNodeID}, referenced for Tag #{lObject.Name}, but this Tag ID was registered for another node of ID #{lNodeID}."
         end
       when ID_SHORTCUT
         # Remove a Shortcut reference
         # Nothing to do
       else
-        puts "!!! We are trying to remove a tree node (ID = #{iNodeID}) that is not registered as a Tag not a Shortcut (ID = #{lID}). Bug ?"
+        logBug "We are trying to remove a tree node (ID = #{iNodeID}) that is not registered as a Tag not a Shortcut (ID = #{lID})."
       end
       # And remove the node itself
       delete(iNodeID)
@@ -883,7 +880,7 @@ module PBS
         iSC.Tags.each do |iTag, iNil|
           lTagID = @TagsToMainTree[iTag]
           if (lTagID == nil)
-            puts "!!! Shortcut #{iSC.Metadata['title']} is tagged with #{iTag.Name}, which does not exist in the known tags."
+            logBug "Shortcut #{iSC.Metadata['title']} is tagged with #{iTag.Name}, which does not exist in the known tags."
           else
             lNewNodeID = append_item(lTagID, '')
             set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC ])
@@ -927,7 +924,7 @@ module PBS
       end
       # Just a little Bug detection mechanism ... never know.
       if (!lFound)
-        puts "!!! Object #{iObject} should have been inserted under node #{iParentNodeID}). However no trace of this object in the children nodes. Bug ?"
+        logBug "Object #{iObject} should have been inserted under node #{iParentNodeID}). However no trace of this object in the children nodes."
       end
     end
 
@@ -978,7 +975,7 @@ module PBS
       updateTree do
         lTagNodeID = @TagsToMainTree[iParentTag]
         if (lTagNodeID == nil)
-          puts '!!! The updated Tag was not inserted in the main tree. Bug ?'
+          logBug 'The updated Tag was not inserted in the main tree.'
         else
           # First remove Tags that are not part of the children anymore
           children(lTagNodeID).each do |iChildNodeID|
@@ -1040,7 +1037,7 @@ module PBS
           iSC.Tags.each do |iTag, iNil|
             lTagNodeID = @TagsToMainTree[iTag]
             if (lTagNodeID == nil)
-              puts "!!! Tag #{iTag.Name} should have been inserted in the main tree. However it is not registered. Bug ?"
+              logBug "Tag #{iTag.Name} should have been inserted in the main tree. However it is not registered."
             else
               deleteObjectFromTree(lTagNodeID, iSC)
             end
@@ -1061,7 +1058,7 @@ module PBS
         # Retrieve the existing node
         lTagNodeID = @TagsToMainTree[iTag]
         if (lTagNodeID == nil)
-          puts "!!! Normally the tree should have registered Tag #{iTag.Name}, but unable to retrieve it."
+          logBug "Normally the tree should have registered Tag #{iTag.Name}, but unable to retrieve it."
         else
           # Refresh it
           updateTreeNode(lTagNodeID)
@@ -1127,7 +1124,7 @@ module PBS
           # Find the node of the Tag
           lParentNodeID = @TagsToMainTree[iParentTag]
           if (lParentNodeID == nil)
-            puts "!!! Normally tag #{iParentTag.Name} should have been registered in the main tree, but unable to retrieve it. Bug ?"
+            logBug "Normally tag #{iParentTag.Name} should have been registered in the main tree, but unable to retrieve it."
           else
             # Check each child, and update the one for our Shortcut
             children(lParentNodeID).each do |iChildNodeID|
@@ -1232,9 +1229,9 @@ module PBS
 
     # Display some debugging info
     def onDevDebug
-      puts '=== Correspondance between Tag IDs and Node IDs:'
+      logDebug '=== Correspondance between Tag IDs and Node IDs:'
       @TagsToMainTree.each do |iTag, iNodeID|
-        puts "#{iTag.Name} => #{iNodeID}"
+        logDebug "#{iTag.Name} => #{iNodeID}"
       end
     end
 
@@ -1250,7 +1247,7 @@ module PBS
       lParentNodeID = get_item_parent(iNodeID)
       lParentID, rParentTag = get_item_data(lParentNodeID)
       if (lParentID != ID_TAG)
-        puts "Parent node #{lParentNodeID} should be flagged as a Tag, but is flagged as #{lParentID}. Bug ?"
+        logBug "Parent node #{lParentNodeID} should be flagged as a Tag, but is flagged as #{lParentID}."
       end
 
       return rParentTag
@@ -1301,7 +1298,7 @@ module PBS
           lParentTag = getParentTag(iSelectionID)
           rSelection.selectShortcut(lObject, lParentTag)
         else
-          puts "!!! One of the selected items has an unknown ID (#{lID}). Bug ?"
+          logBug "One of the selected items has an unknown ID (#{lID})."
         end
       end
 

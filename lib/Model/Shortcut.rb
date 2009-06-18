@@ -48,17 +48,27 @@ module PBS
       @Type.getContentSummary(@Content)
     end
 
-    # Dump the Shortcut's info
-    def dump
-      puts "+-Content: #{@Content.inspect}"
-      puts '+-Metadata:'
+    # Dump the Shortcut's info in a String
+    #
+    # Parameters:
+    # * *iPrefix* (_String_): The prefix to append to the strings [optional = '']
+    # Return:
+    # * _String_: The dump
+    def dump(iPrefix)
+      rDump = ''
+
+      rDump += "#{iPrefix}+-Type: #{@Type.inspect}\n"
+      rDump += "#{iPrefix}+-Content: #{@Content.inspect}\n"
+      rDump += "#{iPrefix}+-Metadata:\n"
       @Metadata.each do |iKey, iValue|
-        puts "| +-#{iKey}: #{iValue}"
+        rDump += "#{iPrefix}| +-#{iKey}: #{iValue.inspect}\n"
       end
-      puts '+-Tags:'
+      rDump += "#{iPrefix}+-Tags:\n"
       @Tags.each do |iTag, iNil|
-        puts "  +-#{iTag.Name}"
+        rDump += "#{iPrefix}  +-#{iTag.Name} (@#{iTag.object_id})\n"
       end
+
+      return rDump
     end
 
     # Method that runs the Shortcut
