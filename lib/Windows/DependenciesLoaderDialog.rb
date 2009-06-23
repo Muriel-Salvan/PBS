@@ -326,27 +326,30 @@ module PBS
             if (!lProgressDialog.update(lIdxCount, "Installing gem for requirement #{iRequireName} ..."))
               break
             end
-            # TODO (Ruby): Correct `` implementation for gem to be invoked wihout .bat extension
-            lCmd = "gem.bat install -i \"#{iInstallDir}\" #{lGemInstallCommand}"
-            logInfo "Installing Gem for dependency #{iRequireName}: #{lCmd}"
-            lInstallOutput = `#{lCmd}`
-            logInfo "Installation done:\n#{lInstallOutput}"
-            @LoadableRequires << iRequireName
-            # Add the directory if it is not a standard one
-            if (!@RequireToPanels[iRequireName].installDirStandard?)
-              # Retrieve the installed gem directory
-              lGemName = lGemInstallCommand.split[0]
-              lFound = false
-              Dir.glob("#{iInstallDir}/gems/#{lGemName}*").each do |iDir|
-                if (File.exists?("#{iDir}/lib"))
-                  @ExternalDirectories << "#{iDir}/lib"
-                  lFound = true
+            logInfo "Installing Gem for dependency #{iRequireName}: #{lGemInstallCommand}"
+            lSuccess = installGem(iInstallDir, lGemInstallCommand, lProgressDialog)
+            if (lSuccess)
+              logInfo 'Installation done successfully.'
+              @LoadableRequires << iRequireName
+              # Add the directory if it is not a standard one
+              if (!@RequireToPanels[iRequireName].installDirStandard?)
+                # Retrieve the installed gem directory
+                lGemName = lGemInstallCommand.split[0]
+                lFound = false
+                Dir.glob("#{iInstallDir}/gems/#{lGemName}*").each do |iDir|
+                  if (File.exists?("#{iDir}/lib"))
+                    @ExternalDirectories << "#{iDir}/lib"
+                    lFound = true
+                  end
+                end
+                if (!lFound)
+                  logErr "Unable to find the installed directory #{iInstallDir}/gems/#{lGemName}*. It is possible that #{iRequireName} dependency will not be installed correctly."
                 end
               end
-              if (!lFound)
-                logErr "Unable to find the installed directory #{iInstallDir}/gems/#{lGemName}*. It is possible that #{iRequireName} dependency will not be installed correctly."
-              end
+            else
+              logErr "Installing Gem \"#{lGemInstallCommand}\" ended in error. Please try to install it manually."
             end
+            lIdxCount += 1
           end
           lProgressDialog.destroy
         end
@@ -355,6 +358,42 @@ module PBS
 
       notifyInstallDecisionChanged
 
+    end
+
+    # Install a Gem
+    # Only this method should have a dependency on RubyGems.
+    # It calls the internal API of RubyGems: do not invoke gem binary, as it has to work also in an embedded binary (RubyGems statically compiled in Ruby) for packaging.
+    #
+    # Parameters:
+    # * *iInstallDir* (_String_): The directory to install the Gem to.
+    # * *iInstallCmd* (_String_): The gem install parameters
+    # * *iProgressDialog* (<em>Wx::ProgressDialog</em>): The progress dialog to update eventually
+    # Return:
+    # * _Boolean_: Success ?
+    def installGem(iInstallDir, iInstallCmd, iProgressDialog)
+      rSuccess = true
+
+      # Add options to the command
+      lCmd = "#{iInstallCmd} --no-rdoc --no-ri --no-test"
+      # this require is left here, as we don't want to need it if we don't call this method.
+      require 'rubygems/commands/install_command'
+      # Create the RubyGems command
+      lRubyGemsInstallCmd = Gem::Commands::InstallCommand.new
+      lRubyGemsInstallCmd.handle_options(lCmd.split)
+      begin
+        lRubyGemsInstallCmd.execute
+      rescue Gem::SystemExitException
+        # For RubyGems, this is normal behaviour: success results in an exception thrown with exit_code 0.
+        if ($!.exit_code != 0)
+          logBug "RubyGems returned error code #{$!.exit_code} while installing #{iInstallCmd}."
+          rSuccess = false
+        end
+      rescue Exception
+        logBug "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{caller.join("\n")}"
+        rSuccess = false
+      end
+
+      return rSuccess
     end
 
     # Notify that an install decision of one of the dependencies has changed
