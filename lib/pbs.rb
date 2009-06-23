@@ -99,6 +99,7 @@ end
 # Require those files after having defined global $PBS_* variables, as it will be used during require
 # Common utilities
 require 'Tools.rb'
+require 'DataObject.rb'
 # The model
 require 'Model/Common.rb'
 require 'Model/Tag.rb'

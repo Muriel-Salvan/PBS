@@ -717,35 +717,8 @@ module PBS
     # Return:
     # * <em>list<String></em>: The list of directories
     def getExternalLibDirs
-      rList = []
+      rList = getLocalExternalLibDirs
 
-      # Manually set libs in local PBS installation
-      Dir.glob("#{$PBS_ExtDir}/*") do |iDir|
-        if (File.exists?("#{iDir}/lib"))
-          rList << "#{iDir}/lib"
-        end
-      end
-      # Manually set Gems in local PBS installation
-      if (File.exists?($PBS_ExtGemsDir))
-        Dir.glob("#{$PBS_ExtGemsDir}/gems/*") do |iDir|
-          if (File.exists?("#{iDir}/lib"))
-            rList << "#{iDir}/lib"
-          end
-        end
-      end
-      # Every directory from GEM_PATH if it exists
-      # We do so as we don't want to depend on RubyGems.
-      if (defined?(Gem))
-        Gem.path.each do |iGemDir|
-          if (File.exists?("#{iGemDir}/gems"))
-            Dir.glob("#{iGemDir}/gems/*") do |iDir|
-              if (File.exists?("#{iDir}/lib"))
-                rList << "#{iDir}/lib"
-              end
-            end
-          end
-        end
-      end
       # Every previously searched directory for this architecture
       if (@Options[:externalLibDirs][RUBY_PLATFORM] != nil)
         @Options[:externalLibDirs][RUBY_PLATFORM].each do |iDir|
@@ -761,10 +734,8 @@ module PBS
     # Initialize the controller once the main_loop has been called
     # This lets messages pop up.
     def init
-      # We save it as we might need to restore it completely
-      lOrgLoadPath = $LOAD_PATH.clone
       # Add external libraries directories to the load path
-      $LOAD_PATH.concat(getExternalLibDirs)
+      addToLoadPath(getExternalLibDirs)
 
       # Load plugins
       # Map keeping trace of missing dependencies: for each require name, the gem install command and the list of [ plugin type, plugin name, corresponding plugins map, constructor parameters ] that depend on this require.
@@ -787,7 +758,7 @@ module PBS
           end
           @Options[:externalLibDirs][RUBY_PLATFORM].concat(lExternalDirs)
           # Replace the load path with the new external lib dirs
-          $LOAD_PATH.replace(lOrgLoadPath + getExternalLibDirs)
+          addToLoadPath(getExternalLibDirs)
           # Get the list of dependencies that should be loadable
           lLoadableDeps = iDialog.getLoadableDependencies
           # Build the map of requires needed per plugin ( [ Plugin type ID, Plugin name ] ): the list of requires that need to be installed, and the corresponding plugins map to complete and parameters to give the constructor

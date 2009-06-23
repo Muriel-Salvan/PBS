@@ -14,9 +14,6 @@ module PBS
   ID_TAG = 0
   ID_SHORTCUT = 1
 
-  # An invalid icon
-  INVALID_ICON = Wx::Bitmap.new("#{$PBS_GraphicsDir}/InvalidIcon.png")
-
   # This module define methods that are useful to several functions in PBS, but are not GUI related.
   # They could be used in a command-line mode.
   # No reference to Wx should present in here
@@ -92,179 +89,173 @@ module PBS
 
     end
 
-    # Object that is used with the clipboard
-    class DataObjectSelection < Wx::DataObject
+    # Get the list of local library directories:
+    # * From the ext directory
+    # * From the ext gems
+    # * From declared directories in GEM_PATH
+    #
+    # Return:
+    # * <em>list<String></em>: The list of directories
+    def getLocalExternalLibDirs
+      rList = []
 
-      # constructor
-      def initialize
-        super
-        @Data = nil
-        @DataAsText = nil
+      # Manually set libs in local PBS installation
+      Dir.glob("#{$PBS_ExtDir}/*") do |iDir|
+        if (File.exists?("#{iDir}/lib"))
+          rList << "#{iDir}/lib"
+        end
       end
-
-      # Set the data to send to the clipboard
-      #
-      # Parameters:
-      # * *iCopyType* (_Integer_): Type of the copy (Wx::ID_COPY/Wx::ID_CUT)
-      # * *iCopyID* (_Integer_): ID of the copy
-      # * *iSerializedSelection* (<em>MultipleSelection::Serialized</em>): The serialized selection (can be nil for acks)
-      def setData(iCopyType, iCopyID, iSerializedSelection)
-        @Data = Marshal.dump( [ iCopyType, iCopyID, iSerializedSelection ] )
-        if (iSerializedSelection == nil)
-          @DataAsText = nil
-        else
-          @DataAsText = iSerializedSelection.getSingleContent
+      # Manually set Gems in local PBS installation
+      if (File.exists?($PBS_ExtGemsDir))
+        Dir.glob("#{$PBS_ExtGemsDir}/gems/*") do |iDir|
+          if (File.exists?("#{iDir}/lib"))
+            rList << "#{iDir}/lib"
+          end
+        end
+      end
+      # Every directory from GEM_PATH if it exists
+      # We do so as we don't want to depend on RubyGems.
+      if (defined?(Gem))
+        Gem.path.each do |iGemDir|
+          if (File.exists?("#{iGemDir}/gems"))
+            Dir.glob("#{iGemDir}/gems/*") do |iDir|
+              if (File.exists?("#{iDir}/lib"))
+                rList << "#{iDir}/lib"
+              end
+            end
+          end
         end
       end
 
-      # Get the data from the clipboard
-      #
-      # Return:
-      # * _Integer_: Type of the copy (Wx::ID_COPY/Wx::ID_CUT)
-      # * _Integer_: ID of the copy
-      # * <em>MultipleSelection::Serialized</em>: The serialized selection (can be nil for acks)
-      def getData
-        return Marshal.load(@Data)
-      end
-
-      # Get the data format
-      #
-      # Return:
-      # * <em>Wx::DataFormat</em>: The data format
-      def self.getDataFormat
-        if (!defined?(@@PBS_CLIPBOARD_DATA_FORMAT))
-          # Custom format, that ensures only PBS will use this clipboard data
-          @@PBS_CLIPBOARD_DATA_FORMAT = Wx::DataFormat.new('PBSClipboardDataFormat')
-        end
-        return @@PBS_CLIPBOARD_DATA_FORMAT
-      end
-
-      # Get the list of all supported formats.
-      #
-      # Parameters:
-      # * *iDirection* (_Object_): ? Not documented
-      # Return:
-      # * <em>list<Wx::DataFormat></em>: List of supported data formats
-      def get_all_formats(iDirection)
-        if (@DataAsText != nil)
-          return [ DataObjectSelection.getDataFormat, Wx::DF_TEXT ]
-        else
-          return [ DataObjectSelection.getDataFormat ]
-        end
-      end
-
-      # Method used by the clipboard itself to fill data
-      #
-      # Parameters:
-      # * *iFormat* (<em>Wx::DataFormat</em>): The format used
-      # * *iData* (_String_): The data
-      def set_data(iFormat, iData)
-        case iFormat
-        when Wx::DF_TEXT
-          @DataAsText = iData
-        when DataObjectSelection.getDataFormat
-          @Data = iData
-        else
-          logBug "Set unknown format: #{iFormat}"
-        end
-      end
-
-      # Method used by Wxruby to retrieve the data
-      #
-      # Parameters:
-      # * *iFormat* (<em>Wx::DataFormat</em>): The format used
-      # Return:
-      # * _String_: The data
-      def get_data_here(iFormat)
-        rData = nil
-
-        case iFormat
-        when Wx::DF_TEXT
-          rData = @DataAsText
-        when DataObjectSelection.getDataFormat
-          rData = @Data
-        else
-          logBug "Asked unknown format: #{iFormat}"
-        end
-
-        return rData
-      end
-
-      # Redefine this method to be used with Wx::DataObjectComposite that requires it
-      #
-      # Parameters:
-      # * *iFormat* (<em>Wx::DataFormat</em>): The format used
-      # Return:
-      # * _Integer_: The data size
-      def get_data_size(iFormat)
-        rDataSize = 0
-
-        case iFormat
-        when Wx::DF_TEXT
-          # Add 1, otherwise it replaces last character with \0x00
-          rDataSize = @DataAsText.length + 1
-        when DataObjectSelection.getDataFormat
-          rDataSize = @Data.length
-        else
-          logBug "Asked unknown format for size: #{iFormat}"
-        end
-
-        return rDataSize
-      end
-
+      return rList
     end
 
-    # Class that is used for drag'n'drop
-    class SelectionDropSource < Wx::DropSource
+    # Adds a list of directories to the load path, ensuring no doublons
+    #
+    # Parameters:
+    # *iDirsList* (<em>list<String></em>): The list of directories
+    def addToLoadPath(iDirsList)
+      $LOAD_PATH.replace(($LOAD_PATH + iDirsList).uniq)
+    end
 
-      # Constructor
-      #
-      # Parameters:
-      # * *iDragImage* (<em>Wx::DragImage</em>): The drag image to display
-      # * *iWindow* (<em>Wx::Window</em>): The window initiating the Drag'n'Drop
-      # * *iSelection* (_MultipleSelection_): The selection being dragged
-      # * *iController* (_Controller_): The data model controller
-      def initialize(iDragImage, iWindow, iSelection, iController)
-        super(iWindow)
+    # Ensure that WxRuby is up and running in our environment
+    # This method uses sendMsg method to notify the user. This method has to be defined by the caller.
+    #
+    # Parameters:
+    # * *iLauncher* (_Object_): The launcher containing platform dependent methods
+    # Return:
+    # * _Boolean_: Is WxRuby loaded ?
+    def ensureWxRuby(iLauncher)
+      rSuccess = true
 
-        @DragImage = iDragImage
-        @Selection = iSelection
-        @Controller = iController
-        @OldEffect = nil
-
-        # Create the serialized data
-        lData = Tools::DataObjectSelection.new
-        lData.setData(Wx::ID_CUT, @Controller.getNewCopyID, @Selection.getSerializedSelection)
-
-        # Set the DropSource internal data
-        self.data = lData
-      end
-
-      # Change appearance.
-      #
-      # Parameters:
-      # * *iEffect* (_Integer_): The effect to implement. One of DragCopy, DragMove, DragLink and DragNone.
-      # Return:
-      # * _Boolean_: false if you want default feedback, or true if you implement your own feedback. The return values is ignored under GTK.
-      def give_feedback(iEffect)
-        # Drag the image
-        @DragImage.move(Wx::get_mouse_position)
-        # Change icons of items to be moved if the sugggested result (Move/Copy) has changed
-        if (iEffect != @OldEffect)
-          case iEffect
-          when Wx::DRAG_MOVE
-            @Controller.notifyObjectsDragMove(@Selection)
-          when Wx::DRAG_COPY
-            @Controller.notifyObjectsDragCopy(@Selection)
+      begin
+        require 'wx'
+      rescue Exception
+        # Try to check all paths to load for libs
+        addToLoadPath(getLocalExternalLibDirs)
+        begin
+          require 'wx'
+        rescue Exception
+          rSuccess = false
+          # We need to download wxruby gem
+          require 'Tools.rb'
+          if (ensureRubyGems(false))
+            # Now we want to install the Gem
+            iLauncher.sendMsg("WxRuby is not part of this PBS installation.\nInstalling WxRuby will begin after this message, and will take around 10 Mb.\nYou will be notified once it is completed.")
+            rSuccess = installGem($PBS_ExtGemsDir, 'wxruby --version 2.0.0', nil, false)
+            if (rSuccess)
+              # Add the path again
+              addToLoadPath(getLocalExternalLibDirs)
+              begin
+                require 'wx'
+              rescue Exception
+                iLauncher.sendMsg("WxRuby could not be installed (#{$!}).\nPlease install WxRuby manually in PBS local installation, or reinstall PBS completely.")
+              end
+              iLauncher.sendMsg("WxRuby has been successfully installed.\nPBS will start after this message.")
+            else
+              iLauncher.sendMsg("WxRuby could not be installed.\nPlease install WxRuby manually in PBS local installation, or reinstall PBS completely.")
+            end
           else
-            @Controller.notifyObjectsDragNone(@Selection)
+            iLauncher.sendMsg("Unable to install RubyGems.\nPlease download WxRuby manually in PBS local installation, or reinstall PBS completely.")
           end
-          @OldEffect = iEffect
         end
-        # Default feedback is ok
-        return false
       end
 
+      return rSuccess
+    end
+
+    # Ensure RubyGems environment is loaded correctly
+    #
+    # Parameters:
+    # * *iAcceptDialogs* (_Boolean_): Do we accept displaying dialogs ? This is used to indicate that this method is called without wxruby environment set up. [optional = true]
+    # Return:
+    # * _Boolean_: Is RubyGems loaded ?
+    def ensureRubyGems(iAcceptDialogs = true)
+      rSuccess = true
+
+      # First ensure that RubyGems is up and running
+      # This require is left here, as we don't want to need it if we don't call this method.
+      begin
+        require 'rubygems'
+        require 'rubygems/commands/install_command'
+      rescue Exception
+        # RubyGems is not installed.
+        # Use our own installation of RubyGems
+        $LOAD_PATH << "#{$PBS_RootDir}/ext/rubygems"
+        begin
+          require 'rubygems'
+          require 'rubygems/commands/install_command'
+        rescue Exception
+          if (iAcceptDialogs)
+            logBug "PBS installation of RubyGems could not get required: #{$!}.\nException stack\n: #{caller.join("\n")}"
+          else
+            $stderr << "PBS installation of RubyGems could not get required: #{$!}.\nException stack\n: #{caller.join("\n")}\n"
+          end
+          rSuccess = false
+        end
+      end
+
+      return rSuccess
+    end
+
+    # Install a Gem
+    # It calls the internal API of RubyGems: do not invoke gem binary, as it has to work also in an embedded binary (RubyGems statically compiled in Ruby) for packaging.
+    #
+    # Parameters:
+    # * *iInstallDir* (_String_): The directory to install the Gem to.
+    # * *iInstallCmd* (_String_): The gem install parameters
+    # * *iProgressDialog* (<em>Wx::ProgressDialog</em>): The progress dialog to update eventually (nil if none)
+    # * *iAcceptDialogs* (_Boolean_): Do we accept displaying dialogs ? This is used to indicate that this method is called without wxruby environment set up. [optional = true]
+    # Return:
+    # * _Boolean_: Success ?
+    def installGem(iInstallDir, iInstallCmd, iProgressDialog, iAcceptDialogs = true)
+      rSuccess = true
+
+      # Create the RubyGems command
+      lRubyGemsInstallCmd = Gem::Commands::InstallCommand.new
+      lRubyGemsInstallCmd.handle_options(iInstallCmd.split + [ '-i', iInstallDir, '--no-rdoc', '--no-ri', '--no-test' ] )
+      begin
+        lRubyGemsInstallCmd.execute
+      rescue Gem::SystemExitException
+        # For RubyGems, this is normal behaviour: success results in an exception thrown with exit_code 0.
+        if ($!.exit_code != 0)
+          if (iAcceptDialogs)
+            logBug "RubyGems returned error code #{$!.exit_code} while installing #{iInstallCmd}."
+          else
+            $stderr << "RubyGems returned error code #{$!.exit_code} while installing #{iInstallCmd}.\n"
+          end
+          rSuccess = false
+        end
+      rescue Exception
+        if (iAcceptDialogs)
+          logBug "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{caller.join("\n")}"
+        else
+          $stderr << "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{caller.join("\n")}\n"
+        end
+        rSuccess = false
+      end
+
+      return rSuccess
     end
 
     # Log a bug

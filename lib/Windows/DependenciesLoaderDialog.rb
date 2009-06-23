@@ -6,7 +6,7 @@
 module PBS
 
   # Dialog that downloads missing dependencies
-  # Only this class has a dependency on RubyGems
+  # Apart launchers, only this class has a dependency on RubyGems
   class DependenciesLoaderDialog < Wx::Dialog
 
     include Tools
@@ -266,25 +266,6 @@ module PBS
         :style => Wx::DEFAULT_DIALOG_STYLE|Wx::RESIZE_BORDER|Wx::MAXIMIZE_BOX
       )
 
-      # First ensure that RubyGems is up and running
-      # This require is left here, as we don't want to need it if we don't call this method.
-      lRubyGemsFailed = false
-      begin
-        require 'rubygems'
-        require 'rubygems/commands/install_command'
-      rescue Exception
-        # RubyGems is not installed.
-        # Use our own installation of RubyGems
-        $LOAD_PATH << "#{$PBS_RootDir}/ext/rubygems"
-        begin
-          require 'rubygems'
-          require 'rubygems/commands/install_command'
-        rescue Exception
-          logBug "PBS installation of RubyGems could not get required: #{$!}.\nException stack\n: #{caller.join("\n")}"
-          lRubyGemsFailed = true
-        end
-      end
-
       # Mapping of require name to panel
       # map< String, DependencyPanel >
       @RequireToPanels = {}
@@ -315,16 +296,18 @@ module PBS
         :style => Wx::VSCROLL
       )
       @ScrollSizer = Wx::BoxSizer.new(Wx::VERTICAL)
+      # Create each panel
       # list< DependencyPanel >
       lDepsPanels = []
-      # Create each panel
+      # We want RubyGems
+      lRubyGemsLoaded = ensureRubyGems
       iMissingDeps.each do |iRequireName, iRequireInfo|
         iGemInstallCommand, iPluginsInfo = iRequireInfo
         lDepPanel = nil
-        if (lRubyGemsFailed)
-          lDepPanel = DependencyPanel.new(@MainPanel, iRequireName, nil, iPluginsInfo, self)
-        else
+        if (lRubyGemsLoaded)
           lDepPanel = DependencyPanel.new(@MainPanel, iRequireName, iGemInstallCommand, iPluginsInfo, self)
+        else
+          lDepPanel = DependencyPanel.new(@MainPanel, iRequireName, nil, iPluginsInfo, self)
         end
         lDepsPanels << lDepPanel
         @RequireToPanels[iRequireName] = lDepPanel
@@ -407,37 +390,6 @@ module PBS
 
       notifyInstallDecisionChanged
 
-    end
-
-    # Install a Gem
-    # It calls the internal API of RubyGems: do not invoke gem binary, as it has to work also in an embedded binary (RubyGems statically compiled in Ruby) for packaging.
-    #
-    # Parameters:
-    # * *iInstallDir* (_String_): The directory to install the Gem to.
-    # * *iInstallCmd* (_String_): The gem install parameters
-    # * *iProgressDialog* (<em>Wx::ProgressDialog</em>): The progress dialog to update eventually
-    # Return:
-    # * _Boolean_: Success ?
-    def installGem(iInstallDir, iInstallCmd, iProgressDialog)
-      rSuccess = true
-      
-      # Create the RubyGems command
-      lRubyGemsInstallCmd = Gem::Commands::InstallCommand.new
-      lRubyGemsInstallCmd.handle_options(iInstallCmd.split + [ '-i', iInstallDir, '--no-rdoc', '--no-ri', '--no-test' ] )
-      begin
-        lRubyGemsInstallCmd.execute
-      rescue Gem::SystemExitException
-        # For RubyGems, this is normal behaviour: success results in an exception thrown with exit_code 0.
-        if ($!.exit_code != 0)
-          logBug "RubyGems returned error code #{$!.exit_code} while installing #{iInstallCmd}."
-          rSuccess = false
-        end
-      rescue Exception
-        logBug "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{caller.join("\n")}"
-        rSuccess = false
-      end
-
-      return rSuccess
     end
 
     # Notify that an install decision of one of the dependencies has changed
