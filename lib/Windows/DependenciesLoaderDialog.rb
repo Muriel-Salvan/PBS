@@ -421,11 +421,9 @@ module PBS
     def installGem(iInstallDir, iInstallCmd, iProgressDialog)
       rSuccess = true
       
-      # Add options to the command
-      lCmd = "#{iInstallCmd} -i #{iInstallDir} --no-rdoc --no-ri --no-test"
       # Create the RubyGems command
       lRubyGemsInstallCmd = Gem::Commands::InstallCommand.new
-      lRubyGemsInstallCmd.handle_options(lCmd.split)
+      lRubyGemsInstallCmd.handle_options(iInstallCmd.split + [ '-i', iInstallDir, '--no-rdoc', '--no-ri', '--no-test' ] )
       begin
         lRubyGemsInstallCmd.execute
       rescue Gem::SystemExitException
