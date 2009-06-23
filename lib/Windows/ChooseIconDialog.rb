@@ -306,7 +306,7 @@ module PBS
       # TODO: For performance reasons, keep this list in a class variable: this will avoid reading files several times, and it will also reuse previously added icons. However we still have to add the current icon at first place (and replace previous first place by doing it).
       @BitmapsList = [iIcon]
       # Parse all files in the Graphics dir to add some others
-      Dir.glob("#{$PBSRootDir}/Graphics/*") do |iFileName|
+      Dir.glob("#{$PBS_GraphicsDir}/*") do |iFileName|
         begin
           @BitmapsList << createBitmapFromFile(iFileName)
         rescue Exception

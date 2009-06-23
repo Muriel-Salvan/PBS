@@ -158,7 +158,7 @@ module PBS
           iTitle,
           false,
           lImageListManager.getImageIndex(iPanel.object_id) do
-            next Wx::Bitmap.new("#{$PBSRootDir}/Graphics/#{iIconFileName}")
+            next Wx::Bitmap.new("#{$PBS_GraphicsDir}/#{iIconFileName}")
           end
         )
       end

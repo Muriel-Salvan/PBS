@@ -196,6 +196,10 @@ module PBS
 
       # Create the main treeview
       @TCMainTree = PBSTreeCtrl.new(@Controller, self)
+    end
+
+    # Initialize everything, based on the controller
+    def init
       # We register the tree controller itself, as it contains plenty of onXxxx methods.
       @Controller.registerGUI(@TCMainTree)
 
@@ -410,7 +414,7 @@ module PBS
       @TCMainTree.setContextMenu(@EditMenu)
 
       # Don't forget the main icon
-      self.icon = Wx::Icon.new("#{$PBSRootDir}/Graphics/Icon.png")
+      self.icon = Wx::Icon.new("#{$PBS_GraphicsDir}/Icon.png")
 
       # Set the application title, as it depends on context
       setAppTitle

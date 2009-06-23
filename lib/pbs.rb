@@ -3,9 +3,10 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
+# This file has to be required with wxruby already part of the environment
+# This is made on purpose, as depending on the way the pplication is launch, wxruby may be statically compiled in the executable that invoked pbs.rb, and in this case there is no require authorized.
+
 require 'optparse'
-require 'rubygems'
-require 'wx'
 
 # Disabling the Garbage Collector prevents several main WxRuby bugs:
 # * The Drag'n'Drop from the main tree does not cause SegFaults anymore.
@@ -13,9 +14,6 @@ require 'wx'
 # * Not destroying Windows manually does not cause ObjectPreviouslyDeleted exceptions on exit.
 # However, disabling GC does increase memory consumption of around 30Mb every 5 minutes of usage.
 GC.disable
-
-# Add this path to the load path. This allows anybody to execute PBS from any directory, even not the current one.
-$LOAD_PATH << File.dirname(__FILE__)
 
 module PBS
 
@@ -25,9 +23,6 @@ module PBS
   $PBS_VERSION_TAGS = [
     'Alpha'
   ]
-
-  # Root dir used as a based for images directories, plugins to be required...
-  $PBSRootDir = File.dirname(__FILE__)
 
   # Class for the main application
   class MainApp < Wx::App
@@ -44,6 +39,8 @@ module PBS
     # Initialize the application
     def on_init
       lMainFrame = MainFrame.new(nil, @Controller)
+      @Controller.init
+      lMainFrame.init
       # Register all windows that will receive notifications
       # The main one
       @Controller.registerGUI(lMainFrame)
@@ -77,9 +74,29 @@ module PBS
     return rOptions
   end
 
+  # Run PBS
+  def self.run
+    # Default variables, that can be altered with command line options
+    $PBS_DevDebug = false
+    $PBS_LogFile = nil
+    # Parse command line arguments
+    lOptions = self.getOptions
+    lSuccess = true
+    begin
+      lOptions.parse(ARGV)
+    rescue Exception
+      puts "Error while parsing arguments: #{$!}"
+      puts lOptions
+      lSuccess = false
+    end
+    if (lSuccess)
+      MainApp.new(PBS::Controller.new).main_loop
+    end
+  end
+
 end
 
-# Require those files after having defined $PBSRootDir, as it will be used during require
+# Require those files after having defined global $PBS_* variables, as it will be used during require
 # Common utilities
 require 'Tools.rb'
 # The model
@@ -94,20 +111,5 @@ require 'Windows/Main.rb'
 
 # Be prepared to be just a library: don't do anything unless called explicitly
 if (__FILE__ == $0)
-  # Default variables, that can be altered with command line options
-  $PBS_DevDebug = false
-  $PBS_LogFile = nil
-  # Parse command line arguments
-  lOptions = PBS::getOptions
-  lSuccess = true
-  begin
-    lOptions.parse(ARGV)
-  rescue Exception
-    puts "Error while parsing arguments: #{$!}"
-    puts lOptions
-    lSuccess = false
-  end
-  if (lSuccess)
-    PBS::MainApp.new(PBS::Controller.new).main_loop
-  end
+  PBS::run
 end

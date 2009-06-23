@@ -15,7 +15,7 @@ module PBS
   ID_SHORTCUT = 1
 
   # An invalid icon
-  INVALID_ICON = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/InvalidIcon.png")
+  INVALID_ICON = Wx::Bitmap.new("#{$PBS_GraphicsDir}/InvalidIcon.png")
 
   # This module define methods that are useful to several functions in PBS, but are not GUI related.
   # They could be used in a command-line mode.
@@ -275,7 +275,7 @@ module PBS
     def logBug(iMsg)
       lCallers = []
       caller[0..-2].each do |iCallerLine|
-        lCallers << iCallerLine.gsub($PBSRootDir, '')
+        lCallers << iCallerLine.gsub($PBS_RootDir, '')
       end
       lCompleteMsg = "Bug: #{iMsg}\nStack:\n#{lCallers.join("\n")}\nNormally you should never encounter this message. Please fill a bug report to PBS with this information to make sure it will be corrected in future releases. Thanks."
       # Log into stderr
@@ -435,9 +435,9 @@ module PBS
       yield(lModalResult, lDialog)
       # If we destroy the window, we get SegFaults during execution when mouse hovers some toolbar icons and moves (except if we disable GC: in this case it works perfectly fine, but consumes tons of memory).
       # If we don't destroy, we get ObjectPreviouslyDeleted exceptions on exit.
-      # So the least harmful is to not destroy it.
+      # So the least harmful is to destroy it without GC.
       # TODO: Find a good solution
-      #lDialog.destroy
+      lDialog.destroy
     end
 
     # Return a valid file name based on a String
@@ -869,7 +869,7 @@ module PBS
       lMinHeight = nil
       # Read every file given as input, and get minimal width/height
       iFileNames.each do |iFileName|
-        lBitmap = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/#{iFileName}")
+        lBitmap = Wx::Bitmap.new("#{$PBS_GraphicsDir}/#{iFileName}")
         if ((lMinWidth == nil) or
             (lBitmap.width < lMinWidth))
           lMinWidth = lBitmap.width

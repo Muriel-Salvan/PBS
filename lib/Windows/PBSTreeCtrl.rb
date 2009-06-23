@@ -41,17 +41,17 @@ module PBS
 
     # Define bitmaps used for layers in the tree
     # !!! Be careful that all of these images MUST have a semi-transparent pixel in their data, otherwise drawing the bitmap on a DC completely ignores the mask. Bug ?
-    BITMAPLAYER_PRIMARY_COPY = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MiniCopy.png")
-    BITMAPLAYER_PRIMARY_CUT = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MiniCut.png")
-    BITMAPLAYER_SECONDARY_COPY = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MicroCopy.png")
-    BITMAPLAYER_SECONDARY_CUT = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MicroCut.png")
-    BITMAPLAYER_DRAG = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/DragNDrop.png")
-    BITMAPLAYER_DRAG_NONE = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/DragNDropCancel.png")
+    BITMAPLAYER_PRIMARY_COPY = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniCopy.png")
+    BITMAPLAYER_PRIMARY_CUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniCut.png")
+    BITMAPLAYER_SECONDARY_COPY = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MicroCopy.png")
+    BITMAPLAYER_SECONDARY_CUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MicroCut.png")
+    BITMAPLAYER_DRAG = Wx::Bitmap.new("#{$PBS_GraphicsDir}/DragNDrop.png")
+    BITMAPLAYER_DRAG_NONE = Wx::Bitmap.new("#{$PBS_GraphicsDir}/DragNDropCancel.png")
 
     # Define default Tag and Shortcuts icons
-    ICON_DEFAULT_TAG = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Tag.png")
-    ICON_DEFAULT_SHORTCUT = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Shortcut.png")
-    ICON_ROOT_TAG = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/MiniIcon.png")
+    ICON_DEFAULT_TAG = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Tag.png")
+    ICON_DEFAULT_SHORTCUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Shortcut.png")
+    ICON_ROOT_TAG = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniIcon.png")
 
     # The class defining the behaviour of the main tree for drop operations
     class SelectionDropTarget < Wx::DropTarget

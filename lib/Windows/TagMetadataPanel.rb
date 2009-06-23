@@ -13,7 +13,7 @@ module PBS
     include Tools
 
     # The default Tag icon
-    DEFAULT_TAG_ICON = Wx::Bitmap.new("#{$PBSRootDir}/Graphics/Tag.png")
+    DEFAULT_TAG_ICON = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Tag.png")
 
     # Set the BitmapButton icon, based on @Icon
     def setBBIcon

@@ -20,7 +20,7 @@ module PBS
         @Controller = iController
 
         # The icon
-        set_icon(makeIcon("#{$PBSRootDir}/Graphics/Icon.png"), 'PBS')
+        set_icon(makeIcon("#{$PBS_GraphicsDir}/Icon.png"), 'PBS')
       end
 
       # Method that adds sub-Tags of a given Tag to a menu

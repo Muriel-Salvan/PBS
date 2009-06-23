@@ -15,6 +15,8 @@ module PBS
 
     class GoogleChrome
 
+      include Tools
+
       # The Google Chrome names to UTF-8 converter
       UTF8_CONVERTER = Iconv.new('UTF-8', 'CP1252')
 
