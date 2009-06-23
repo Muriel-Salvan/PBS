@@ -158,7 +158,6 @@ module PBS
         rescue Exception
           rSuccess = false
           # We need to download wxruby gem
-          require 'Tools.rb'
           if (ensureRubyGems(false))
             # Now we want to install the Gem
             iLauncher.sendMsg("WxRuby is not part of this PBS installation.\nInstalling WxRuby will begin after this message, and will take around 10 Mb.\nYou will be notified once it is completed.")
@@ -197,13 +196,41 @@ module PBS
       # This require is left here, as we don't want to need it if we don't call this method.
       begin
         require 'rubygems'
+        require 'rubygems/command'
         require 'rubygems/commands/install_command'
       rescue Exception
-        # RubyGems is not installed.
+        # RubyGems is not installed (or badly installed).
         # Use our own installation of RubyGems
-        $LOAD_PATH << "#{$PBS_RootDir}/ext/rubygems"
+        # First, clean up possible symbols of previous RubyGems installations
+        if (Kernel.method_defined?(:require_gem))
+          Kernel.send(:remove_method, :require_gem)
+        end
+        if (Kernel.method_defined?(:gem))
+          Kernel.send(:remove_method, :gem)
+        end
+        if (Object.const_defined?(:Gem))
+          Object.send(:remove_const, :Gem)
+        end
+        # Test if gem_original_require exists
         begin
+          gem_original_require
+        rescue ArgumentError
+          # It exists: reset the alias
+          Kernel.send(:remove_method, :require)
+          Kernel.module_eval('alias require gem_original_require')
+        rescue Exception
+          # Nothing to do
+        end
+        # Add our path to rubygems at the beginning of the load path
+        $LOAD_PATH.replace(["#{$PBS_RootDir}/ext/rubygems"] + $LOAD_PATH)
+        # Remove any required file from the require cache concerning rubygems
+        $".delete_if do |iFileName|
+          (iFileName.match(/^rubygems.*$/) != nil)
+        end
+        begin
+          # Now we reload our version of RubyGems
           require 'rubygems'
+          require 'rubygems/command'
           require 'rubygems/commands/install_command'
         rescue Exception
           if (iAcceptDialogs)

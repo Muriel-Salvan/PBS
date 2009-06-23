@@ -290,7 +290,7 @@ module PBS
       # First check if we haven't saved current work
       if (@CurrentOpenedFileModified)
         showModal(Wx::MessageDialog, iParentWindow,
-          "Current Shortcuts are not saved.\nAre you sure you want to discard current Shortcuts to load new ones ?\nYou will still be able to undo the operation in case of mistake.",
+          "Current Shortcuts are not saved.\nAre you sure you want to discard current Shortcuts to load new ones ?",
           :caption => 'Confirm discard',
           :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
         ) do |iModalResult, iDialog|

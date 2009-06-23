@@ -131,6 +131,8 @@ module PBS
     # Class used to factorize new Shortcut commands
     class NewShortcutCommand
 
+      include Tools
+
       # Constructor
       #
       # Parameters:
@@ -158,7 +160,7 @@ module PBS
             lLocationName = " in #{lTag.Name}"
           end
           ioController.undoableOperation("Create new Shortcut#{lLocationName}") do
-            showModal(EditShortcutDialog, lWindow, nil, @RootTag, self, lShortcutTypeInfo[:plugin], lTag) do |iModalResult, iDialog|
+            showModal(EditShortcutDialog, lWindow, nil, ioController.RootTag, ioController, lShortcutTypeInfo[:plugin], lTag) do |iModalResult, iDialog|
               case iModalResult
               when Wx::ID_OK
                 lNewContent, lNewMetadata, lNewTags = iDialog.getData
