@@ -6,6 +6,7 @@
 module PBS
 
   # Dialog that downloads missing dependencies
+  # Only this class has a dependency on RubyGems
   class DependenciesLoaderDialog < Wx::Dialog
 
     include Tools
@@ -26,7 +27,7 @@ module PBS
       # Parameters:
       # * *iParent* (<em>Wx::Window</em>): The parent window
       # * *iRequireName* (_String_): The require name for this dependency
-      # * *iInstallCommand* (_String_): The gem install command for this dependency
+      # * *iInstallCommand* (_String_): The gem install command for this dependency (or nil if RubyGems is missing)
       # * *iPluginsInfo* (<em>list<[PluginType,PluginName,PluginsMap,Params]></em>): Information about plugins dependent on this dependency
       # * *iNotifierControl* (_Object_): The notifier control that will be notified upon changes
       def initialize(iParent, iRequireName, iInstallCommand, iPluginsInfo, iNotifierControl)
@@ -48,17 +49,22 @@ module PBS
         @SBStatus = Wx::StaticBitmap.new(self, Wx::ID_ANY, ICON_KO)
         @RBIgnore = Wx::RadioButton.new(self, Wx::ID_ANY, 'Ignore', :style => Wx::RB_GROUP)
         lRBDirectory = Wx::RadioButton.new(self, Wx::ID_ANY, 'Specify directory')
-        @RBInstall = Wx::RadioButton.new(self, Wx::ID_ANY, "Install (gem install #{iInstallCommand})")
-        @RBInstallIn = Wx::RadioBox.new(self, Wx::ID_ANY, 'Install in',
-          :choices => [
-            "PBS directory (#{$PBS_ExtGemsDir})",
-            "Current host gems (#{Gem.dir})",
-            "Current user gems (#{Gem.user_dir})",
-            "Temporary directory (#{Dir.tmpdir})",
-            'Other directory'
-          ],
-          :style => Wx::RA_SPECIFY_ROWS
-        )
+        if (iInstallCommand == nil)
+          @RBInstall = nil
+          @RBInstallIn = nil
+        else
+          @RBInstall = Wx::RadioButton.new(self, Wx::ID_ANY, "Install (gem install #{iInstallCommand})")
+          @RBInstallIn = Wx::RadioBox.new(self, Wx::ID_ANY, 'Install in',
+            :choices => [
+              "PBS directory (#{$PBS_ExtGemsDir})",
+              "Current host gems (#{Gem.dir})",
+              "Current user gems (#{Gem.user_dir})",
+              "Temporary directory (#{Dir.tmpdir})",
+              'Other directory'
+            ],
+            :style => Wx::RA_SPECIFY_ROWS
+          )
+        end
         # list< String >
         lPluginsList = []
         iPluginsInfo.each do |iPluginInfo|
@@ -76,10 +82,14 @@ module PBS
         lFirstLineSizer.add_item(@SBStatus, :border => 8, :flag => Wx::ALIGN_CENTER|Wx::ALL, :proportion => 0)
         lFirstLineSizer.add_item(@RBIgnore, :flag => Wx::ALIGN_CENTER, :proportion => 0)
         lFirstLineSizer.add_item(lRBDirectory, :flag => Wx::ALIGN_CENTER, :proportion => 0)
-        lFirstLineSizer.add_item(@RBInstall, :flag => Wx::ALIGN_CENTER, :proportion => 0)
+        if (@RBInstall != nil)
+          lFirstLineSizer.add_item(@RBInstall, :flag => Wx::ALIGN_CENTER, :proportion => 0)
+        end
 
         lSBSizer.add_item(lFirstLineSizer, :flag => Wx::GROW, :proportion => 0)
-        lSBSizer.add_item(@RBInstallIn, :flag => Wx::GROW, :proportion => 0)
+        if (@RBInstallIn != nil)
+          lSBSizer.add_item(@RBInstallIn, :flag => Wx::GROW, :proportion => 0)
+        end
         lSBSizer.add_item(lSTUsed, :flag => Wx::GROW, :proportion => 0)
 
         lMainSizer.add_item(lSBSizer, :flag => Wx::GROW, :proportion => 1)
@@ -125,8 +135,10 @@ module PBS
               else
                 # It's ok, we have a valid directory
                 @SBStatus.bitmap = ICON_OK
-                @RBInstallIn.show(false)
-                self.fit
+                if (@RBInstallIn != nil)
+                  @RBInstallIn.show(false)
+                  self.fit
+                end
                 @NotifierControl.notifyInstallDecisionChanged
               end
             else
@@ -134,41 +146,43 @@ module PBS
             end
           end
         end
-        evt_radiobutton(@RBInstall) do |iEvent|
-          # Choose to install the missing dependency
-          @ValidDirectory = nil
-          @SBStatus.bitmap = ICON_DOWNLOAD
-          @RBInstallIn.show(true)
-          self.fit
-          @NotifierControl.notifyInstallDecisionChanged
-        end
-        evt_radiobox(@RBInstallIn) do |iEvent|
-          # Change the installation destination
-          case @RBInstallIn.selection
-          when 0
-            @InstallDir = $PBS_ExtGemsDir
-          when 1
-            @InstallDir = Gem.dir
-          when 2
-            @InstallDir = Gem.user_dir
-          when 3
-            @InstallDir = "#{Dir.tmpdir}/PBS_GEMS_#{self.object_id}"
-          when 4
-            # Specify a directory to install to
-            showModal(Wx::DirDialog, self,
-              :message => "Install #{iRequireName} library in directory"
-            ) do |iModalResult, iDialog|
-              case iModalResult
-              when Wx::ID_OK
-                # Change install directory to iDialog.path
-                @InstallDir = iDialog.path
-              else
-                @RBInstallIn.selection = 1
-                @InstallDir = $PBS_ExtGemsDir
+        if (@RBInstall != nil)
+          evt_radiobutton(@RBInstall) do |iEvent|
+            # Choose to install the missing dependency
+            @ValidDirectory = nil
+            @SBStatus.bitmap = ICON_DOWNLOAD
+            @RBInstallIn.show(true)
+            self.fit
+            @NotifierControl.notifyInstallDecisionChanged
+          end
+          evt_radiobox(@RBInstallIn) do |iEvent|
+            # Change the installation destination
+            case @RBInstallIn.selection
+            when 0
+              @InstallDir = $PBS_ExtGemsDir
+            when 1
+              @InstallDir = Gem.dir
+            when 2
+              @InstallDir = Gem.user_dir
+            when 3
+              @InstallDir = "#{Dir.tmpdir}/PBS_GEMS_#{self.object_id}"
+            when 4
+              # Specify a directory to install to
+              showModal(Wx::DirDialog, self,
+                :message => "Install #{iRequireName} library in directory"
+              ) do |iModalResult, iDialog|
+                case iModalResult
+                when Wx::ID_OK
+                  # Change install directory to iDialog.path
+                  @InstallDir = iDialog.path
+                else
+                  @RBInstallIn.selection = 1
+                  @InstallDir = $PBS_ExtGemsDir
+                end
               end
+            else
+              logBug "Unknown selection of installation directory: #{@RBInstallIn.selection}"
             end
-          else
-            logBug "Unknown selection of installation directory: #{@RBInstallIn.selection}"
           end
         end
 
@@ -182,8 +196,10 @@ module PBS
         @ValidDirectory = nil
         @SBStatus.bitmap = ICON_KO
         @RBIgnore.value = true
-        @RBInstallIn.show(false)
-        self.fit
+        if (@RBInstallIn != nil)
+          @RBInstallIn.show(false)
+          self.fit
+        end
         @NotifierControl.notifyInstallDecisionChanged
       end
 
@@ -192,7 +208,12 @@ module PBS
       # Return:
       # * _Boolean_: Is this panel marked to be installed ?
       def install?
-        return @RBInstall.value
+        if (@RBInstall == nil)
+          return false
+        else
+          return @RBInstall.value
+        end
+
       end
 
       # Is this panel marked to be ignored ?
@@ -225,7 +246,11 @@ module PBS
       # Return:
       # * _Boolean_: Does the installation location a standard directory ?
       def installDirStandard?
-        return (@RBInstallIn.selection != 4)
+        if (@RBInstallIn == nil)
+          return true
+        else
+          return (@RBInstallIn.selection != 4)
+        end
       end
 
     end
@@ -240,6 +265,25 @@ module PBS
         :title => 'Dependencies downloader',
         :style => Wx::DEFAULT_DIALOG_STYLE|Wx::RESIZE_BORDER|Wx::MAXIMIZE_BOX
       )
+
+      # First ensure that RubyGems is up and running
+      # This require is left here, as we don't want to need it if we don't call this method.
+      lRubyGemsFailed = false
+      begin
+        require 'rubygems'
+        require 'rubygems/commands/install_command'
+      rescue Exception
+        # RubyGems is not installed.
+        # Use our own installation of RubyGems
+        $LOAD_PATH << "#{$PBS_RootDir}/ext/rubygems"
+        begin
+          require 'rubygems'
+          require 'rubygems/commands/install_command'
+        rescue Exception
+          logBug "PBS installation of RubyGems could not get required: #{$!}.\nException stack\n: #{caller.join("\n")}"
+          lRubyGemsFailed = true
+        end
+      end
 
       # Mapping of require name to panel
       # map< String, DependencyPanel >
@@ -276,7 +320,12 @@ module PBS
       # Create each panel
       iMissingDeps.each do |iRequireName, iRequireInfo|
         iGemInstallCommand, iPluginsInfo = iRequireInfo
-        lDepPanel = DependencyPanel.new(@MainPanel, iRequireName, iGemInstallCommand, iPluginsInfo, self)
+        lDepPanel = nil
+        if (lRubyGemsFailed)
+          lDepPanel = DependencyPanel.new(@MainPanel, iRequireName, nil, iPluginsInfo, self)
+        else
+          lDepPanel = DependencyPanel.new(@MainPanel, iRequireName, iGemInstallCommand, iPluginsInfo, self)
+        end
         lDepsPanels << lDepPanel
         @RequireToPanels[iRequireName] = lDepPanel
         @ScrollSizer.add_item(lDepPanel, :border => 8, :flag => Wx::GROW|Wx::BOTTOM, :proportion => 0)
@@ -361,7 +410,6 @@ module PBS
     end
 
     # Install a Gem
-    # Only this method should have a dependency on RubyGems.
     # It calls the internal API of RubyGems: do not invoke gem binary, as it has to work also in an embedded binary (RubyGems statically compiled in Ruby) for packaging.
     #
     # Parameters:
@@ -372,11 +420,9 @@ module PBS
     # * _Boolean_: Success ?
     def installGem(iInstallDir, iInstallCmd, iProgressDialog)
       rSuccess = true
-
+      
       # Add options to the command
-      lCmd = "#{iInstallCmd} --no-rdoc --no-ri --no-test"
-      # this require is left here, as we don't want to need it if we don't call this method.
-      require 'rubygems/commands/install_command'
+      lCmd = "#{iInstallCmd} -i #{iInstallDir} --no-rdoc --no-ri --no-test"
       # Create the RubyGems command
       lRubyGemsInstallCmd = Gem::Commands::InstallCommand.new
       lRubyGemsInstallCmd.handle_options(lCmd.split)

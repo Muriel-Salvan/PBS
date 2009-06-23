@@ -778,7 +778,6 @@ module PBS
 
       # Check missing deps
       if (!lMissingDeps.empty?)
-        # TODO: First ensure that RubyGems is up and running
         showModal(DependenciesLoaderDialog, nil, lMissingDeps) do |iModalResult, iDialog|
           # Get the list of additional directories to search into
           lExternalDirs = iDialog.getExternalDirectories
