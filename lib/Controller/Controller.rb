@@ -77,6 +77,8 @@ module PBS
     # Class used to factorize import commands
     class ImportCommand
 
+      include Tools
+
       # Constructor
       #
       # Parameters:
@@ -97,7 +99,12 @@ module PBS
         if (@Merge)
           ioController.Merging = true
         end
-        ioController.ImportPlugins[@ImportPluginName][:plugin].execute(ioController, iParams[:parentWindow])
+        # Protect with exception
+        begin
+          ioController.ImportPlugins[@ImportPluginName][:plugin].execute(ioController, iParams[:parentWindow])
+        rescue Exception
+          logBug "Plugin Imports/#{@ImportPluginName} threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+        end
         if (@Merge)
           ioController.Merging = false
         end
@@ -107,6 +114,8 @@ module PBS
 
     # Class used to factorize export commands
     class ExportCommand
+
+      include Tools
 
       # Constructor
       #
@@ -123,7 +132,11 @@ module PBS
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
       # ** *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
       def execute(iController, iParams)
-        iController.ExportPlugins[@ExportPluginName][:plugin].execute(iController, iParams[:parentWindow])
+        begin
+          iController.ExportPlugins[@ExportPluginName][:plugin].execute(iController, iParams[:parentWindow])
+        rescue Exception
+          logBug "Plugin Exports/#{@ImportPluginName} threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+        end
       end
 
     end
@@ -402,7 +415,11 @@ module PBS
       logDebug "Notify GUIs for #{iMethod.to_s}"
       @RegisteredGUIs.each do |iRegisteredGUI|
         if (iRegisteredGUI.respond_to?(iMethod))
-          iRegisteredGUI.send(iMethod, *iParams)
+          begin
+            iRegisteredGUI.send(iMethod, *iParams)
+          rescue Exception
+            logBug "A notified GUI (maybe from an Integration Plugin) threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+          end
         end
       end
     end

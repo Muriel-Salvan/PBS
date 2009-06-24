@@ -329,7 +329,11 @@ module PBS
             logBug "Command #{iCommandID} should be called with parameters, but the GUI did not pass any. Please correct GUI code or command plugin parameters."
           end
           # Call the command method without parameters
-          lCommand[:plugin].execute(self)
+          begin
+            lCommand[:plugin].execute(self)
+          rescue
+            logBug "Command \"#{lCommand[:title]}\" (called without parameters) threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+          end
         else
           if (lCommand[:parameters] != nil)
             # Check that all parameters have been set
@@ -340,7 +344,11 @@ module PBS
             end
           end
           # Call the command method with the parameters given by the validator
-          lCommand[:plugin].execute(self, iParams)
+          begin
+            lCommand[:plugin].execute(self, iParams)
+          rescue
+            logBug "Command \"#{lCommand[:title]}\" (called with parameters: #{iParams.inspect}) threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+          end
         end
       end
     end

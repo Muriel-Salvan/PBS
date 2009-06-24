@@ -22,6 +22,8 @@ module PBS
 
       # Class that encapsulate the calls to SQLite to get the favicons
       class FaviconsProvider
+        
+        include Tools
 
         # Create a new Favicon provider, and ensure it will be closed
         #
