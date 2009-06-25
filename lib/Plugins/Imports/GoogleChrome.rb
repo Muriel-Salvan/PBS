@@ -6,6 +6,7 @@
 require 'iconv'
 # SQLite is required to read the favicons database of Google Chrome.
 require 'sqlite3'
+require 'Plugins/Tools_SQLite3.rb'
 # Temp directories are used to store the favicon files on disk to read them
 require 'tmpdir'
 
@@ -16,6 +17,7 @@ module PBS
     class GoogleChrome
 
       include Tools
+      include Tools_SQLite3
 
       # The Google Chrome names to UTF-8 converter
       UTF8_CONVERTER = Iconv.new('UTF-8', 'CP1252')
@@ -44,18 +46,19 @@ module PBS
         def initialize(iFileName)
           @FaviconsDB = nil
           if (File.exists?(iFileName))
-            logErr "Favicons database #{iFileName} does not exist. Shortcuts will be created without favicons."
             # First get the database storing favicons
-            @FaviconsDB = SQLite3::Database.new(iFileName)
+            @FaviconsDB = Tools_SQLite3::SQLite3DB.new(iFileName)
             # As we open a large file (often around 50Mb for Google Chrome favicons), we increase the cache size.
-            @FaviconsDB.execute("PRAGMA cache_size=50000")
+            @FaviconsDB.DB.execute("PRAGMA cache_size=50000")
+          else
+            logErr "Favicons database #{iFileName} does not exist. Shortcuts will be created without favicons."
           end
         end
 
         # Destructor
         def final
           if (@FaviconsDB != nil)
-            @FaviconsDB.close
+            @FaviconsDB.final
           end
         end
 
@@ -70,7 +73,7 @@ module PBS
 
           if (@FaviconsDB != nil)
             begin
-              @FaviconsDB.execute("SELECT image_data FROM favicons WHERE url LIKE \"#{iServerURL}%/favicon.ico\"") do |iFaviconData|
+              @FaviconsDB.DB.execute("SELECT image_data FROM favicons WHERE url LIKE \"#{iServerURL}%/favicon.ico\"") do |iFaviconData|
                 if (iFaviconData[0] != nil)
                   # Write this data in a temporary file
                   lFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}.png"

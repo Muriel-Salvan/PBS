@@ -25,7 +25,11 @@ module PBS
       @CurrentOperationTagsConflicts = nil
       @CurrentOperationShortcutsConflicts = nil
       # Call the command code
-      yield
+      begin
+        yield
+      rescue Exception
+        logBug "Exception encountered during execution of \"#{iOperationTitle}\": #{$!}.\nException stack:\n#{$!.backtrace.join("\n")}"
+      end
       # Check possible errors
       if (!@CurrentTransactionErrors.empty?)
         lErrorsText = nil

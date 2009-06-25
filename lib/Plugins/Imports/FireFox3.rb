@@ -5,7 +5,8 @@
 
 # SQLite is required to read the complete bookmarks database of Firefox 3.
 require 'sqlite3'
-# Temp directory is used to store the favicon files on disk to read them, and also to eventually copy the database file if it is in use.
+require 'Plugins/Tools_SQLite3.rb'
+# Temp directory is used to store the favicon files on disk to read them
 require 'tmpdir'
 # Neeed to copy files
 require 'fileutils'
@@ -17,6 +18,7 @@ module PBS
     class FireFox3
 
       include Tools
+      include Tools_SQLite3
 
       # Execute the import
       #
@@ -25,7 +27,7 @@ module PBS
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParentWindow)
         # Get the profile path from the environment
-        lProfileDir = ENV['USERPROFILE']
+        lProfileDir = ENV['USERPROFILE'].gsub(/\\/,'/')
         if (lProfileDir == nil)
           logErr 'The environment variable USERPROFILE is not set. Unable to get FireFox 3 bookmarks.'
         else
@@ -35,7 +37,7 @@ module PBS
             lBookmarksFileName = "#{iProfileDir}/places.sqlite"
           end
           if (lBookmarksFileName == nil)
-            logErr "Can't find profile dir in #{lProfileDir}/Application Data/Mozilla/Firefox/Profiles/*.default"
+            logErr "Can't find profile dir in #{lProfileDir}/Application Data/Mozilla/Firefox/Profiles/*.default/places.sqlite"
           else
             if (!File.exists?(lBookmarksFileName))
               logErr "Bookmarks file #{lBookmarksFileName} does not exist."
@@ -101,7 +103,7 @@ module PBS
           lNewTags
         )
       end
-
+      
       # Import bookmarks from a database file used by FireFox 3
       #
       # Parameters:
@@ -110,121 +112,104 @@ module PBS
       # * *ioParentTag* (_Tag_): The parent Tag where we want to import (can be the Root Tag).
       def importBookmarksFromFirefox(ioController, iFileName, ioParentTag)
         # Open the DB and import everything
-        lNewFileName = nil
-        lBMDB = SQLite3::Database.new(iFileName)
-        begin
-          # Issue a single select to test if the database is in use
-          lBMDB.execute("SELECT id FROM moz_bookmarks WHERE id = 1")
-        rescue SQLite3::BusyException
-          # The database is in use.
-          # Try copying the file in another place.
-          lNewFileName = "#{Dir.tmpdir}/FF3DB_#{self.object_id}.sqlite"
-          FileUtils::cp(iFileName, lNewFileName)
-          # Try again
-          lBMDB = SQLite3::Database.new(lNewFileName)
-        end
-        # Here we have a working DB.
-        # Types:
-        # 1 = Bookmark
-        # 2 = Folder
-        # We temporarily store the folders data in a hash map
-        # map< Integer, [ String, Integer, list< [ ... ] >, Tag ] >
-        # map< ID, [ Title, ParentID, list< ChildrenInfo >, CorrespondingTag ] >
-        lFolders = {}
-        # First select folders
-        lBMDB.execute("
-          SELECT
-            id,
-            parent,
-            title
-          FROM
-            moz_bookmarks
-          WHERE
-            type = \"2\" AND
-            title <> \"\"
-        ") do |iRow|
-          iID, iParentID, iTitle = iRow
-          lFolders[iID] = [ iTitle, iParentID, [], nil ]
-        end
-        # Then create links to the children maps, and remember which ones do not have parents
-        # list< Integer >
-        lRootFolders = []
-        lFolders.each do |iID, ioFolderInfo|
-          if (lFolders[ioFolderInfo[1]] == nil)
-            # No parent
-            lRootFolders << iID
-          else
-            # Add ourselves as a child of our parent
-            lFolders[ioFolderInfo[1]][2] << ioFolderInfo
+        openSQLite3DB(iFileName) do |ioDB|
+          # Here we have a working DB.
+          # Types:
+          # 1 = Bookmark
+          # 2 = Folder
+          # We temporarily store the folders data in a hash map
+          # map< Integer, [ String, Integer, list< [ ... ] >, Tag ] >
+          # map< ID, [ Title, ParentID, list< ChildrenInfo >, CorrespondingTag ] >
+          lFolders = {}
+          # First select folders
+          ioDB.execute("
+            SELECT
+              id,
+              parent,
+              title
+            FROM
+              moz_bookmarks
+            WHERE
+              type = \"2\" AND
+              title <> \"\"
+          ") do |iRow|
+            iID, iParentID, iTitle = iRow
+            lFolders[iID] = [ iTitle, iParentID, [], nil ]
           end
-        end
-        # Create all corresponding Tags
-        lRootFolders.each do |iRootID|
-          createTags(ioController, lFolders[iRootID], ioParentTag)
-        end
-        # Now, all Tags have been created, and for each Folder ID we have the corresponding Tag in lFolders[ID][3]
-        # We read bookmarks that have icons
-        lBMDB.execute("
-          SELECT
-            b.parent,
-            b.title,
-            p.url,
-            f.data,
-            f.mime_type
-          FROM
-            moz_bookmarks b,
-            moz_places p,
-            moz_favicons f
-          WHERE
-            b.type = \"1\" AND
-            b.fk = p.id AND
-            p.favicon_id = f.id AND
-            b.title is not NULL
-        ") do |iRow|
-          iParentID, iTitle, iURL, iIconData, iIconType = iRow
-          # The icon
-          # Write its data in a temporary file
-          lIconFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}"
-          File.open(lIconFileName, 'wb') do |oFile|
-            oFile.write(iIconData)
+          # Then create links to the children maps, and remember which ones do not have parents
+          # list< Integer >
+          lRootFolders = []
+          lFolders.each do |iID, ioFolderInfo|
+            if (lFolders[ioFolderInfo[1]] == nil)
+              # No parent
+              lRootFolders << iID
+            else
+              # Add ourselves as a child of our parent
+              lFolders[ioFolderInfo[1]][2] << ioFolderInfo
+            end
           end
-          # Translate some unknown mime/type to WxRuby's types
-          lBitmapType = iIconType
-          case iIconType
-          when 'image/x-icon'
-            lBitmapType = Wx::BITMAP_TYPE_ICO
-          when 'image/bmp'
-            lBitmapType = Wx::BITMAP_TYPE_BMP
+          # Create all corresponding Tags
+          lRootFolders.each do |iRootID|
+            createTags(ioController, lFolders[iRootID], ioParentTag)
           end
-          # Read the file
-          lIconBitmap = Wx::Bitmap.from_image(Wx::Image.new(lIconFileName, lBitmapType))
-          # Delete the temporary file
-          File.unlink(lIconFileName)
-          importBookmark(ioController, lFolders, iParentID, iURL, iTitle, lIconBitmap)
-        end
-        # Now we read bookmarks that don't have any icons
-        lBMDB.execute("
-          SELECT
-            b.parent,
-            b.title,
-            p.url
-          FROM
-            moz_bookmarks b,
-            moz_places p
-          WHERE
-            b.type = \"1\" AND
-            b.fk = p.id AND
-            p.favicon_id is NULL AND
-            b.title is not NULL
-        ") do |iRow|
-          iParentID, iTitle, iURL = iRow
-          importBookmark(ioController, lFolders, iParentID, iURL, iTitle, nil)
-        end
-        # Close
-        lBMDB.close
-        # Remove eventually temporary file
-        if (lNewFileName != nil)
-          File.unlink(lNewFileName)
+          # Now, all Tags have been created, and for each Folder ID we have the corresponding Tag in lFolders[ID][3]
+          # We read bookmarks that have icons
+          ioDB.execute("
+            SELECT
+              b.parent,
+              b.title,
+              p.url,
+              f.data,
+              f.mime_type
+            FROM
+              moz_bookmarks b,
+              moz_places p,
+              moz_favicons f
+            WHERE
+              b.type = \"1\" AND
+              b.fk = p.id AND
+              p.favicon_id = f.id AND
+              b.title is not NULL
+          ") do |iRow|
+            iParentID, iTitle, iURL, iIconData, iIconType = iRow
+            # The icon
+            # Write its data in a temporary file
+            lIconFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}"
+            File.open(lIconFileName, 'wb') do |oFile|
+              oFile.write(iIconData)
+            end
+            # Translate some unknown mime/type to WxRuby's types
+            lBitmapType = iIconType
+            case iIconType
+            when 'image/x-icon'
+              lBitmapType = Wx::BITMAP_TYPE_ICO
+            when 'image/bmp'
+              lBitmapType = Wx::BITMAP_TYPE_BMP
+            end
+            # Read the file
+            lIconBitmap = Wx::Bitmap.from_image(Wx::Image.new(lIconFileName, lBitmapType))
+            # Delete the temporary file
+            File.unlink(lIconFileName)
+            importBookmark(ioController, lFolders, iParentID, iURL, iTitle, lIconBitmap)
+          end
+          # Now we read bookmarks that don't have any icons
+          ioDB.execute("
+            SELECT
+              b.parent,
+              b.title,
+              p.url
+            FROM
+              moz_bookmarks b,
+              moz_places p
+            WHERE
+              b.type = \"1\" AND
+              b.fk = p.id AND
+              p.favicon_id is NULL AND
+              b.title is not NULL
+          ") do |iRow|
+            iParentID, iTitle, iURL = iRow
+            importBookmark(ioController, lFolders, iParentID, iURL, iTitle, nil)
+          end
         end
       end
 

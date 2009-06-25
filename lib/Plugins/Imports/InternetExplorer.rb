@@ -24,12 +24,15 @@ module PBS
         begin
           Win32::Registry::HKEY_CURRENT_USER.open('Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders') do |iReg|
             lRegType, lFavoritesPath = iReg.read('Favorites')
+            lFavoritesPath.gsub!(/\\/,'/')
           end
         rescue Exception
           logErr "Unable to get the favorites path: #{$!}."
           lFavoritesPath = nil
         end
-        if (lFavoritesPath != nil)
+        if (lFavoritesPath == nil)
+          logErr 'Unable to read the favorites path from Windows registry.'
+        else
           # Use the WebBookmarks import plugin
           if (PBS::Imports.const_defined?(:WebBookmarks))
             ioController.undoableOperation('Import bookmarks from Internet Explorer') do
