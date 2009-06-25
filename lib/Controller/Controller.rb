@@ -991,7 +991,7 @@ module PBS
     # * *iParams* (<em>list<Object></em>): Additional parameters to give to the plugin constructor [optional]
     # Return:
     # * _Boolean_: Are there some missing dependencies ?
-    def checkMissingDependencies(iPluginInfo, ioPluginsMap, iPluginsTypeID, iPluginName, oMissingDeps, *iParams)
+    def checkMissingDependencies(iPluginInfo, ioPluginsMap, iPluginsTypeID, iPluginName, oMissingDeps, iParams)
       rMissing = false
 
       if (iPluginInfo[:gemsDependencies] != nil)
