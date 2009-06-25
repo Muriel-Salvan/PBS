@@ -105,6 +105,7 @@ require 'Model/Common.rb'
 require 'Model/Tag.rb'
 require 'Model/Shortcut.rb'
 require 'Model/MultipleSelection.rb'
+require 'Model/MissingDependencies.rb'
 # The controller
 require 'Controller/Controller.rb'
 # The view

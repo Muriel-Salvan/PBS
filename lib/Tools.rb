@@ -7,12 +7,16 @@
 require 'tmpdir'
 require 'net/http'
 require 'net/ftp'
+# Used to uncompress zip files containing DLLs needed for plugins' dependencies
+require 'zip/zipfilesystem'
 
 module PBS
 
   # Define general constants
   ID_TAG = 0
   ID_SHORTCUT = 1
+
+  OS_WINDOWS = 0
 
   # This module define methods that are useful to several functions in PBS, but are not GUI related.
   # They could be used in a command-line mode.
@@ -101,7 +105,9 @@ module PBS
 
       # Manually set libs in local PBS installation
       Dir.glob("#{$PBS_ExtDir}/*") do |iDir|
-        if (File.exists?("#{iDir}/lib"))
+        if ((iDir != "#{$PBS_ExtDir}/gems") and
+            (iDir != "#{$PBS_ExtDir}/libs") and
+            (File.exists?("#{iDir}/lib")))
           rList << "#{iDir}/lib"
         end
       end
@@ -130,6 +136,24 @@ module PBS
       return rList
     end
 
+    # Get the list of local OS library directories (containing DLLs...)
+    #
+    # Return:
+    # * <em>list<String></em>: The list of directories
+    def getLocalExternalDLLDirs
+      rList = []
+
+      if (File.exists?($PBS_ExtDllsDir))
+        Dir.glob("#{$PBS_ExtDllsDir}/**/*") do |iFileName|
+          if (File.directory?(iFileName))
+            rList << iFileName
+          end
+        end
+      end
+
+      return rList
+    end
+
     # Adds a list of directories to the load path, ensuring no doublons
     #
     # Parameters:
@@ -138,14 +162,22 @@ module PBS
       $LOAD_PATH.replace(($LOAD_PATH + iDirsList).uniq)
     end
 
+    # Adds a list of directories to the system libraries paths, ensuring no doublons
+    #
+    # Parameters:
+    # *iDirsList* (<em>list<String></em>): The list of directories
+    def addToSystemLoadPath(iDirsList)
+      $PBS_Platform.setSystemLibsPath(
+        ($PBS_Platform.getSystemLibsPath + iDirsList).uniq
+      )
+    end
+
     # Ensure that WxRuby is up and running in our environment
     # This method uses sendMsg method to notify the user. This method has to be defined by the caller.
     #
-    # Parameters:
-    # * *iLauncher* (_Object_): The launcher containing platform dependent methods
     # Return:
     # * _Boolean_: Is WxRuby loaded ?
-    def ensureWxRuby(iLauncher)
+    def ensureWxRuby
       rSuccess = true
 
       begin
@@ -160,7 +192,7 @@ module PBS
           # We need to download wxruby gem
           if (ensureRubyGems(false))
             # Now we want to install the Gem
-            iLauncher.sendMsg("WxRuby is not part of this PBS installation.\nInstalling WxRuby will begin after this message, and will take around 10 Mb.\nYou will be notified once it is completed.")
+            $PBS_Platform.sendMsg("WxRuby is not part of this PBS installation.\nInstalling WxRuby will begin after this message, and will take around 10 Mb.\nYou will be notified once it is completed.")
             rSuccess = installGem($PBS_ExtGemsDir, 'wxruby --version 2.0.0', nil, false)
             if (rSuccess)
               # Add the path again
@@ -168,14 +200,14 @@ module PBS
               begin
                 require 'wx'
               rescue Exception
-                iLauncher.sendMsg("WxRuby could not be installed (#{$!}).\nPlease install WxRuby manually in PBS local installation, or reinstall PBS completely.")
+                $PBS_Platform.sendMsg("WxRuby could not be installed (#{$!}).\nPlease install WxRuby manually in PBS local installation, or reinstall PBS completely.")
               end
-              iLauncher.sendMsg("WxRuby has been successfully installed.\nPBS will start after this message.")
+              $PBS_Platform.sendMsg("WxRuby has been successfully installed.\nPBS will start after this message.")
             else
-              iLauncher.sendMsg("WxRuby could not be installed.\nPlease install WxRuby manually in PBS local installation, or reinstall PBS completely.")
+              $PBS_Platform.sendMsg("WxRuby could not be installed.\nPlease install WxRuby manually in PBS local installation, or reinstall PBS completely.")
             end
           else
-            iLauncher.sendMsg("Unable to install RubyGems.\nPlease download WxRuby manually in PBS local installation, or reinstall PBS completely.")
+            $PBS_Platform.sendMsg("Unable to install RubyGems.\nPlease download WxRuby manually in PBS local installation, or reinstall PBS completely.")
           end
         end
       end
@@ -261,8 +293,10 @@ module PBS
       # Create the RubyGems command
       lRubyGemsInstallCmd = Gem::Commands::InstallCommand.new
       lRubyGemsInstallCmd.handle_options(iInstallCmd.split + [ '-i', iInstallDir, '--no-rdoc', '--no-ri', '--no-test' ] )
+      logInfo "Installing Gem \"#{iInstallCmd}\" in directory #{iInstallDir} ..."
       begin
         lRubyGemsInstallCmd.execute
+        logInfo 'Gem successfully installed.'
       rescue Gem::SystemExitException
         # For RubyGems, this is normal behaviour: success results in an exception thrown with exit_code 0.
         if ($!.exit_code != 0)
@@ -283,6 +317,39 @@ module PBS
       end
 
       return rSuccess
+    end
+
+    # Apply bitmap layers based on flags on a given bitmap
+    #
+    # Parameters:
+    # * *ioBitmap* (<em>Wx::Bitmap</em>): The bitmap to modify
+    # * *iMasks* (<em>list<Wx::Bitmap></em>): The masks to apply to the bitmap
+    def applyBitmapLayers(ioBitmap, iMasks)
+      # 1. Create the bitmap that will be used as a mask
+      lMaskBitmap = Wx::Bitmap.new(ioBitmap.width, ioBitmap.height, 1)
+      lMaskBitmap.draw do |ioMaskDC|
+        ioBitmap.draw do |iBitmapDC|
+          ioMaskDC.blit(0, 0, ioBitmap.width, ioBitmap.height, iBitmapDC, 0, 0, Wx::SET, true)
+        end
+      end
+      # 2. Remove the mask from the original bitmap
+      lNoMaskBitmap = Wx::Bitmap.new(ioBitmap.width, ioBitmap.height, 1)
+      lNoMaskBitmap.draw do |ioNoMaskDC|
+        ioNoMaskDC.brush = Wx::WHITE_BRUSH
+        ioNoMaskDC.pen = Wx::WHITE_PEN
+        ioNoMaskDC.draw_rectangle(0, 0, ioBitmap.width, ioBitmap.height)
+      end
+      ioBitmap.mask = Wx::Mask.new(lNoMaskBitmap)
+      # 3. Draw on the original bitmap and its mask
+      ioBitmap.draw do |ioDC|
+        lMaskBitmap.draw do |ioMaskDC|
+          iMasks.each do |iMask|
+            mergeBitmapOnDC(ioDC, ioMaskDC, iMask)
+          end
+        end
+      end
+      # 4. Set the mask correctly
+      ioBitmap.mask = Wx::Mask.new(lMaskBitmap)
     end
 
     # Log a bug
@@ -527,6 +594,110 @@ module PBS
       return rIconBitmap
     end
 
+    # Access a file: it calls a code block with a local file name corresponding to the file we want to read.
+    # For local files, this is obvious.
+    # For URLs, download first file from a URL into a temporary file, and execute a code on it.
+    # Works with URL from http, https, ftp, ftps, file, and local files otherwise.
+    #
+    # Parameters:
+    # * *iFileURL* (_String_): The file URL to download
+    # * *CodeBlock*: The code invoked if the temporary file exists:
+    # ** *iFileName* (_String_): Name of the local temporary file
+    # Return:
+    # * _Boolean_: Success ?
+    def accessFile(iFileURL)
+      rSuccess = false
+
+      lFileName = nil
+      lTemporary = false
+      lHTTPMatch = iFileURL.match(/^(http|https):\/\/([^\/]*)\/(.*)$/)
+      if (lHTTPMatch != nil)
+        lHTTPServer, lHTTPPath = lHTTPMatch[2..3]
+        # Keep the extension in the temporary file
+        lFileName = "#{Dir.tmpdir}/PBS_#{self.object_id}#{File.extname(iFileURL)}"
+        # Download iFileURL to lFileName
+        begin
+          Net::HTTP.start(lHTTPServer) do |iHTTPConnection|
+            lResponse = iHTTPConnection.get("/#{lHTTPPath}")
+            File.open(lFileName, 'wb') do |oFile|
+              oFile.write(lResponse.body)
+            end
+          end
+          lTemporary = true
+        rescue Exception
+          logErr "Exception while downloading file #{iFileURL}: #{$!}"
+          lFileName = nil
+        end
+      else
+        lFTPMatch = iFileURL.match(/^(ftp|ftps):\/\/([^\/]*)\/(.*)$/)
+        if (lFTPMatch != nil)
+          lFTPServer, lFTPPath = lFTPMatch[2..3]
+          lFileName = "#{Dir.tmpdir}/PBS_#{self.object_id}#{File.extname(iFileURL)}"
+          # Download iFileURL to lFileName
+          begin
+            lFTPConnection = Net::FTP.new(lFTPServer)
+            lFTPConnection.login
+            lFTPConnection.chdir(File.dirname(lFTPPath))
+            lFTPConnection.getbinaryfile(File.basename(lFTPPath), lFileName)
+            lFTPConnection.close
+            lTemporary = true
+          rescue Exception
+            logerr "Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
+            lFileName = nil
+          end
+        else
+          lLocalFileMatch = iFileURL.match(/^file:\/\/\/(.*)$/)
+          if (lLocalFileMatch != nil)
+            lFileName = lLocalFileMatch[1]
+          else
+            # Assume it is a local file
+            lFileName = iFileURL
+          end
+        end
+      end
+      if (lFileName != nil)
+        yield(lFileName)
+        rSuccess = true
+        # Delete the temporary file
+        if (lTemporary)
+          File.unlink(lFileName)
+        end
+      end
+
+      return rSuccess
+    end
+
+    # Extract a Zip archive in a given system dependent lib sub-directory
+    #
+    # Parameters:
+    # * *iZipFileName* (_String_): The zip file name to extract content from
+    # * *iDirName* (_String_): The name of the directory to store the zip to
+    # Return:
+    # * _Boolean_: Success ?
+    def extractZipFile(iZipFileName, iDirName)
+      rSuccess = true
+
+      # Extract content of iFileName to #{$PBS_ExtDllsDir}/#{iLibName}
+      begin
+        Zip::ZipInputStream::open(iZipFileName) do |iZipFile|
+          while (lEntry = iZipFile.get_next_entry)
+            lDestFileName = "#{iDirName}/#{lEntry.name}"
+            if (lEntry.directory?)
+              FileUtils::mkdir_p(lDestFileName)
+            else
+              FileUtils::mkdir_p(File.dirname(lDestFileName))
+              lEntry.extract(lDestFileName)
+            end
+          end
+        end
+      rescue
+        logBug "Exception while unzipping #{iZipFileName} into #{iDirName}: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+        rSuccess = false
+      end
+
+      return rSuccess
+    end
+
     # Get a bitmap/icon from a file.
     # If no type has been provided, it detects the type of icon based on the file extension.
     #
@@ -566,50 +737,11 @@ module PBS
           lBitmapType = Wx::BITMAP_TYPE_ICO
         end
       end
-      # If the file is from a URL, we download it first to a temporary file
-      lCancel = false
-      lTempFileToDelete = false
-      lFileName = iFileName
-      lHTTPMatch = iFileName.match(/^(http|https):\/\/([^\/]*)\/(.*)$/)
-      if (lHTTPMatch != nil)
-        lHTTPServer, lHTTPPath = lHTTPMatch[2..3]
-        lFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}_#{lHTTPServer}#{File.extname(iFileName)}"
-        # Download iFileName to lFileName
-        begin
-          Net::HTTP.start(lHTTPServer) do |iHTTPConnection|
-            lResponse = iHTTPConnection.get("/#{lHTTPPath}")
-            File.open(lFileName, 'wb') do |oFile|
-              oFile.write(lResponse.body)
-            end
-            lTempFileToDelete = true
-          end
-        rescue Exception
-          logErr "Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
-          lCancel = true
-        end
-      else
-        lFTPMatch = iFileName.match(/^(ftp|ftps):\/\/([^\/]*)\/(.*)$/)
-        if (lFTPMatch != nil)
-          lFTPServer, lFTPPath = lFTPMatch[2..3]
-          lFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}_#{lFTPServer}#{File.extname(iFileName)}"
-          # Download iFileName to lFileName
-          begin
-            lFTPConnection = Net::FTP.new(lFTPServer)
-            lFTPConnection.login
-            lFTPConnection.chdir(File.dirname(lFTPPath))
-            lFTPConnection.getbinaryfile(File.basename(lFTPPath), lFileName)
-            lFTPConnection.close
-            lTempFileToDelete = true
-          rescue Exception
-            logerr "Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
-            lCancel = true
-          end
-        end
-      end
-      if (!lCancel)
+      # iFileName can be a URL or whatever
+      accessFile(iFileName) do |iRealFileName|
         # Special case for the ICO type
         if (lBitmapType == Wx::BITMAP_TYPE_ICO)
-          lIconID = lFileName
+          lIconID = iRealFileName
           if ((iIconIndex != nil) and
               (iIconIndex != 0))
             # TODO: Currently this implementation does not work. Uncomment when ok.
@@ -623,12 +755,8 @@ module PBS
             rBitmap = nil
           end
         else
-          rBitmap = Wx::Bitmap.new(lFileName, lBitmapType)
+          rBitmap = Wx::Bitmap.new(iRealFileName, lBitmapType)
         end
-      end
-      # Remove temporary file if needed
-      if (lTempFileToDelete)
-        File.unlink(lFileName)
       end
 
       return rBitmap

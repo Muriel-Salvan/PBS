@@ -30,21 +30,6 @@ module PBS
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7', 'h8', 'h9'
       ]
 
-      # Give the description of this plugin
-      #
-      # Return:
-      # * <em>map<Symbol,Object></em>: Information on the plugin: the following symbols can be provided:
-      # ** :title (_String_): Name of the plugin
-      # ** :description (_String_): Quick description
-      # ** :bitmapName (_String_): Sub-path to the icon (from the Graphics/ directory)
-      def pluginInfo
-        return {
-          :title => 'HTML file',
-          :description => 'Import Shortcuts from an HTML file',
-          :bitmapName => 'HTML.png',
-        }
-      end
-
       # Execute the import
       #
       # Parameters:

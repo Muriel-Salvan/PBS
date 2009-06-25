@@ -3,6 +3,10 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
+require 'Windows/DependenciesGroupWindow.rb'
+# Needed to copy files once downloaded
+require 'fileutils'
+
 module PBS
 
   # Dialog that downloads missing dependencies
@@ -11,246 +15,171 @@ module PBS
 
     include Tools
 
-    # Panel that proposes how to resolve a dependency
-    class DependencyPanel < Wx::Panel
+    # Icons used
+    BITMAP_GEM = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Gem.png")
+    BITMAP_LIB = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Lib.png")
+    BITMAP_VALID = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniValidOK.png")
+    BITMAP_IGNORE = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniValidKO.png")
+    BITMAP_INSTALL = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniDownload.png")
+
+    # This class is used to handle Gem dependencies
+    class GemDepHandler
 
       include Tools
 
-      # Icons used to identofy status
-      ICON_OK = Wx::Bitmap.new("#{$PBS_GraphicsDir}/ValidOK.png")
-      ICON_KO = Wx::Bitmap.new("#{$PBS_GraphicsDir}/ValidKO.png")
-      ICON_DOWNLOAD = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Download.png")
-
-      # Constructor
-      # The notifier control window must have a notifyInstallDecisionChanged method implemented
+      # Test if adding a given directory resolves the missing dependency
       #
       # Parameters:
-      # * *iParent* (<em>Wx::Window</em>): The parent window
-      # * *iRequireName* (_String_): The require name for this dependency
-      # * *iInstallCommand* (_String_): The gem install command for this dependency (or nil if RubyGems is missing)
-      # * *iPluginsInfo* (<em>list<[PluginType,PluginName,PluginsMap,Params]></em>): Information about plugins dependent on this dependency
-      # * *iNotifierControl* (_Object_): The notifier control that will be notified upon changes
-      def initialize(iParent, iRequireName, iInstallCommand, iPluginsInfo, iNotifierControl)
-        super(iParent)
+      # * *iDepName* (_String_): The name of the dependency to resolve
+      # * *iDir* (_String_): The directory to test
+      # Return:
+      # * _Boolean_: Is the test successfull ?
+      # * _Exception_: The exception, or nil if success
+      def testDirectory(iDepName, iDir)
+        rSuccess = false
+        rException = nil
 
-        # Installation directory (corresponding to default choice of @RBInstallIn
-        @InstallDir = $PBS_ExtGemsDir
-        # Directory where the dependency has been found
-        @ValidDirectory = nil
-        # The control to be notified upon changes
-        @NotifierControl = iNotifierControl
-
-        # Create components
-        lSBMain = Wx::StaticBox.new(self, Wx::ID_ANY, iRequireName)
-        # Put bold
-        lFont = lSBMain.font
-        lFont.weight = Wx::FONTWEIGHT_BOLD
-        lSBMain.font = lFont
-        @SBStatus = Wx::StaticBitmap.new(self, Wx::ID_ANY, ICON_KO)
-        @RBIgnore = Wx::RadioButton.new(self, Wx::ID_ANY, 'Ignore', :style => Wx::RB_GROUP)
-        lRBDirectory = Wx::RadioButton.new(self, Wx::ID_ANY, 'Specify directory')
-        if (iInstallCommand == nil)
-          @RBInstall = nil
-          @RBInstallIn = nil
-        else
-          @RBInstall = Wx::RadioButton.new(self, Wx::ID_ANY, "Install (gem install #{iInstallCommand})")
-          @RBInstallIn = Wx::RadioBox.new(self, Wx::ID_ANY, 'Install in',
-            :choices => [
-              "PBS directory (#{$PBS_ExtGemsDir})",
-              "Current host gems (#{Gem.dir})",
-              "Current user gems (#{Gem.user_dir})",
-              "Temporary directory (#{Dir.tmpdir})",
-              'Other directory'
-            ],
-            :style => Wx::RA_SPECIFY_ROWS
-          )
-        end
-        # list< String >
-        lPluginsList = []
-        iPluginsInfo.each do |iPluginInfo|
-          iPluginType, iPluginName, iPluginsMap, iParams = iPluginInfo
-          lPluginsList << "#{iPluginType}/#{iPluginName}"
-        end
-        lSTUsed = Wx::StaticText.new(self, Wx::ID_ANY, "Used by #{lPluginsList.sort.join(', ')}")
-
-        # Put them into sizers
-        lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
-
-        lSBSizer = Wx::StaticBoxSizer.new(lSBMain, Wx::VERTICAL)
-
-        lFirstLineSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
-        lFirstLineSizer.add_item(@SBStatus, :border => 8, :flag => Wx::ALIGN_CENTER|Wx::ALL, :proportion => 0)
-        lFirstLineSizer.add_item(@RBIgnore, :flag => Wx::ALIGN_CENTER, :proportion => 0)
-        lFirstLineSizer.add_item(lRBDirectory, :flag => Wx::ALIGN_CENTER, :proportion => 0)
-        if (@RBInstall != nil)
-          lFirstLineSizer.add_item(@RBInstall, :flag => Wx::ALIGN_CENTER, :proportion => 0)
-        end
-
-        lSBSizer.add_item(lFirstLineSizer, :flag => Wx::GROW, :proportion => 0)
-        if (@RBInstallIn != nil)
-          lSBSizer.add_item(@RBInstallIn, :flag => Wx::GROW, :proportion => 0)
-        end
-        lSBSizer.add_item(lSTUsed, :flag => Wx::GROW, :proportion => 0)
-
-        lMainSizer.add_item(lSBSizer, :flag => Wx::GROW, :proportion => 1)
-        
-        self.sizer = lMainSizer
-        self.fit
-
-        # Set events
-        evt_radiobutton(@RBIgnore) do |iEvent|
-          # Choose to ignore the missing dependency
-          setIgnore
-        end
-        evt_radiobutton(lRBDirectory) do |iEvent|
-          # Choose a directory
-          showModal(Wx::DirDialog, self,
-            :message => "Open directory containing #{iRequireName} library"
-          ) do |iModalResult, iDialog|
-            case iModalResult
-            when Wx::ID_OK
-              # Test using the directory provided directly
-              lOldLoadPath = $LOAD_PATH.clone
-              @ValidDirectory = nil
-              $LOAD_PATH << iDialog.path
-              begin
-                require iRequireName
-                @ValidDirectory = iDialog.path
-              rescue Exception
-                # Test if there is a lib directory
-                if (File.exists?("#{iDialog.path}/lib"))
-                  $LOAD_PATH.replace(lOldLoadPath + ["#{iDialog.path}/lib"])
-                  begin
-                    require iRequireName
-                    @ValidDirectory = iDialog.path
-                  rescue Exception
-                    logErr "Adding directory #{iDialog.path}[/lib] does not help in using #{iRequireName}: #{$!}"
-                  end
-                end
-              end
-              # Revert changes made for testing
-              $LOAD_PATH.replace(lOldLoadPath)
-              if (@ValidDirectory == nil)
-                setIgnore
-              else
-                # It's ok, we have a valid directory
-                @SBStatus.bitmap = ICON_OK
-                if (@RBInstallIn != nil)
-                  @RBInstallIn.show(false)
-                  self.fit
-                end
-                @NotifierControl.notifyInstallDecisionChanged
-              end
-            else
-              setIgnore
+        # Save the load paths
+        lOldLoadPath = $LOAD_PATH.clone
+        # Add the directory to the load paths
+        $LOAD_PATH << iDir
+        # Test the require
+        begin
+          require iDepName
+          rSuccess = true
+        rescue Exception
+          # Test if there is a lib directory
+          if (File.exists?("#{iDir}/lib"))
+            $LOAD_PATH.replace(lOldLoadPath + ["#{iDir}/lib"])
+            # Test again the require
+            begin
+              require iDepName
+              rSuccess = true
+            rescue Exception
+              rException = $!
             end
           end
         end
-        if (@RBInstall != nil)
-          evt_radiobutton(@RBInstall) do |iEvent|
-            # Choose to install the missing dependency
-            @ValidDirectory = nil
-            @SBStatus.bitmap = ICON_DOWNLOAD
-            @RBInstallIn.show(true)
-            self.fit
-            @NotifierControl.notifyInstallDecisionChanged
+        # Revert changes made for testing
+        $LOAD_PATH.replace(lOldLoadPath)
+
+        return rSuccess, rException
+      end
+
+      # Install a dependency in a given directory
+      #
+      # Parameters:
+      # * *iDepName* (_String_): Dependency name
+      # * *iInstallDir* (_String_): Directory to install to
+      # * *iInstallCommand* (_String_): Command used for installation
+      # * *ioProgressDialog* (<em>Wx::ProgressDialog</em>): The progress dialog (can be nil)
+      # Return:
+      # * _Boolean_: Success ?
+      def install(iDepName, iInstallDir, iInstallCommand, ioProgressDialog)
+        return installGem(iInstallDir, iInstallCommand, ioProgressDialog)
+      end
+
+      # Get the directory to add after an install in a non-standard directory
+      #
+      # Parameters:
+      # * *iDepName* (_String_): Dependency name
+      # * *iInstallDir* (_String_): Directory to install to
+      # * *iInstallCommand* (_String_): Command used for installation
+      # Return:
+      # * <em>list<String></em>: Directories to add
+      def getDirectoriesToAddAfterInstall(iDepName, iInstallDir, iInstallCommand)
+        rDirs = []
+
+        lGemName = iInstallCommand.split[0]
+        lFound = false
+        Dir.glob("#{iInstallDir}/gems/#{lGemName}*").each do |iDir|
+          if (File.exists?("#{iDir}/lib"))
+            rDirs << "#{iDir}/lib"
+            lFound = true
           end
-          evt_radiobox(@RBInstallIn) do |iEvent|
-            # Change the installation destination
-            case @RBInstallIn.selection
-            when 0
-              @InstallDir = $PBS_ExtGemsDir
-            when 1
-              @InstallDir = Gem.dir
-            when 2
-              @InstallDir = Gem.user_dir
-            when 3
-              @InstallDir = "#{Dir.tmpdir}/PBS_GEMS_#{self.object_id}"
-            when 4
-              # Specify a directory to install to
-              showModal(Wx::DirDialog, self,
-                :message => "Install #{iRequireName} library in directory"
-              ) do |iModalResult, iDialog|
-                case iModalResult
-                when Wx::ID_OK
-                  # Change install directory to iDialog.path
-                  @InstallDir = iDialog.path
-                else
-                  @RBInstallIn.selection = 1
-                  @InstallDir = $PBS_ExtGemsDir
-                end
-              end
-            else
-              logBug "Unknown selection of installation directory: #{@RBInstallIn.selection}"
-            end
+        end
+        if (!lFound)
+          logErr "Unable to find the installed directory #{iInstallDir}/gems/#{lGemName}*. It is possible that #{iDepName} dependency will not be installed correctly."
+        end
+
+        return rDirs
+      end
+
+    end
+
+    # This class is used to handle libraries dependencies
+    class LibDepHandler
+
+      include Tools
+
+      # Test if adding a given directory resolves the missing dependency
+      #
+      # Parameters:
+      # * *iDepName* (_String_): The name of the dependency to resolve
+      # * *iDir* (_String_): The directory to test
+      # Return:
+      # * _Boolean_: Is the test successfull ?
+      # * _Exception_: The exception, or nil if success
+      def testDirectory(iDepName, iDir)
+        rSuccess = false
+        rException = nil
+
+        rSuccess = File.exists?("#{iDir}/#{iDepName}")
+        if (!rSuccess)
+          rException = Exception.new("File \"#{iDir}/#{iDepName}\" does not exist.")
+        end
+
+        return rSuccess, rException
+      end
+
+      # Install a dependency in a given directory
+      #
+      # Parameters:
+      # * *iDepName* (_String_): Dependency name
+      # * *iInstallDir* (_String_): Directory to install to
+      # * *iInstallCommand* (_String_): Command used for installation
+      # * *ioProgressDialog* (<em>Wx::ProgressDialog</em>): The progress dialog (can be nil)
+      # Return:
+      # * _Boolean_: Success ?
+      def install(iDepName, iInstallDir, iInstallCommand, ioProgressDialog)
+        rSuccess = false
+
+        # Download the URL stored in iInstallCommand into iInstallDir
+        # The URL can be a zip file, a targz, a direct dll file
+        accessFile(iInstallCommand) do |iLocalFileName|
+          case File.extname(iLocalFileName).upcase
+          when '.ZIP'
+            # Unzip before
+            rSuccess = extractZipFile(iLocalFileName, "#{iInstallDir}/#{iDepName}")
+          # TODO: Handle targz, bz...
+          else
+            # Just copy
+            FileUtils::mkdir_p("#{iInstallDir}/#{iDepName}")
+            FileUtils::cp(iLocalFileName, "#{iInstallDir}/#{iDepName}/#{File.basename(iInstallCommand)}")
           end
         end
 
-        # First state
-        setIgnore
-
+        return rSuccess
       end
 
-      # Set the panel to ignore decision
-      def setIgnore
-        @ValidDirectory = nil
-        @SBStatus.bitmap = ICON_KO
-        @RBIgnore.value = true
-        if (@RBInstallIn != nil)
-          @RBInstallIn.show(false)
-          self.fit
-        end
-        @NotifierControl.notifyInstallDecisionChanged
-      end
-
-      # Is this panel marked to be installed ?
+      # Get the directory to add after an install in a non-standard directory
       #
+      # Parameters:
+      # * *iDepName* (_String_): Dependency name
+      # * *iInstallDir* (_String_): Directory to install to
+      # * *iInstallCommand* (_String_): Command used for installation
       # Return:
-      # * _Boolean_: Is this panel marked to be installed ?
-      def install?
-        if (@RBInstall == nil)
-          return false
-        else
-          return @RBInstall.value
+      # * <em>list<String></em>: Directories to add
+      def getDirectoriesToAddAfterInstall(iDepName, iInstallDir, iInstallCommand)
+        rDirs = []
+
+        Dir.glob("#{iInstallDir}/**/*").each do |iFileName|
+          if (File.directory?(iFileName))
+            rDirs << iFileName
+          end
         end
 
-      end
-
-      # Is this panel marked to be ignored ?
-      #
-      # Return:
-      # * _Boolean_: Is this panel marked to be ignored ?
-      def ignore?
-        return @RBIgnore.value
-      end
-
-      # Get the installation directory
-      #
-      # Return:
-      # * _String_: Installation directory
-      def installLocation
-        return @InstallDir
-      end
-
-      # Get the valid directory where the dependency was found.
-      #
-      # Return:
-      # * _String_: Directory containing the library, or nil if none specified
-      def getValidDirectory
-        return @ValidDirectory
-      end
-
-      # Does the installation location a standard directory ?
-      # A standard directory is a directory where PBS will search for plugins by default.
-      #
-      # Return:
-      # * _Boolean_: Does the installation location a standard directory ?
-      def installDirStandard?
-        if (@RBInstallIn == nil)
-          return true
-        else
-          return (@RBInstallIn.selection != 4)
-        end
+        return rDirs
       end
 
     end
@@ -259,176 +188,408 @@ module PBS
     #
     # Parameters:
     # * *iParent* (<em>Wx::Window</em>): The parent
-    # * *iMissingDeps* (<em>map<String,[String,list<[String,String,map<String,map<Symbol,Object>>,list<Object>]>]></em>): The map of missing dependencies
+    # * *iMissingDeps* (_MissingDependencies_): The missing dependencies
     def initialize(iParent, iMissingDeps)
       super(iParent,
         :title => 'Dependencies downloader',
         :style => Wx::DEFAULT_DIALOG_STYLE|Wx::RESIZE_BORDER|Wx::MAXIMIZE_BOX
       )
 
-      # Mapping of require name to panel
-      # map< String, DependencyPanel >
-      @RequireToPanels = {}
-      # List of requires that become loadable after this dialog's completion
-      # list< String >
-      @LoadableRequires = []
-      # List of external directories needed to load new paths.
-      # These are the directories that might be searched next time PBS is launched on this computer.
-      # list< String >
-      @ExternalDirectories = []
+      @MissingDeps = iMissingDeps
+      # The list of additional directories, per dependency type
+      # map< Symbol, list< String > >
+      @AdditionalDirs = {}
+      # The list of resolved dependencies, per dependency type
+      # map< Symbol, list< String > >
+      @ResolvedDeps = {}
+      # The correspondance between require/library names and tree nodes
+      # map< String, list< Integer > >
+      @GemsToNodeID = {}
+      @LibsToNodeID = {}
 
       # Create components
       @BApply = Wx::Button.new(self, Wx::ID_ANY, 'Apply')
-      lFirstSentence = nil
-      if (iMissingDeps.size == 1)
-        lFirstSentence = 'A dependency for plugins is missing.'
-      else
-        lFirstSentence = "#{iMissingDeps.size} dependencies for plugins are missing."
+      lStrSentence = 'Some dependencies are missing for some plugins:'
+      if (!iMissingDeps.MissingGems.empty?)
+        if (iMissingDeps.MissingGems.size == 1)
+          lStrSentence += "\n1 Gem"
+        else
+          lStrSentence += "\n#{iMissingDeps.MissingGems.size} Gems"
+        end
       end
-      lSTMessage = Wx::StaticText.new(self, Wx::ID_ANY, "#{lFirstSentence}\nPlease indicate what action to take for each one of them before continuing.",
+      if (!iMissingDeps.MissingLibs.empty?)
+        if (iMissingDeps.MissingLibs.size == 1)
+          lStrSentence += "\n1 library"
+        else
+          lStrSentence += "\n#{iMissingDeps.MissingLibs.size} libraries"
+        end
+      end
+      lSTMessage = Wx::StaticText.new(self, Wx::ID_ANY, "#{lStrSentence}\nPlease indicate what action to take for each one of them before continuing.",
         :style => Wx::ALIGN_CENTRE
       )
       lFont = lSTMessage.font
       lFont.weight = Wx::FONTWEIGHT_BOLD
       lSTMessage.font = lFont
-      # The window that will contain each panel corresponding to missing dependencies
-      @MainPanel = Wx::ScrolledWindow.new(self,
-        :style => Wx::VSCROLL
+
+      # The list of group windows for each type of dependency: [ Window, Title, Icon ], grouped per dependency type
+      # map< Symbol, [ DependenciesGroupWindow, String, Wx::Bitmap ] >
+      @DependencyWindows = {}
+
+      # The tree ctrl that gives a vision of the plugins
+      @TCPlugins = Wx::TreeCtrl.new(self,
+        :style => Wx::TR_HAS_BUTTONS|Wx::TR_HIDE_ROOT
       )
-      @ScrollSizer = Wx::BoxSizer.new(Wx::VERTICAL)
-      # Create each panel
-      # list< DependencyPanel >
-      lDepsPanels = []
-      # We want RubyGems
-      lRubyGemsLoaded = ensureRubyGems
-      iMissingDeps.each do |iRequireName, iRequireInfo|
-        iGemInstallCommand, iPluginsInfo = iRequireInfo
-        lDepPanel = nil
-        if (lRubyGemsLoaded)
-          lDepPanel = DependencyPanel.new(@MainPanel, iRequireName, iGemInstallCommand, iPluginsInfo, self)
-        else
-          lDepPanel = DependencyPanel.new(@MainPanel, iRequireName, nil, iPluginsInfo, self)
+      # Create the image list for the tree
+      lTreeImageList = Wx::ImageList.new(16, 16)
+      @TCPlugins.set_image_list(lTreeImageList)
+      # Make this image list driven by a manager
+      @TCImageListManager = ImageListManager.new(lTreeImageList, 16, 16)
+      # Fill the tree
+      # For each type, the corresponding tree node id
+      # map< String, Integer >
+      lTypeToNodeID = {}
+      # For each plugin key, the corresponding tree node id
+      # map< String, Integer >
+      @PluginKeyToNodeID = {}
+      lRootID = @TCPlugins.add_root('')
+      iMissingDeps.MissingPlugins.each do |iPluginKey, iPluginDepInfo|
+        iPluginTypeID, iPluginName = iPluginKey
+        iGemsList, iLibsList, iParams, iPluginInfo, iPluginsMap = iPluginDepInfo
+        # Check if this plugin key already has a node
+        if (@PluginKeyToNodeID[iPluginKey] == nil)
+          # Add a node for iPluginTypeID if it does node exist already
+          if (lTypeToNodeID[iPluginTypeID] == nil)
+            lTypeToNodeID[iPluginTypeID] = @TCPlugins.append_item(lRootID, iPluginTypeID)
+          end
+          @PluginKeyToNodeID[iPluginKey] = @TCPlugins.append_item(lTypeToNodeID[iPluginTypeID], iPluginName)
         end
-        lDepsPanels << lDepPanel
-        @RequireToPanels[iRequireName] = lDepPanel
-        @ScrollSizer.add_item(lDepPanel, :border => 8, :flag => Wx::GROW|Wx::BOTTOM, :proportion => 0)
+        # And now, add gems and libs dependencies
+        lPluginNodeID = @PluginKeyToNodeID[iPluginKey]
+        iGemsList.each do |iRequireName|
+          if (@GemsToNodeID[iRequireName] == nil)
+            @GemsToNodeID[iRequireName] = []
+          end
+          @GemsToNodeID[iRequireName] << @TCPlugins.append_item(lPluginNodeID, iRequireName)
+        end
+        iLibsList.each do |iLibName|
+          if (@LibsToNodeID[iLibName] == nil)
+            @LibsToNodeID[iLibName] = []
+          end
+          @LibsToNodeID[iLibName] << @TCPlugins.append_item(lPluginNodeID, iLibName)
+        end
       end
-      @MainPanel.sizer = @ScrollSizer
+      @TCPlugins.expand_all
+
+      # The notebook containing the scroll windows
+      lNBDeps = Wx::Notebook.new(self)
+      # Create the image list for the notebook
+      lNotebookImageList = Wx::ImageList.new(16, 16)
+      lNBDeps.image_list = lNotebookImageList
+      # Make this image list driven by a manager
+      lNBImageListManager = ImageListManager.new(lNotebookImageList, 16, 16)
+
+      # The scroll windows, 1 per dependency type
+      if (!iMissingDeps.MissingGems.empty?)
+        # We want RubyGems
+        lRubyGemsLoaded = ensureRubyGems
+        # Build the dependencies info for the scrolled window
+        lDepsList = {}
+        iMissingDeps.MissingGems.each do |iRequireName, iGemInstallCommand|
+          lDepsList[iRequireName] = [ iGemInstallCommand, iMissingDeps.getPluginsDependentOnGem(iRequireName) ]
+        end
+        if (lRubyGemsLoaded)
+          @DependencyWindows[:gem] = [
+            DependenciesGroupWindow.new(
+              lNBDeps,
+              lDepsList,
+              self,
+              [
+                [ 'PBS directory', $PBS_ExtGemsDir ],
+                [ 'Current host gems', Gem.dir ],
+                [ 'Current user gems', Gem.user_dir ]
+              ],
+              GemDepHandler.new,
+              'gem install '
+            ),
+            'Missing Gems',
+            BITMAP_GEM
+          ]
+        else
+          @DependencyWindows[:gem] = [
+            DependenciesGroupWindow.new(
+              lNBDeps,
+              lDepsList,
+              self,
+              nil,
+              GemDepHandler.new,
+              'gem install '
+            ),
+            'Missing Gems',
+            BITMAP_GEM
+          ]
+        end
+      end
+
+      # The window that will contain each panel corresponding to missing lib dependencies
+      if (!iMissingDeps.MissingLibs.empty?)
+        # Build the dependencies info for the scrolled window
+        lDepsList = {}
+        iMissingDeps.MissingLibs.each do |iLibName, iLibURL|
+          lDepsList[iLibName] = [ iLibURL, iMissingDeps.getPluginsDependentOnLib(iLibName) ]
+        end
+        @DependencyWindows[:lib] = [
+          DependenciesGroupWindow.new(
+            lNBDeps,
+            lDepsList,
+            self,
+            [
+              [ 'PBS directory', $PBS_ExtDllsDir ]
+            ],
+            LibDepHandler.new,
+            'Download from '
+          ),
+          'Missing libraries',
+          BITMAP_LIB
+        ]
+      end
+
+      # Add the pages to the notebook
+      @DependencyWindows.each do |iDepID, iDependencyWindowInfo|
+        iDependencyWindow, iTitle, iIcon = iDependencyWindowInfo
+        lNBDeps.add_page(
+          iDependencyWindow,
+          iTitle,
+          false,
+          lNBImageListManager.getImageIndex(iDependencyWindow.object_id) do
+            next iIcon
+          end
+        )
+      end
+
+      # Resize some components as they will be used for sizers
+      lNBDeps.fit
+      @TCPlugins.fit
 
       # Put everything in sizers
       lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
       lMainSizer.add_item(lSTMessage, :border => 8, :flag => Wx::ALIGN_CENTER|Wx::ALL, :proportion => 0)
-      lMainSizer.add_item(@MainPanel, :flag => Wx::GROW, :proportion => 1)
-      lMainSizer.add_item(@BApply, :border => 8, :flag => Wx::ALIGN_RIGHT|Wx::ALL, :proportion => 0)
+
+      # The sizer containing the tree, the notebook and the apply button
+      lContentSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
+      lContentSizer.add_item(@TCPlugins, :flag => Wx::GROW, :proportion => @TCPlugins.size.width)
+
+      # The sizer containing the notebook and the apply button
+      lRightSizer = Wx::BoxSizer.new(Wx::VERTICAL)
+      lRightSizer.add_item(lNBDeps, :flag => Wx::GROW, :proportion => 1)
+      lRightSizer.add_item(@BApply, :border => 8, :flag => Wx::ALIGN_RIGHT|Wx::ALL, :proportion => 0)
+
+      lContentSizer.add_item(lRightSizer, :flag => Wx::GROW, :proportion => lNBDeps.size.width)
+
+      lMainSizer.add_item(lContentSizer, :flag => Wx::GROW, :proportion => 1)
       self.sizer = lMainSizer
 
-      # Resize everything
       self.fit
-      # Add the size of scrollbars to the window's size, for them to not appear if not needed
-      self.size = [
-        self.size.width + Wx::SystemSettings.get_metric(Wx::SYS_VTHUMB_Y),
-        self.size.height + Wx::SystemSettings.get_metric(Wx::SYS_HTHUMB_X)
-      ]
-      # Set scrollbars
-      @MainPanel.set_scrollbars(1, 1, @MainPanel.size.width, @MainPanel.size.height)
 
       # Events
       evt_button(@BApply) do |iEvent|
-        # Gather the list to install in a map, with the corresponding paths to install to
-        # map< String, String >
-        lRequiresToInstall = {}
-        @RequireToPanels.each do |iRequireName, iDepPanel|
-          if (iDepPanel.install?)
-            lRequiresToInstall[iRequireName] = iDepPanel.installLocation
-          end
+        # Get the number of dependencies to ignore, and the number to install
+        lNbrIgnore = 0
+        lNbrInstall = 0
+        @DependencyWindows.each do |iDepID, iDependencyWindowInfo|
+          iDepWindow, iTitle, iIcon = iDependencyWindowInfo
+          lNbrWinIgnore, lNbrWinInstall = iDepWindow.getIgnoreInstallCounters
+          lNbrIgnore += lNbrWinIgnore
+          lNbrInstall += lNbrWinInstall
         end
-        if (!lRequiresToInstall.empty?)
-          # Create the progress dialog
+        lProgressDialog = nil
+        if (lNbrInstall > 0)
+          # We need to have a progress dialog, as we will need to install some dependencies
           lProgressDialog = Wx::ProgressDialog.new(
-            "Gems installation",
-            "Installing gems",
-            lRequiresToInstall.size,
+            'Dependencies installation',
+            'Installing',
+            lNbrInstall,
             self,
             Wx::PD_CAN_ABORT|Wx::PD_APP_MODAL
           )
-          lIdxCount = 0
-          # Install everybody
-          lRequiresToInstall.each do |iRequireName, iInstallDir|
-            lGemInstallCommand, lPluginsInfo = iMissingDeps[iRequireName]
-            if (!lProgressDialog.update(lIdxCount, "Installing gem for requirement #{iRequireName} ..."))
-              break
-            end
-            logInfo "Installing Gem for dependency #{iRequireName}: #{lGemInstallCommand}"
-            lSuccess = installGem(iInstallDir, lGemInstallCommand, lProgressDialog)
-            if (lSuccess)
-              logInfo 'Installation done successfully.'
-              @LoadableRequires << iRequireName
-              # Add the directory if it is not a standard one
-              if (!@RequireToPanels[iRequireName].installDirStandard?)
-                # Retrieve the installed gem directory
-                lGemName = lGemInstallCommand.split[0]
-                lFound = false
-                Dir.glob("#{iInstallDir}/gems/#{lGemName}*").each do |iDir|
-                  if (File.exists?("#{iDir}/lib"))
-                    @ExternalDirectories << "#{iDir}/lib"
-                    lFound = true
-                  end
-                end
-                if (!lFound)
-                  logErr "Unable to find the installed directory #{iInstallDir}/gems/#{lGemName}*. It is possible that #{iRequireName} dependency will not be installed correctly."
-                end
-              end
-            else
-              logErr "Installing Gem \"#{lGemInstallCommand}\" ended in error. Please try to install it manually."
-            end
-            lIdxCount += 1
-          end
+        end
+        # Install what is needed and get back the additional list of directories, and the list of resolved dependencies
+        lNbrCount = 0
+        @DependencyWindows.each do |iDepID, iDependencyWindowInfo|
+          iDepWindow, iTitle, iIcon = iDependencyWindowInfo
+          @AdditionalDirs[iDepID], @ResolvedDeps[iDepID] = iDepWindow.performApply(lProgressDialog, lNbrCount)
+          lNbrWinIgnore, lNbrWinInstall = iDepWindow.getIgnoreInstallCounters
+          lNbrCount += lNbrWinInstall
+        end
+        if (lProgressDialog != nil)
           lProgressDialog.destroy
         end
         self.end_modal(Wx::ID_OK)
       end
 
+      # Update the button label
       notifyInstallDecisionChanged
 
     end
 
     # Notify that an install decision of one of the dependencies has changed
     def notifyInstallDecisionChanged
-      # Get the number of dependencies to ignore, and the number to install
-      lNbrToBeInstalled = 0
-      lNbrToBeIgnored = 0
-      @LoadableRequires = []
-      @ExternalDirectories = []
-      @RequireToPanels.each do |iRequireName, iDepPanel|
-        if (iDepPanel.install?)
-          lNbrToBeInstalled += 1
-        elsif (iDepPanel.ignore?)
-          lNbrToBeIgnored += 1
+      # Update the label
+      lNbrIgnore = 0
+      lNbrInstall = 0
+      @DependencyWindows.each do |iDepID, iDependencyWindowInfo|
+        iDepWindow, iTitle, iIcon = iDependencyWindowInfo
+        lNbrWinIgnore, lNbrWinInstall = iDepWindow.getIgnoreInstallCounters
+        lNbrIgnore += lNbrWinIgnore
+        lNbrInstall += lNbrWinInstall
+      end
+      @BApply.label = "Apply (Ignore #{lNbrIgnore}, Install #{lNbrInstall})"
+      # Update icons of the tree
+      # The gems
+      @GemsToNodeID.each do |iDepName, iNodesList|
+        # First get the masks for this dependency
+        # Wx::Bitmap
+        lMask = nil
+        if (@DependencyWindows[:gem][0].depInstall?(iDepName))
+          lMask = BITMAP_INSTALL
+        elsif (@DependencyWindows[:gem][0].depIgnore?(iDepName))
+          lMask = BITMAP_IGNORE
         else
-          # We found a directory where this require is installed
-          @LoadableRequires << iRequireName
-          @ExternalDirectories << iDepPanel.getValidDirectory
+          lMask = BITMAP_VALID
+        end
+        lIdxImage = @TCImageListManager.getImageIndex( [ :gem, lMask, iDepName ] ) do
+          # We will apply some layers, so clone the original bitmap
+          rBitmap = BITMAP_GEM.clone
+          applyBitmapLayers(rBitmap, [lMask])
+          next rBitmap
+        end
+        # Apply this to every node
+        iNodesList.each do |iNodeID|
+          @TCPlugins.set_item_image(iNodeID, lIdxImage)
+          # This is used to compute the bitmap of the plugin after
+          @TCPlugins.set_item_data(iNodeID, lMask)
         end
       end
-      @BApply.label = "Apply (#{lNbrToBeInstalled} to be installed, #{lNbrToBeIgnored} to be ignored)"
-      # Place the components correctly inside the sizer
-      @ScrollSizer.fit_inside(@MainPanel)
+      # The libs
+      @LibsToNodeID.each do |iDepName, iNodesList|
+        # First get the masks for this dependency
+        # Wx::Bitmap
+        lMask = nil
+        if (@DependencyWindows[:lib][0].depInstall?(iDepName))
+          lMask = BITMAP_INSTALL
+        elsif (@DependencyWindows[:lib][0].depIgnore?(iDepName))
+          lMask = BITMAP_IGNORE
+        else
+          lMask = BITMAP_VALID
+        end
+        lIdxImage = @TCImageListManager.getImageIndex( [ :lib, lMask, iDepName ] ) do
+          # We will apply some layers, so clone the original bitmap
+          rBitmap = BITMAP_LIB.clone
+          applyBitmapLayers(rBitmap, [lMask])
+          next rBitmap
+        end
+        # Apply this to every node
+        iNodesList.each do |iNodeID|
+          @TCPlugins.set_item_image(iNodeID, lIdxImage)
+          # This is used to compute the bitmap of the plugin after
+          @TCPlugins.set_item_data(iNodeID, lMask)
+        end
+      end
+      # The plugins
+      @PluginKeyToNodeID.each do |iPluginKey, iNodeID|
+        # Check images of all its children to compute its one
+        lInstall = false
+        lIgnore = false
+        @TCPlugins.get_children(iNodeID).each do |iChildNodeID|
+          case @TCPlugins.get_item_data(iChildNodeID)
+          when BITMAP_INSTALL
+            lInstall = true
+          when BITMAP_IGNORE
+            lIgnore = true
+            break
+          end
+        end
+        lMask = nil
+        if (lIgnore)
+          lMask = BITMAP_IGNORE
+        elsif (lInstall)
+          lMask = BITMAP_INSTALL
+        else
+          lMask = BITMAP_VALID
+        end
+        lIdxImage = @TCImageListManager.getImageIndex( [ nil, lMask, iPluginKey ] ) do
+          # We must retrieve the plugin icon
+          # We will apply some layers, so clone the original bitmap
+          rBitmap = @MissingDeps.MissingPlugins[iPluginKey][3][:bitmap].clone
+          applyBitmapLayers(rBitmap, [lMask])
+          next rBitmap
+        end
+        @TCPlugins.set_item_image(iNodeID, lIdxImage)
+      end
     end
 
-    # Return dependencies that should be loadable after this dialog execution
+    # Return plugins that should be loadable after this dialog execution
     #
     # Return:
-    # * <em>list<String></em>: List of requires that should get ok
-    def getLoadableDependencies
-      return @LoadableRequires
+    # * <em>list<[String,String]></em>: List of [ plugin type, plugin name ] that should get ok
+    def getLoadablePlugins
+      rLoadablePlugins = []
+
+      # Check each plugin
+      @MissingDeps.MissingPlugins.each do |iPluginKey, iPluginDepInfo|
+        iGemList, iLibList, iParams, iPluginInfo = iPluginDepInfo
+        # Verify that each missing gem is part of the loadable ones
+        lMissingGem = false
+        iGemList.each do |iRequireName|
+          if ((@ResolvedDeps[:gem] == nil) or
+              (!@ResolvedDeps[:gem].include?(iRequireName)))
+            lMissingGem = true
+            break
+          end
+        end
+        if (!lMissingGem)
+          # Verify that each missing lib is part of the loadable ones
+          lMissingLib = false
+          iLibList.each do |iLibName|
+            if ((@ResolvedDeps[:lib] == nil) or
+                (!@ResolvedDeps[:lib].include?(iLibName)))
+              lMissingLib = true
+              break
+            end
+          end
+          if (!lMissingLib)
+            # This plugin should be loadable: all its dependencies have been resolved
+            rLoadablePlugins << iPluginKey
+          end
+        end
+      end
+
+      return rLoadablePlugins
     end
 
     # Return the list of directories that should be added to initial search paths for libraries
     #
     # Return:
     # * <em>list<String></em>: List of directories to add
-    def getExternalDirectories
-      return @ExternalDirectories
+    def getExternalLibDirectories
+      # Can be nil if no dependency of this type was to be resolved
+      if (@AdditionalDirs[:gem] != nil)
+        return @AdditionalDirs[:gem]
+      else
+        return []
+      end
+    end
+
+    # Return the list of directories that should be added to initial search paths for system libraries
+    #
+    # Return:
+    # * <em>list<String></em>: List of directories to add
+    def getExternalDLLDirectories
+      # Can be nil if no dependency of this type was to be resolved
+      if (@AdditionalDirs[:lib] != nil)
+        return @AdditionalDirs[:lib]
+      else
+        return []
+      end
     end
 
   end

@@ -30,23 +30,15 @@ module PBS
 
     include Tools
 
-    # Define flags that will then be used to identify which icons have to be drawn upon an item icon (ex. for Copy/Cut/Drag)
-    # Those flags can then be combined into a bit mask.
-    FLAG_PRIMARY_COPY = 1
-    FLAG_PRIMARY_CUT = 2
-    FLAG_SECONDARY_COPY = 4
-    FLAG_SECONDARY_CUT = 8
-    FLAG_DRAG = 16
-    FLAG_DRAG_NONE = 32
-
     # Define bitmaps used for layers in the tree
     # !!! Be careful that all of these images MUST have a semi-transparent pixel in their data, otherwise drawing the bitmap on a DC completely ignores the mask. Bug ?
-    BITMAPLAYER_PRIMARY_COPY = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniCopy.png")
-    BITMAPLAYER_PRIMARY_CUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniCut.png")
-    BITMAPLAYER_SECONDARY_COPY = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MicroCopy.png")
-    BITMAPLAYER_SECONDARY_CUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MicroCut.png")
-    BITMAPLAYER_DRAG = Wx::Bitmap.new("#{$PBS_GraphicsDir}/DragNDrop.png")
-    BITMAPLAYER_DRAG_NONE = Wx::Bitmap.new("#{$PBS_GraphicsDir}/DragNDropCancel.png")
+    # TODO (WxRuby): Correct this bug
+    BITMAP_PRIMARY_COPY = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniCopy.png")
+    BITMAP_PRIMARY_CUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniCut.png")
+    BITMAP_SECONDARY_COPY = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MicroCopy.png")
+    BITMAP_SECONDARY_CUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MicroCut.png")
+    BITMAP_DRAG = Wx::Bitmap.new("#{$PBS_GraphicsDir}/DragNDrop.png")
+    BITMAP_DRAG_NONE = Wx::Bitmap.new("#{$PBS_GraphicsDir}/DragNDropCancel.png")
 
     # Define default Tag and Shortcuts icons
     ICON_DEFAULT_TAG = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Tag.png")
@@ -329,7 +321,7 @@ module PBS
       # We have little + buttons to collapse/expand
       # We have multiple selection
       super(iWindow,
-        :style => Wx::TR_EDIT_LABELS|Wx::TR_HAS_BUTTONS|Wx::TR_MULTIPLE
+        :style => Wx::TR_EDIT_LABELS|Wx::TR_HAS_BUTTONS|Wx::TR_MULTIPLE|Wx::TR_EXTENDED
       )
 
       # TODO (WxRuby): Bug correction
@@ -590,54 +582,6 @@ module PBS
       @DragImage.show
     end
 
-    # Apply bitmap layers based on flags on a given bitmap
-    #
-    # Parameters:
-    # * *ioBitmap* (<em>Wx::Bitmap</em>): The bitmap to modify
-    # * *iFlags* (_Integer_): The flags used for modification
-    def applyBitmapLayers(ioBitmap, iFlags)
-      # 1. Create the bitmap that will be used as a mask
-      lMaskBitmap = Wx::Bitmap.new(ioBitmap.width, ioBitmap.height, 1)
-      lMaskBitmap.draw do |ioMaskDC|
-        ioBitmap.draw do |iBitmapDC|
-          ioMaskDC.blit(0, 0, ioBitmap.width, ioBitmap.height, iBitmapDC, 0, 0, Wx::SET, true)
-        end
-      end
-      # 2. Remove the mask from the original bitmap
-      lNoMaskBitmap = Wx::Bitmap.new(ioBitmap.width, ioBitmap.height, 1)
-      lNoMaskBitmap.draw do |ioNoMaskDC|
-        ioNoMaskDC.brush = Wx::WHITE_BRUSH
-        ioNoMaskDC.pen = Wx::WHITE_PEN
-        ioNoMaskDC.draw_rectangle(0, 0, ioBitmap.width, ioBitmap.height)
-      end
-      ioBitmap.mask = Wx::Mask.new(lNoMaskBitmap)
-      # 3. Draw on the original bitmap and its mask
-      ioBitmap.draw do |ioDC|
-        lMaskBitmap.draw do |ioMaskDC|
-          if (iFlags & FLAG_PRIMARY_COPY != 0)
-            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_PRIMARY_COPY)
-          end
-          if (iFlags & FLAG_PRIMARY_CUT != 0)
-            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_PRIMARY_CUT)
-          end
-          if (iFlags & FLAG_SECONDARY_COPY != 0)
-            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_SECONDARY_COPY)
-          end
-          if (iFlags & FLAG_SECONDARY_CUT != 0)
-            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_SECONDARY_CUT)
-          end
-          if (iFlags & FLAG_DRAG != 0)
-            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_DRAG)
-          end
-          if (iFlags & FLAG_DRAG_NONE != 0)
-            mergeBitmapOnDC(ioDC, ioMaskDC, BITMAPLAYER_DRAG_NONE)
-          end
-        end
-      end
-      # 4. Set the mask correctly
-      ioBitmap.mask = Wx::Mask.new(lMaskBitmap)
-    end
-
     # Set one of tree's node attributes to fit its associated data (Tag or Shortcut).
     # Only this method knows how to display tree nodes.
     #
@@ -649,46 +593,48 @@ module PBS
       when ID_TAG
         # Get the corresponding Tag
         set_item_text(iItemID, lObject.Name)
-        # Compute the flags to put on the icon
-        # Integer
-        lFlags = 0
+        # Compute the masks to put on the icon
+        # list< Wx::Bitmap >
+        lMasks = []
         # Check the Copy/Cut markers
         if (@CopySelection != nil)
           if (@CopySelection.isTagPrimary?(lObject))
             if (@CopyMode == Wx::ID_CUT)
-              lFlags |= FLAG_PRIMARY_CUT
+              lMasks << BITMAP_PRIMARY_CUT
             else
-              lFlags |= FLAG_PRIMARY_COPY
+              lMasks << BITMAP_PRIMARY_COPY
             end
           end
           if (@CopySelection.isTagSecondary?(lObject))
             if (@CopyMode == Wx::ID_CUT)
-              lFlags |= FLAG_SECONDARY_CUT
+              lMasks << BITMAP_SECONDARY_CUT
             else
-              lFlags |= FLAG_SECONDARY_COPY
+              lMasks << BITMAP_SECONDARY_COPY
             end
           end
-        elsif (@DragSelection != nil)
+        end
+        if (@DragSelection != nil)
           if (@DragSelection.isTagPrimary?(lObject))
             if (@DragMode == Wx::DRAG_MOVE)
-              lFlags |= FLAG_PRIMARY_CUT
-              lFlags |= FLAG_DRAG
+              lMasks << BITMAP_PRIMARY_CUT
+              lMasks << BITMAP_DRAG
+              p 1
             elsif (@DragMode == Wx::DRAG_COPY)
-              lFlags |= FLAG_PRIMARY_COPY
-              lFlags |= FLAG_DRAG
+              lMasks << BITMAP_PRIMARY_COPY
+              lMasks << BITMAP_DRAG
             else
-              lFlags |= FLAG_DRAG_NONE
+              lMasks << BITMAP_DRAG_NONE
             end
           end
           if (@DragSelection.isTagSecondary?(lObject))
             if (@DragMode == Wx::DRAG_MOVE)
-              lFlags |= FLAG_SECONDARY_CUT
-              lFlags |= FLAG_DRAG
+              lMasks << BITMAP_SECONDARY_CUT
+              lMasks << BITMAP_DRAG
             elsif (@DragMode == Wx::DRAG_COPY)
-              lFlags |= FLAG_SECONDARY_COPY
-              lFlags |= FLAG_DRAG
+              lMasks << BITMAP_SECONDARY_COPY
+              lMasks << BITMAP_DRAG
             else
-              lFlags |= FLAG_DRAG_NONE
+              lMasks << BITMAP_DRAG_NONE
             end
           end
         end
@@ -696,14 +642,14 @@ module PBS
         lImageID = nil
         if (lObject.Icon != nil)
           # This image is unique to this Shortcut
-          lImageID = [ lObject, lFlags ]
+          lImageID = [ lObject, lMasks ]
         else
           # This is the ID for Tags having no icon.
-          lImageID = [ nil, lFlags ]
+          lImageID = [ nil, lMasks ]
         end
         # Now compute the image based on lFlags and the object ID
         lIdxImage = @ImageListManager.getImageIndex(lImageID) do
-          if (lFlags == 0)
+          if (lMasks.empty?)
             # Just return the original icon, without modifications
             if (lObject.Icon != nil)
               next lObject.Icon
@@ -718,7 +664,7 @@ module PBS
             else
               rBitmap = ICON_DEFAULT_TAG.clone
             end
-            applyBitmapLayers(rBitmap, lFlags)
+            applyBitmapLayers(rBitmap, lMasks)
             next rBitmap
           end
         end
@@ -730,48 +676,49 @@ module PBS
           lTitle = '-- Unknown title --'
         end
         set_item_text(iItemID, lTitle)
-        # Compute the flags to put on the icon
-        # Integer
-        lFlags = 0
+        # Compute the masks to put on the icon
+        # list< Wx::Bitmap >
+        lMasks = []
         # Check the Copy/Cut markers
         if (@CopySelection != nil)
           lParentTag = getParentTag(iItemID)
           if (@CopySelection.isShortcutPrimary?(lObject, lParentTag))
             if (@CopyMode == Wx::ID_CUT)
-              lFlags |= FLAG_PRIMARY_CUT
+              lMasks << BITMAP_PRIMARY_CUT
             else
-              lFlags |= FLAG_PRIMARY_COPY
+              lMasks << BITMAP_PRIMARY_COPY
             end
           end
           if (@CopySelection.isShortcutSecondary?(lObject, lParentTag))
             if (@CopyMode == Wx::ID_CUT)
-              lFlags |= FLAG_SECONDARY_CUT
+              lMasks << BITMAP_SECONDARY_CUT
             else
-              lFlags |= FLAG_SECONDARY_COPY
+              lMasks << BITMAP_SECONDARY_COPY
             end
           end
-        elsif (@DragSelection != nil)
+        end
+        if (@DragSelection != nil)
           lParentTag = getParentTag(iItemID)
           if (@DragSelection.isShortcutPrimary?(lObject, lParentTag))
             if (@DragMode == Wx::DRAG_MOVE)
-              lFlags |= FLAG_PRIMARY_CUT
-              lFlags |= FLAG_DRAG
+              lMasks << BITMAP_PRIMARY_CUT
+              lMasks << BITMAP_DRAG
             elsif (@DragMode == Wx::DRAG_COPY)
-              lFlags |= FLAG_PRIMARY_COPY
-              lFlags |= FLAG_DRAG
+              lMasks << BITMAP_PRIMARY_COPY
+              lMasks << BITMAP_DRAG
             else
-              lFlags |= FLAG_DRAG_NONE
+              lMasks << BITMAP_DRAG_NONE
             end
           end
           if (@DragSelection.isShortcutSecondary?(lObject, lParentTag))
             if (@DragMode == Wx::DRAG_MOVE)
-              lFlags |= FLAG_SECONDARY_CUT
-              lFlags |= FLAG_DRAG
+              lMasks << BITMAP_SECONDARY_CUT
+              lMasks << BITMAP_DRAG
             elsif (@DragMode == Wx::DRAG_COPY)
-              lFlags |= FLAG_SECONDARY_COPY
-              lFlags |= FLAG_DRAG
+              lMasks << BITMAP_SECONDARY_COPY
+              lMasks << BITMAP_DRAG
             else
-              lFlags |= FLAG_DRAG_NONE
+              lMasks << BITMAP_DRAG_NONE
             end
           end
         end
@@ -779,20 +726,20 @@ module PBS
         lImageID = nil
         if (lObject.Metadata['icon'] != nil)
           # This image is unique to this Shortcut
-          lImageID = [ lObject, lFlags ]
+          lImageID = [ lObject, lMasks ]
         else
           # Get the ID based on the Type
-          lImageID = [ lObject.Type.pluginName, lFlags ]
+          lImageID = [ lObject.Type.pluginName, lMasks ]
         end
         # Now compute the image based on lFlags and the object ID
         lIdxImage = @ImageListManager.getImageIndex(lImageID) do
-          if (lFlags == 0)
+          if (lMasks.empty?)
             # Just return the original icon, without modifications
             next @Controller.getShortcutIcon(lObject)
           else
             # We will apply some layers, so clone it first
             rBitmap = @Controller.getShortcutIcon(lObject).clone
-            applyBitmapLayers(rBitmap, lFlags)
+            applyBitmapLayers(rBitmap, lMasks)
             next rBitmap
           end
         end

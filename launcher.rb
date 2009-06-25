@@ -13,8 +13,10 @@ module PBS
     #
     # Parameters:
     # * *iRootDir* (_String_): The root dir of PBS
-    # * *iLauncher* (_Object_): The launcher containing platform dependent methods
-    def launch(iRootDir, iLauncher)
+    # * *iPlatform* (_Object_): The object containing platform dependent methods
+    def launch(iRootDir, iPlatform)
+      # The platform dependent object
+      $PBS_Platform = iPlatform
       # Global paths
       # Root dir used as a based for images directories, plugins to be required...
       $PBS_RootDir = iRootDir
@@ -22,16 +24,20 @@ module PBS
       $PBS_GraphicsDir = "#{$PBS_LibDir}/Graphics"
       $PBS_ExtDir = "#{$PBS_RootDir}/ext/#{RUBY_PLATFORM}"
       $PBS_ExtGemsDir = "#{$PBS_ExtDir}/gems"
-      # Add the main library directory to the load path
-      $LOAD_PATH << $PBS_LibDir
+      $PBS_ExtDllsDir = "#{$PBS_ExtDir}/libs"
+      # Add the main library directory to the load path, as well as libraries needed for PBS without plugins
+      $LOAD_PATH.concat( [
+        $PBS_LibDir,
+        "#{$PBS_RootDir}/ext/rubyzip-0.9.1/lib"
+      ] )
       require 'Tools.rb'
       self.class.instance_eval('include Tools')
-      if (ensureWxRuby(iLauncher))
+      if (ensureWxRuby)
         # Launch everything
         require 'pbs'
         PBS::run
       else
-        iLauncher.sendMsg('Unable to start PBS. Exiting.')
+        $PBS_Platform.sendMsg('Unable to start PBS. Exiting.')
       end
     end
 

@@ -5,7 +5,32 @@
 
 module PBS
 
-  class Launcher_mswin32
+  class Platform_mswin32
+
+    # Return the ID of the OS
+    # This is then used for PBS and plugins to adapt their behaviour
+    #
+    # Return:
+    # * _Integer_: OS ID
+    def os
+      return OS_WINDOWS
+    end
+
+    # Return the list of directories where we look for libraries
+    #
+    # Return:
+    # * <em>list<String></em>: List of directories
+    def getSystemLibsPath
+      return ENV['PATH'].split(';')
+    end
+
+    # Set the list of directories where we look for libraries
+    #
+    # Parameters:
+    # * *iNewDirsList* (<em>list<String></em>): List of directories
+    def setSystemLibsPath(iNewDirsList)
+      ENV['PATH'] = iNewDirsList.join(';')
+    end
 
     # This method sends a message (platform dependent) to the user, without the use of wxruby
     #
@@ -20,4 +45,4 @@ module PBS
 end
 
 require 'launcher.rb'
-PBS::Launcher.new.launch(File.dirname(__FILE__), PBS::Launcher_mswin32.new)
+PBS::Launcher.new.launch(File.dirname(__FILE__), PBS::Platform_mswin32.new)

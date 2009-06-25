@@ -704,7 +704,10 @@ module PBS
         :shortcutsConflict => SHORTCUTSCONFLICT_ASK,
         # The list of directories storing some libraries, per architecture
         # map< String, list< String > >
-        :externalLibDirs => {}
+        :externalLibDirs => {},
+        # The list of directories storing some system libraries, per architecture
+        # map< String, list< String > >
+        :externalDLLDirs => {}
       }
 
       # The GUIS registered
@@ -750,16 +753,38 @@ module PBS
       return rList.uniq
     end
 
+    # Get the list of directories to parse for system libraries (plugin dependencies).
+    # Check for existence before return.
+    # The list depends on options
+    #
+    # Return:
+    # * <em>list<String></em>: The list of directories
+    def getExternalDLLDirs
+      rList = getLocalExternalDLLDirs
+
+      # Every previously searched directory for this architecture
+      if (@Options[:externalDLLDirs][RUBY_PLATFORM] != nil)
+        @Options[:externalDLLDirs][RUBY_PLATFORM].each do |iDir|
+          if (File.exists?(iDir))
+            rList << iDir
+          end
+        end
+      end
+
+      return rList.uniq
+    end
+
     # Initialize the controller once the main_loop has been called
     # This lets messages pop up.
     def init
       # Add external libraries directories to the load path
       addToLoadPath(getExternalLibDirs)
+      # Add DLLs dir to add to the current OS DLL path
+      addToSystemLoadPath(getExternalDLLDirs)
 
       # Load plugins
-      # Map keeping trace of missing dependencies: for each require name, the gem install command and the list of [ plugin type, plugin name, corresponding plugins map, constructor parameters ] that depend on this require.
-      # map< String, [ String, list< [ String, String, map< String, map< Symbol, Object > >, list< Object > ] > ] >
-      lMissingDeps = {}
+      # Keep trace of missing dependencies
+      lMissingDeps = MissingDependencies.new
       readPlugins(@TypesPlugins, 'Types', lMissingDeps)
       readPlugins(@ImportPlugins, 'Imports', lMissingDeps)
       readPlugins(@ExportPlugins, 'Exports', lMissingDeps)
@@ -770,48 +795,32 @@ module PBS
       if (!lMissingDeps.empty?)
         showModal(DependenciesLoaderDialog, nil, lMissingDeps) do |iModalResult, iDialog|
           # Get the list of additional directories to search into
-          lExternalDirs = iDialog.getExternalDirectories
+          lExternalLibDirs = iDialog.getExternalLibDirectories
           # Store it for future use in options
           if (@Options[:externalLibDirs][RUBY_PLATFORM] == nil)
             @Options[:externalLibDirs][RUBY_PLATFORM] = []
           end
-          @Options[:externalLibDirs][RUBY_PLATFORM].concat(lExternalDirs)
+          @Options[:externalLibDirs][RUBY_PLATFORM].concat(lExternalLibDirs)
           # Replace the load path with the new external lib dirs
           addToLoadPath(getExternalLibDirs)
-          # Get the list of dependencies that should be loadable
-          lLoadableDeps = iDialog.getLoadableDependencies
-          # Build the map of requires needed per plugin ( [ Plugin type ID, Plugin name ] ): the list of requires that need to be installed, and the corresponding plugins map to complete and parameters to give the constructor
-          # map< [ String, String ], [ list< String >, map< String, map< Symbol, Object > >, list< Object > ] >
-          lRequiresPerPlugin = {}
-          lMissingDeps.each do |iRequireName, ioRequireInfo|
-            iGemInstallCommand, iPluginsList = ioRequireInfo
-            iPluginsList.each do |ioPluginInfo|
-              iPluginTypeID, iPluginName, ioPluginsMap, iParams = ioPluginInfo
-              lPluginID = [ iPluginTypeID, iPluginName ]
-              if (lRequiresPerPlugin[lPluginID] == nil)
-                lRequiresPerPlugin[lPluginID] = [ [], ioPluginsMap, iParams ]
-              end
-              lRequiresPerPlugin[lPluginID][0] << iRequireName
-            end
+          # Get the list of additional system directories to search into
+          lExternalDLLDirs = iDialog.getExternalDLLDirectories
+          # Store it for future use in options
+          if (@Options[:externalDLLDirs][RUBY_PLATFORM] == nil)
+            @Options[:externalDLLDirs][RUBY_PLATFORM] = []
           end
-          # And now for each missing plugin that might become loadable, try to load it again
-          lRequiresPerPlugin.each do |iPluginID, ioRequiresInfo|
-            iPluginTypeID, iPluginName = iPluginID
-            iRequiresList, ioPluginsMap, iParams = ioRequiresInfo
-            # Check if all requires are loadable
-            lPluginLoadable = true
-            iRequiresList.each do |iRequireName|
-              if (!lLoadableDeps.include?(iRequireName))
-                # We can't load iPluginID, because iRequireName will still be missing
-                logInfo "Plugin #{iPluginTypeID}/#{iPluginName} cannot be loaded due to missing require #{iRequireName}. Ignoring this plugin."
-                lPluginLoadable = false
-                break
-              end
-            end
-            if (lPluginLoadable)
-              # Try to reload it for real
-              loadPlugin(ioPluginsMap, iPluginTypeID, iPluginName, *iParams)
-            end
+          @Options[:externalDLLDirs][RUBY_PLATFORM].concat(lExternalDLLDirs)
+          # Add DLLs dir to add to the current OS DLL path
+          addToSystemLoadPath(getExternalDLLDirs)
+          # Get the list of plugins that should be loadable
+          # list< [ String, String ] >
+          lLoadablePlugins = iDialog.getLoadablePlugins
+          # And try again to load them
+          lLoadablePlugins.each do |iPluginKey|
+            iPluginTypeID, iPluginName = iPluginKey
+            lGemDeps, lLibDeps, lParams, lPluginInfo, lPluginsMap = lMissingDeps.MissingPlugins[iPluginKey]
+            # Try to reload it for real
+            loadPlugin(lPluginInfo, lPluginsMap, iPluginTypeID, iPluginName, lParams)
           end
         end
       end
@@ -931,47 +940,88 @@ module PBS
 
     end
 
+    # Read the description of a plugin from its description file
+    #
+    # Parameters:
+    # * *iPluginsTypeID* (_String_): The type of plugins identifier
+    # * *iPluginName* (_String_): The plugin name
+    # Return:
+    # * <em>map< Symbol, Object ></em>: The plugin info
+    def readDescription(iPluginsTypeID, iPluginName)
+      # Create default info
+      rPluginInfo = {
+        :title => iPluginName,
+        :description => iPluginName,
+        :bitmapName => 'Plugin.png',
+        :enabled => true
+      }
+
+      lRequireDescName = "Plugins/#{iPluginsTypeID}/#{iPluginName}.desc.rb"
+      begin
+        require lRequireDescName
+        begin
+          # Complete with the plugin's info
+          rPluginInfo.merge!(eval("#{iPluginsTypeID}::Description::#{iPluginName}.new.pluginInfo"))
+          # Create dynamic content of the plugin info
+          rPluginInfo.merge!( {
+            :bitmap => Wx::Bitmap.new("#{$PBS_GraphicsDir}/#{rPluginInfo[:bitmapName]}")
+          } )
+        rescue Exception
+          logBug "Error while getting info on plugin #{iPluginsTypeID}/#{iPluginName}: #{$!}\nCheck that method PBS::#{iPluginsTypeID}::Description::#{iPluginName}.pluginInfo has been correctly defined in it.\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
+          # Record the error
+          rPluginInfo[:exception] = $!
+        end
+      rescue Exception
+        logBug "Error while loading one of the #{iPluginsTypeID} plugin (#{iPluginName}): #{$!}\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
+        # Record the error
+        rPluginInfo[:exception] = $!
+      end
+
+      return rPluginInfo
+    end
+
     # First check if the dependencies of a given plugin file are satisfied, by requiring its libraries if needed.
     #
     # Parameters:
-    # * *iPluginsMap* (<em>map<String,map<Symbol,Object>></em>): The map of plugins corresponding to this plugins type
+    # * *iPluginInfo* (<em>map<Symbol,Object></em>): The plugin info
+    # * *ioPluginsMap* (<em>map<String,map<Symbol,Object>></em>): The plugins map where the plugin info will be inserted
     # * *iPluginsTypeID* (_String_): The type of plugins identifier
     # * *iPluginName* (_String_): The plugin name
-    # * *oMissingDeps* (<em>map<String,[String,list<[String,String,map<String,map<Symbol,Object>>,list<Object>]>]></em>): The map of missing dependencies to fill
+    # * *oMissingDeps* (_MissingDependencies_): The missing dependencies to fill
     # * *iParams* (<em>list<Object></em>): Additional parameters to give to the plugin constructor [optional]
     # Return:
     # * _Boolean_: Are there some missing dependencies ?
-    def checkMissingDependencies(iPluginsMap, iPluginsTypeID, iPluginName, oMissingDeps, *iParams)
+    def checkMissingDependencies(iPluginInfo, ioPluginsMap, iPluginsTypeID, iPluginName, oMissingDeps, *iParams)
       rMissing = false
 
-      if (File.exists?("#{$PBS_LibDir}/Plugins/#{iPluginsTypeID}/#{iPluginName}.dep.rb"))
-        # Check dependencies
-        lRequireDepsName = "Plugins/#{iPluginsTypeID}/#{iPluginName}.dep.rb"
-        begin
-          require lRequireDepsName
+      if (iPluginInfo[:gemsDependencies] != nil)
+        iPluginInfo[:gemsDependencies].each do |iRequireName, iGemInstallCommand|
+          # Test the require
           begin
-            lDeps = eval("#{iPluginsTypeID}::get#{iPluginName}Deps")
-            lDeps.each do |iRequireName, iGemInstallCommand|
-              # Test the require
-              begin
-                require iRequireName
-              rescue Exception
-                # Dependency missing
-                if (oMissingDeps[iRequireName] == nil)
-                  oMissingDeps[iRequireName] = [ iGemInstallCommand, [] ]
-                elsif (oMissingDeps[iRequireName][0] != iGemInstallCommand)
-                  logBug "Conflict of dependencies to install between 2 plugins. They both want to install #{iRequireName}. One wants '#{oMissingDeps[iRequireName][0]}', the other '#{iGemInstallCommand}'.\nPlease check .dep.rb files that declare dependencies.\nWill use '#{iGemInstallCommand}'."
-                  oMissingDeps[iRequireName][0] = iGemInstallCommand
-                end
-                oMissingDeps[iRequireName][1] << [ iPluginsTypeID, iPluginName, iPluginsMap, iParams ]
-                rMissing = true
-              end
-            end
+            require iRequireName
           rescue Exception
-            logBug "Error while instantiating one of the #{iPluginsTypeID} plugin dependencies (#{lRequireDepsName}): #{$!}\nCheck that class method PBS::#{iPluginsTypeID}::get#{iPluginName}Deps has been correctly defined in it.\nException stack:\n#{$!.backtrace.join("\n")}"
+            logInfo "Missing dependency #{iRequireName} for plugin #{iPluginsTypeID}/#{iPluginName}: #{$!}"
+            # Dependency missing
+            oMissingDeps.addMissingGem(iPluginsTypeID, iPluginName, iRequireName, iGemInstallCommand, iPluginInfo, ioPluginsMap, iParams)
+            rMissing = true
           end
-        rescue Exception
-          logBug "Error while instantiating one of the #{iPluginsTypeID} plugin dependencies (#{lRequireDepsName}): #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+        end
+      end
+      if (iPluginInfo[:libsDependencies] != nil)
+        iPluginInfo[:libsDependencies].each do |iLibName, iDownloadURL|
+          # Test if we have the lib somewhere
+          lFound = false
+          $PBS_Platform.getSystemLibsPath.each do |iDir|
+            if (File.exists?("#{iDir}/#{iLibName}"))
+              lFound = true
+              break
+            end
+          end
+          if (!lFound)
+            # Library missing
+            oMissingDeps.addMissingLib(iPluginsTypeID, iPluginName, iLibName, iDownloadURL, iPluginInfo, ioPluginsMap, iParams)
+            rMissing = true
+          end
         end
       end
 
@@ -982,35 +1032,24 @@ module PBS
     # Prerequisite: dependencies of this plugin have to be loadable
     #
     # Parameters:
-    # * *ioPluginsMap* (<em>map<String,map<Symbol,Object>></em>): The map of plugins to fill
+    # * *ioPluginInfo* (<em>map<Symbol,Object></em>): The plugin info
+    # * *ioPluginsMap* (<em>map<String,map<Symbol,Object>></em>): The map in which we have to insert the plugin info if success
     # * *iPluginTypeID* (_String_): The plugin type ID
     # * *iPluginName* (_String_): The plugin name
     # * *iParams* (<em>list<Object></em>): Additional parameters to give to the plugin constructor [optional]
-    def loadPlugin(ioPluginsMap, iPluginTypeID, iPluginName, *iParams)
+    def loadPlugin(ioPluginInfo, ioPluginsMap, iPluginTypeID, iPluginName, iParams)
       lRequireName = "Plugins/#{iPluginTypeID}/#{iPluginName}.rb"
       begin
         require lRequireName
         begin
           lPlugin = eval("#{iPluginTypeID}::#{iPluginName}.new(*iParams)")
-          # Get the info of the plugin, and complete it
-          lPluginInfo = {
-            :title => iPluginName,
-            :description => iPluginName,
-            :bitmapName => 'Plugin.png',
-          }
-          if (lPlugin.class.method_defined?(:pluginInfo))
-            lPluginInfo.merge!(lPlugin.pluginInfo)
-          else
-            logBug "Plugin #{iPluginName} does not have any pluginInfo method. Keeping default values."
-          end
-          # Create dynamic content of the plugin info
-          lPluginInfo.merge!({
-            :bitmap => Wx::Bitmap.new("#{$PBS_GraphicsDir}/#{lPluginInfo[:bitmapName]}"),
+          # Add info about the loaded plugin
+          ioPluginInfo.merge!( {
             :plugin => lPlugin,
             :index => ioPluginsMap.size
-          })
-          # Register the plugin
-          ioPluginsMap[iPluginName] = lPluginInfo
+          } )
+          # Register it for real
+          ioPluginsMap[iPluginName] = ioPluginInfo
           # Add the method pluginName to the object, as it can be useful later
           lPlugin.instance_eval("
 def pluginName
@@ -1020,9 +1059,11 @@ end
           )
         rescue Exception
           logBug "Error while instantiating one of the #{iPluginTypeID} plugin (#{lRequireName}): #{$!}\nCheck that class PBS::#{iPluginTypeID}::#{iPluginName} has been correctly defined in it.\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
+          ioPluginInfo[:exception] = $!
         end
       rescue Exception
         logBug "Error while loading one of the #{iPluginTypeID} plugin (#{lRequireName}): #{$!}\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
+        ioPluginInfo[:exception] = $!
       end
     end
 
@@ -1031,16 +1072,18 @@ end
     # Parameters:
     # * *ioPluginsMap* (<em>map<String,map<Symbol,Object>></em>): The map of plugins to fill
     # * *iPluginsID* (_String_): The plugins identifier
-    # * *oMissingDeps* (<em>map<String,[String,list<[String,String,map<String,map<Symbol,Object>>,list<Object>]>]></em>): The map of missing dependencies to fill
+    # * *oMissingDeps* (_MissingDependencies_): The missing dependencies to fill
     # * *iParams* (<em>list<Object></em>): Additional parameters to give to the plugin constructor [optional]
     def readPlugins(ioPluginsMap, iPluginsID, oMissingDeps, *iParams)
-      Dir.glob("#{$PBS_LibDir}/Plugins/#{iPluginsID}/*.rb").each do |iFileName|
-        lPluginName = File.basename(iFileName)[0..-4]
-        # Ignore .dep.rb files
-        # Check dependencies
-        if ((File.extname(lPluginName) != '.dep') and
-            (!checkMissingDependencies(ioPluginsMap, iPluginsID, lPluginName, oMissingDeps, *iParams)))
-          loadPlugin(ioPluginsMap, iPluginsID, lPluginName, *iParams)
+      Dir.glob("#{$PBS_LibDir}/Plugins/#{iPluginsID}/*.desc.rb").each do |iFileName|
+        lPluginName = File.basename(iFileName)[0..-9]
+        lPluginInfo = readDescription(iPluginsID, lPluginName)
+        # Check if everything ok
+        if ((lPluginInfo[:enabled]) and
+            (lPluginInfo[:exception] == nil) and
+            (!checkMissingDependencies(lPluginInfo, ioPluginsMap, iPluginsID, lPluginName, oMissingDeps, iParams)))
+          # We can load it
+          loadPlugin(lPluginInfo, ioPluginsMap, iPluginsID, lPluginName, iParams)
         end
       end
     end

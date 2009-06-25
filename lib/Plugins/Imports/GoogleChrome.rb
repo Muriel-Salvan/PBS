@@ -94,21 +94,6 @@ module PBS
 
       end
 
-      # Give the description of this plugin
-      #
-      # Return:
-      # * <em>map<Symbol,Object></em>: Information on the plugin: the following symbols can be provided:
-      # ** :title (_String_): Name of the plugin
-      # ** :description (_String_): Quick description
-      # ** :bitmapName (_String_): Sub-path to the icon (from the Graphics/ directory)
-      def pluginInfo
-        return {
-          :title => 'Google Chrome',
-          :description => 'Import Shortcuts from current Google Chrome profile',
-          :bitmapName => 'GoogleChrome.png',
-        }
-      end
-
       # Execute the import
       #
       # Parameters:

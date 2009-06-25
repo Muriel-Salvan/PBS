@@ -13,21 +13,6 @@ module PBS
 
       include Tools
 
-      # Give the description of this plugin
-      #
-      # Return:
-      # * <em>map<Symbol,Object></em>: Information on the plugin: the following symbols can be provided:
-      # ** :title (_String_): Name of the plugin
-      # ** :description (_String_): Quick description
-      # ** :bitmapName (_String_): Sub-path to the icon (from the Graphics/ directory)
-      def pluginInfo
-        return {
-          :title => 'XML file',
-          :description => 'Export Shortcuts in an XML file',
-          :bitmapName => 'XML.png',
-        }
-      end
-
       # Execute the export
       #
       # Parameters:

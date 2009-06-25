@@ -11,33 +11,6 @@ module PBS
 
       include Tools
 
-      # Give the description of this plugin
-      #
-      # Return:
-      # * <em>map<Symbol,Object></em>: Information on the plugin: the following symbols can be provided:
-      # ** :title (_String_): Name of the plugin
-      # ** :description (_String_): Quick description
-      # ** :bitmapName (_String_): Sub-path to the icon (from the Graphics/ directory)
-      # # Specific parameters to Command plugins:
-      # ** :commandID (_Integer_): The command ID
-      # ** :accelerator (<em>[Integer,Integer]</em>): The accelerator (modifier and key)
-      # ** :parameters (<em>list<Symbol></em>): The list of symbols that GUIs have to provide to the execute method
-      def pluginInfo
-        return {
-          :title => 'Delete',
-          :description => 'Delete selection',
-          :bitmapName => 'Delete.png',
-          :commandID => Wx::ID_DELETE,
-          :accelerator => [ Wx::MOD_NONE, Wx::K_DELETE ],
-          :parameters => [
-            :parentWindow,
-            :selection,
-            :deleteTaggedShortcuts,
-            :deleteOrphanShortcuts
-          ]
-        }
-      end
-
       # Command that pastes an object from the clipboard
       #
       # Parameters:
