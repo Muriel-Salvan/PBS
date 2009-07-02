@@ -8,7 +8,7 @@ module PBS
   # About Dialog
   class AboutDialog < Wx::Dialog
 
-    ABOUT_ICON = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Icon.png")
+    ABOUT_ICON = Tools::loadBitmap('Icon72.png')
 
     # Constructor
     #

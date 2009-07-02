@@ -16,7 +16,7 @@ module PBS
     CHOOSE_CONFLICTING = 1
 
     # Icon used on the transfer button
-    TRANSFER_ICON = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Transfer.png")
+    TRANSFER_ICON = Tools::loadBitmap('Transfer.png')
 
     # Create the buttons panel
     #

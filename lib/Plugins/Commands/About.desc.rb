@@ -29,7 +29,7 @@ module PBS
           return {
             :title => 'About',
             :description => 'Give information about PBS',
-            :bitmapName => 'MiniIcon.png',
+            :bitmapName => 'Icon16.png',
             :commandID => Wx::ID_ABOUT,
             :parameters => [
               :parentWindow

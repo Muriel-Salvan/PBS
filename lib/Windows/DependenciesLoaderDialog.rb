@@ -16,11 +16,11 @@ module PBS
     include Tools
 
     # Icons used
-    BITMAP_GEM = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Gem.png")
-    BITMAP_LIB = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Lib.png")
-    BITMAP_VALID = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniValidOK.png")
-    BITMAP_IGNORE = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniValidKO.png")
-    BITMAP_INSTALL = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniDownload.png")
+    BITMAP_GEM = Tools::loadBitmap('Gem.png')
+    BITMAP_LIB = Tools::loadBitmap('Lib.png')
+    BITMAP_VALID = Tools::loadBitmap('MiniValidOK.png')
+    BITMAP_IGNORE = Tools::loadBitmap('MiniValidKO.png')
+    BITMAP_INSTALL = Tools::loadBitmap('MiniDownload.png')
 
     # This class is used to handle Gem dependencies
     class GemDepHandler

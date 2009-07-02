@@ -27,12 +27,15 @@ module PBS
   # Class for the main application
   class MainApp < Wx::App
 
+    include Tools
+
     # Constructor
     #
     # Parameters:
     # * *iController* (_Controller_): The controller of the model
     def initialize(iController)
       super()
+      logInfo "Starting PBS #{$PBS_VERSION}"
       @Controller = iController
     end
 
@@ -76,9 +79,6 @@ module PBS
 
   # Run PBS
   def self.run
-    # Default variables, that can be altered with command line options
-    $PBS_DevDebug = false
-    $PBS_LogFile = nil
     # Parse command line arguments
     lOptions = self.getOptions
     lSuccess = true

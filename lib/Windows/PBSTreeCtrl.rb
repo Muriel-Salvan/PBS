@@ -33,17 +33,17 @@ module PBS
     # Define bitmaps used for layers in the tree
     # !!! Be careful that all of these images MUST have a semi-transparent pixel in their data, otherwise drawing the bitmap on a DC completely ignores the mask. Bug ?
     # TODO (WxRuby): Correct this bug
-    BITMAP_PRIMARY_COPY = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniCopy.png")
-    BITMAP_PRIMARY_CUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniCut.png")
-    BITMAP_SECONDARY_COPY = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MicroCopy.png")
-    BITMAP_SECONDARY_CUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MicroCut.png")
-    BITMAP_DRAG = Wx::Bitmap.new("#{$PBS_GraphicsDir}/DragNDrop.png")
-    BITMAP_DRAG_NONE = Wx::Bitmap.new("#{$PBS_GraphicsDir}/DragNDropCancel.png")
+    BITMAP_PRIMARY_COPY = Tools::loadBitmap('MiniCopy.png')
+    BITMAP_PRIMARY_CUT = Tools::loadBitmap('MiniCut.png')
+    BITMAP_SECONDARY_COPY = Tools::loadBitmap('MicroCopy.png')
+    BITMAP_SECONDARY_CUT = Tools::loadBitmap('MicroCut.png')
+    BITMAP_DRAG = Tools::loadBitmap('DragNDrop.png')
+    BITMAP_DRAG_NONE = Tools::loadBitmap('DragNDropCancel.png')
 
     # Define default Tag and Shortcuts icons
-    ICON_DEFAULT_TAG = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Tag.png")
-    ICON_DEFAULT_SHORTCUT = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Shortcut.png")
-    ICON_ROOT_TAG = Wx::Bitmap.new("#{$PBS_GraphicsDir}/MiniIcon.png")
+    ICON_DEFAULT_TAG = Tools::loadBitmap('Tag.png')
+    ICON_DEFAULT_SHORTCUT = Tools::loadBitmap('Shortcut.png')
+    ICON_ROOT_TAG = Tools::loadBitmap('Icon16.png')
 
     # The class defining the behaviour of the main tree for drop operations
     class SelectionDropTarget < Wx::DropTarget

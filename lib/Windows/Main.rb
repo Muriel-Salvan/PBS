@@ -56,6 +56,7 @@ module PBS
 
     # Notify that we are exiting
     def onExit
+      $PBS_Exiting = true
       self.destroy
     end
 
@@ -192,6 +193,11 @@ module PBS
         @Controller.executeCommand(Wx::ID_EXIT, {
           :parentWindow => self
         })
+        if (!$PBS_Exiting)
+          # There was a problem. Log it and close.
+          logBug "An error occurred while closing. Forcing close."
+          self.destroy
+        end
       end
 
       # Create the main treeview
@@ -414,7 +420,7 @@ module PBS
       @TCMainTree.setContextMenu(@EditMenu)
 
       # Don't forget the main icon
-      self.icon = Wx::Icon.new("#{$PBS_GraphicsDir}/Icon.png")
+      self.icon = Wx::Icon.from_bitmap(Tools::loadBitmap('Icon32.png'))
 
       # Set the application title, as it depends on context
       setAppTitle

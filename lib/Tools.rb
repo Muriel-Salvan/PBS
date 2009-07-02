@@ -7,8 +7,6 @@
 require 'tmpdir'
 require 'net/http'
 require 'net/ftp'
-# Used to uncompress zip files containing DLLs needed for plugins' dependencies
-require 'zip/zipfilesystem'
 
 module PBS
 
@@ -91,6 +89,35 @@ module PBS
         return @Id2Idx[iID]
       end
 
+    end
+
+    # Load a bitmap from a file
+    # This method is protected against missing files.
+    # This is typically used to load icons from constants during the require period (this is also the reason why it uses logBugBase instead of logBug).
+    #
+    # Parameters:
+    # * *iBitmapSubPath* (_String_): Sub-path from the Graphics directory
+    # Return:
+    # * <em>Wx::Bitmap</em>: The bitmap
+    def self.loadBitmap(iBitmapSubPath)
+      rBitmap = nil
+
+      lFileName = "#{$PBS_GraphicsDir}/#{iBitmapSubPath}"
+      if (File.exist?(lFileName))
+        rBitmap = Wx::Bitmap.new(lFileName)
+      else
+        # Set the broken image if it exists
+        lBrokenFileName = "#{$PBS_GraphicsDir}/Broken.png"
+        if (File.exist?(lBrokenFileName))
+          logBugBase "Image #{iBitmapSubPath} does not exist among #{$PBS_GraphicsDir}."
+          rBitmap = Wx::Bitmap.new(lBrokenFileName)
+        else
+          logBugBase "Images #{iBitmapSubPath} and Broken.png do not exist among #{$PBS_GraphicsDir}."
+          rBitmap = Wx::Bitmap.new
+        end
+      end
+
+      return rBitmap
     end
 
     # Get the list of local library directories:
@@ -229,7 +256,8 @@ module PBS
       begin
         require 'rubygems'
         require 'rubygems/command'
-        require 'rubygems/commands/install_command'
+        require 'rubygems/remote_installer'
+        require 'rubygems/gem_commands'
       rescue Exception
         # RubyGems is not installed (or badly installed).
         # Use our own installation of RubyGems
@@ -263,12 +291,15 @@ module PBS
           # Now we reload our version of RubyGems
           require 'rubygems'
           require 'rubygems/command'
-          require 'rubygems/commands/install_command'
+          require 'rubygems/remote_installer'
+          require 'rubygems/gem_commands'
         rescue Exception
           if (iAcceptDialogs)
-            logBug "PBS installation of RubyGems could not get required: #{$!}.\nException stack\n: #{caller.join("\n")}"
+            logBug "PBS installation of RubyGems could not get required: #{$!}.\nException stack:\n#{$!.backtrace.join("\n")}"
           else
-            $stderr << "PBS installation of RubyGems could not get required: #{$!}.\nException stack\n: #{caller.join("\n")}\n"
+            if ($PBS_ScreenOutputErr)
+              $stderr << "PBS installation of RubyGems could not get required: #{$!}.\nException stack:\n#{$!.backtrace.join("\n")}\n"
+            end
           end
           rSuccess = false
         end
@@ -291,7 +322,7 @@ module PBS
       rSuccess = true
 
       # Create the RubyGems command
-      lRubyGemsInstallCmd = Gem::Commands::InstallCommand.new
+      lRubyGemsInstallCmd = Gem::InstallCommand.new
       lRubyGemsInstallCmd.handle_options(iInstallCmd.split + [ '-i', iInstallDir, '--no-rdoc', '--no-ri', '--no-test' ] )
       logInfo "Installing Gem \"#{iInstallCmd}\" in directory #{iInstallDir} ..."
       begin
@@ -303,15 +334,19 @@ module PBS
           if (iAcceptDialogs)
             logBug "RubyGems returned error code #{$!.exit_code} while installing #{iInstallCmd}."
           else
-            $stderr << "RubyGems returned error code #{$!.exit_code} while installing #{iInstallCmd}.\n"
+            if ($PBS_ScreenOutputErr)
+              $stderr << "RubyGems returned error code #{$!.exit_code} while installing #{iInstallCmd}.\n"
+            end
           end
           rSuccess = false
         end
       rescue Exception
         if (iAcceptDialogs)
-          logBug "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{caller.join("\n")}"
+          logBug "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
         else
-          $stderr << "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{caller.join("\n")}\n"
+          if ($PBS_ScreenOutputErr)
+            $stderr << "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}\n"
+          end
         end
         rSuccess = false
       end
@@ -364,9 +399,11 @@ module PBS
       end
       lCompleteMsg = "Bug: #{iMsg}\nStack:\n#{lCallers.join("\n")}\nNormally you should never encounter this message. Please fill a bug report to PBS with this information to make sure it will be corrected in future releases. Thanks."
       # Log into stderr
-      $stderr << "!!! BUG !!! #{lCompleteMsg}\n"
+      if ($PBS_ScreenOutputErr)
+        $stderr << "!!! BUG !!! #{lCompleteMsg}\n"
+      end
       if ($PBS_LogFile != nil)
-        logFile(lCompleteMsg)
+        Tools::logFile(lCompleteMsg)
       end
       # Display dialog
       showModal(Wx::MessageDialog, nil,
@@ -378,6 +415,28 @@ module PBS
       end
     end
 
+    # Log a bug when the application is not yet initialized
+    # This is called when there is a bug in the program. It has been set in many places to detect bugs.
+    #
+    # Parameters:
+    # * *iMsg* (_String_): Message to log
+    def self.logBugBase(iMsg)
+      lCallers = []
+      caller[0..-2].each do |iCallerLine|
+        lCallers << iCallerLine.gsub($PBS_RootDir, '')
+      end
+      lCompleteMsg = "Bug: #{iMsg}\nStack:\n#{lCallers.join("\n")}\nNormally you should never encounter this message. Please fill a bug report to PBS with this information to make sure it will be corrected in future releases. Thanks."
+      # Log into stderr
+      if ($PBS_ScreenOutputErr)
+        $stderr << "!!! BUG !!! #{lCompleteMsg}\n"
+      end
+      if ($PBS_LogFile != nil)
+        Tools::logFile(lCompleteMsg)
+      end
+      # Display dialog using OS dependent ways: don't rely on wxRuby.
+      $PBS_Platform.sendMsg(lCompleteMsg)
+    end
+
     # Log an error.
     # Those errors can be normal, as they mainly depend on external factors (lost connection, invalid user file...)
     #
@@ -385,9 +444,11 @@ module PBS
     # * *iMsg* (_String_): Message to log
     def logErr(iMsg)
       # Log into stderr
-      $stderr << "!!! ERR !!! #{iMsg}\n"
+      if ($PBS_ScreenOutputErr)
+        $stderr << "!!! ERR !!! #{iMsg}\n"
+      end
       if ($PBS_LogFile != nil)
-        logFile(iMsg)
+        Tools::logFile(iMsg)
       end
       # Display dialog
       showModal(Wx::MessageDialog, nil,
@@ -406,9 +467,11 @@ module PBS
     # * *iMsg* (_String_): Message to log
     def logInfo(iMsg)
       # Log into stdout
-      $stdout << "#{iMsg}\n"
+      if ($PBS_ScreenOutput)
+        $stdout << "#{iMsg}\n"
+      end
       if ($PBS_LogFile != nil)
-        logFile(iMsg)
+        Tools::logFile(iMsg)
       end
     end
 
@@ -419,11 +482,12 @@ module PBS
     # * *iMsg* (_String_): Message to log
     def logDebug(iMsg)
       # Log into stdout
-      if ($PBS_DevDebug)
+      if (($PBS_DevDebug) and
+          ($PBS_ScreenOutput))
         $stdout << "#{iMsg}\n"
       end
       if ($PBS_LogFile != nil)
-        logFile(iMsg)
+        Tools::logFile(iMsg)
       end
     end
 
@@ -431,7 +495,7 @@ module PBS
     #
     # Parameters:
     # * *iMsg* (_String_): The message to log
-    def logFile(iMsg)
+    def self.logFile(iMsg)
       File.open($PBS_LogFile, 'a+') do |oFile|
         oFile << "#{Time.now.gmtime.strftime('%Y/%m/%d %H:%M:%S')} - #{iMsg}\n"
       end
@@ -679,6 +743,8 @@ module PBS
 
       # Extract content of iFileName to #{$PBS_ExtDllsDir}/#{iLibName}
       begin
+        # We don't put this require in the global scope as it needs first a DLL to be loaded by plugins
+        require 'zip/zipfilesystem'
         Zip::ZipInputStream::open(iZipFileName) do |iZipFile|
           while (lEntry = iZipFile.get_next_entry)
             lDestFileName = "#{iDirName}/#{lEntry.name}"

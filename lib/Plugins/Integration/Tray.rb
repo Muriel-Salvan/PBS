@@ -20,7 +20,7 @@ module PBS
         @Controller = iController
 
         # The icon
-        set_icon(makeIcon("#{$PBS_GraphicsDir}/Icon.png"), 'PBS')
+        set_icon(makeTrayIcon("#{$PBS_GraphicsDir}/Icon32.png"), 'PBS')
       end
 
       # Method that adds sub-Tags of a given Tag to a menu
@@ -121,7 +121,7 @@ module PBS
       # * *iFileName* (_String_): Name of the file containing the icon
       # Return:
       # * <em>Wx::Icon</em>: Resulting icon
-      def makeIcon(iFileName)
+      def makeTrayIcon(iFileName)
         # Different platforms have different requirements for the taskbar icon size
         lImg = Wx::Image.new(iFileName)
         if Wx::PLATFORM == "WXMSW"

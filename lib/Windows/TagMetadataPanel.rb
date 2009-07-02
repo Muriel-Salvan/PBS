@@ -13,9 +13,9 @@ module PBS
     include Tools
 
     # The default Tag icon
-    DEFAULT_TAG_ICON = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Tag.png")
+    DEFAULT_TAG_ICON = Tools::loadBitmap('Tag.png')
     # An invalid icon
-    INVALID_ICON = Wx::Bitmap.new("#{$PBS_GraphicsDir}/InvalidIcon.png")
+    INVALID_ICON = Tools::loadBitmap('InvalidIcon.png')
 
     # Set the BitmapButton icon, based on @Icon
     def setBBIcon

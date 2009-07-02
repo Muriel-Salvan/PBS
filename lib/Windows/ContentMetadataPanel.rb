@@ -16,7 +16,7 @@ module PBS
       include Tools
 
       # An invalid icon
-      INVALID_ICON = Wx::Bitmap.new("#{$PBS_GraphicsDir}/InvalidIcon.png")
+      INVALID_ICON = Tools::loadBitmap('InvalidIcon.png')
 
       # Set the BitmapButton icon, based on @Icon and @Type
       def setBBIcon

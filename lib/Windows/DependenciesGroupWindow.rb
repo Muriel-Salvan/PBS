@@ -14,9 +14,9 @@ module PBS
       include Tools
 
       # Icons used to identify status
-      ICON_OK = Wx::Bitmap.new("#{$PBS_GraphicsDir}/ValidOK.png")
-      ICON_KO = Wx::Bitmap.new("#{$PBS_GraphicsDir}/ValidKO.png")
-      ICON_DOWNLOAD = Wx::Bitmap.new("#{$PBS_GraphicsDir}/Download.png")
+      ICON_OK = Tools::loadBitmap('ValidOK.png')
+      ICON_KO = Tools::loadBitmap('ValidKO.png')
+      ICON_DOWNLOAD = Tools::loadBitmap('Download.png')
 
       # Constructor
       # The notifier control window must have a notifyInstallDecisionChanged method implemented

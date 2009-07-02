@@ -912,19 +912,19 @@ module PBS
         Wx::ID_FIND => {
           :title => 'Find',
           :description => 'Find a Shortcut',
-          :bitmap => Wx::Bitmap.new("#{$PBS_GraphicsDir}/Find.png"),
+          :bitmap => Tools::loadBitmap('Find.png'),
           :accelerator => [ Wx::MOD_CMD, 'f'[0] ]
         },
         ID_STATS => {
           :title => 'Stats',
           :description => 'Give statistics on your Shortcuts use',
-          :bitmap => Wx::Bitmap.new("#{$PBS_GraphicsDir}/Stats.png"),
+          :bitmap => Tools::loadBitmap('Stats.png'),
           :accelerator => nil
         },
         Wx::ID_HELP => {
           :title => 'User manual',
           :description => 'Display help file',
-          :bitmap => Wx::Bitmap.new("#{$PBS_GraphicsDir}/Help.png"),
+          :bitmap => Tools::loadBitmap('Help.png'),
           :accelerator => nil
         }
       })
