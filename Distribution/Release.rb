@@ -189,8 +189,13 @@ module PBS
               end
             end
             logOp('Create installer') do
+              lInstallerDir = "#{@ReleaseDir}/Installer"
+              FileUtils::mkdir_p(lInstallerDir)
               # Create the installer for this distribution
-              # TODO
+              rSuccess = @PlatformReleaseInfo.createInstaller(@PBSRootDir, @ReleaseDir, lInstallerDir)
+              if (!rSuccess)
+                puts "!!! Unable to create the installer"
+              end
             end
           else
             puts "!!! Unable to create the platform dependent binary."

@@ -44,6 +44,12 @@ module PBS
           puts "!!! Please download and install exerb from http://exerb.sourceforge.jp/index.en.html"
           rSuccess = false
         end
+        # Check that makensis is present
+        if (!system('makensis /VERSION'))
+          puts "!!! Need to have MakeNSIS installed in the system PATH to create installer."
+          puts "!!! Please download and install MakeNSIS in the PATH from http://nsis.sourceforge.net/Main_Page"
+          rSuccess = false
+        end
 
         return rSuccess
       end
@@ -98,6 +104,7 @@ module PBS
   \# Return:
   \# * _Boolean_: Success ?
   def self.shellExecute(iCmd)
+    puts \"> \#{iCmd}\"
     rSuccess = system(iCmd)
 
     if (!rSuccess)
@@ -115,12 +122,12 @@ lCurrentDir = Dir.getwd
 if (system('rubyw --version'))
   \# Launch directly
   puts \"Ruby found in environment. Using it directly.\"
-  lSuccess = PBS::shellExecute(\"start rubyw -w \#{lCurrentDir}/Launch/Launcher.rb \#{ARGV.join(' ')}\")
+  lSuccess = PBS::shellExecute(\"start rubyw -w \\\"\#{lCurrentDir}/Launch/Launcher.rb\\\" \#{ARGV.join(' ')}\")
 end
 if (!lSuccess)
   \# Use allinoneruby
   puts \"Ruby not found in environment. Using shipped Ruby.\"
-  lSuccess = PBS::shellExecute(\"start \#{lCurrentDir}/Launch/#{RUBY_PLATFORM}/bin/rubyw-#{RUBY_VERSION}.exe \#{lCurrentDir}/Launch/Launcher.rb \#{ARGV.join(' ')}\")
+  lSuccess = PBS::shellExecute(\"start \\\"\#{lCurrentDir}/Launch/#{RUBY_PLATFORM}/bin/rubyw-#{RUBY_VERSION}.exe\\\" \\\"\#{lCurrentDir}/Launch/Launcher.rb\\\" \#{ARGV.join(' ')}\")
   if (!lSuccess)
     puts 'Unable to launch PBS. Please reinstall it.'
     puts 'Hit enter to quit.'
@@ -147,6 +154,27 @@ end
 
         return rSuccess
       end
+
+      # Create the installer with everything in the release directory.
+      #
+      # Parameters:
+      # * *iPBSRootDir* (_String_): The PBS Root directory
+      # * *iReleaseDir* (_String_): The release directory (all files to put in the installer are there)
+      # * *iInstallerDir* (_String_): The directory where the installer has to be put
+      # Return:
+      # * _Boolean_: Success ?
+      def createInstaller(iPBSRootDir, iReleaseDir, iInstallerDir)
+        rSuccess = true
+
+        # TODO: Reuse Version from a centralized place
+        rSuccess = system("makensis /DVERSION=0.0.1.20090430 \"/DRELEASEDIR=#{iReleaseDir.gsub(/\//,'\\')}\" \"#{iPBSRootDir.gsub(/\//,'\\')}\\Distribution\\#{RUBY_PLATFORM}\\Installer\\install.nsi\"")
+        if (rSuccess)
+          FileUtils.mv("#{iPBSRootDir}/Distribution/#{RUBY_PLATFORM}/Installer/pbs_0.0.1.20090430_setup.exe", "#{iInstallerDir}/pbs_0.0.1.20090430_setup.exe")
+        end
+
+        return rSuccess
+      end
+
 
     end
 
