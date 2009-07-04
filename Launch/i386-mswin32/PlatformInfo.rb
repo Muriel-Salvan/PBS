@@ -47,6 +47,26 @@ module PBS
         end
       end
 
+      # Execute a Shell command.
+      # Do not wait for its termination.
+      #
+      # Parameters:
+      # * *iCmd* (_String_): The command to execute
+      # * *iInTerminal* (_Boolean_): Do we execute this command in a separate terminal ?
+      # Return:
+      # * _Boolean_: Success ?
+      def execShellCmdNoWait(iCmd, iInTerminal)
+        rSuccess = true
+
+        if (iInTerminal)
+          rSuccess = system("start cmd /c #{iCmd}")
+        else
+          IO.popen(iCmd)
+        end
+
+        return rSuccess
+      end
+
     end
 
   end

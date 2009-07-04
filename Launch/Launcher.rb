@@ -56,6 +56,7 @@ module PBS
         $PBS_Exiting = false
         $PBS_LogFile = nil
         $PBS_DevDebug = nil
+        $PBS_StartupFile = nil
         # Global paths
         # Root dir used as a based for images directories, plugins to be required...
         $PBS_RootDir = iRootDir

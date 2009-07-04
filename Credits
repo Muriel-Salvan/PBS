@@ -1,0 +1,55 @@
+= Projects used by PBS
+
+== AllInOneRuby
+* Erik Veenstra <allinoneruby@erikveen.dds.nl>
+* http://rubyforge.org/projects/allinoneruby/
+* Used to release Ruby for platforms missing Ruby
+
+== Exerb
+* Yuya Kato <yuyakato@gmail.com>
+* http://exerb.sourceforge.jp/index.en.html
+* Used to create the executable entry point of PBS
+
+== Nokogiri
+* Aaron Patterson (http://tenderlovemaking.com/)
+* Mike Dalessio (http://mike.daless.io/)
+* http://nokogiri.rubyforge.org/nokogiri/
+* Used to parse HTML in HTML import plugin
+
+== Ocra
+* Lars Christensen
+* http://rubyforge.org/projects/ocra/
+* Used its edicon utility to change executable icon
+
+== Ruby
+* Yukihiro « matz » Matsumoto (http://www.rubyist.net/~matz/)
+* http://www.ruby-lang.org/
+* Used to develop PBS. Thanks a lot Matz for this truly wonderful language !
+
+== RubyGems
+* Paul Duncan <pabs@pablotron.org>
+* http://rubygems.org/
+* Used to automatically download Gem dependencies
+
+== RubyZip
+* Thomas Sondergaard <thomas@sondergaard.cc>
+* Technorama Ltd. <oss-ruby-zip@technorama.net>
+* Tatsuki Sugiura <sugi@nemui.org>
+* http://rubyzip.sourceforge.net/
+* Used to unzip dependencies downloaded from the web
+
+== SQLite3-Ruby
+* Jamis Buck
+* http://rubyforge.org/projects/sqlite-ruby/
+* Used to read SQLite3 databases in Firefox and Chrome import plugins
+
+== WxRuby
+* Sean Long (http://rubyforge.org/users/seanlong/)
+* Alex Fenton (http://rubyforge.org/users/brokentoy/)
+* http://wxruby.rubyforge.org
+* Used as the GUI framework
+
+= People that helped a lot in developing PBS
+
+* Jeremy Hinegardner <jeremy@hinegardner.org>, for its wonderful project Crate that should be the next standard in shipping cross-platform ruby applications
+* Alex Fenton (http://rubyforge.org/users/brokentoy/) for its unvaluable help in better understanding WxRuby and WxWidgets

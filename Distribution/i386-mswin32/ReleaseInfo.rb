@@ -161,15 +161,14 @@ end
       # * *iPBSRootDir* (_String_): The PBS Root directory
       # * *iReleaseDir* (_String_): The release directory (all files to put in the installer are there)
       # * *iInstallerDir* (_String_): The directory where the installer has to be put
+      # * *iVersion* (_String_): Release version
       # Return:
       # * _Boolean_: Success ?
-      def createInstaller(iPBSRootDir, iReleaseDir, iInstallerDir)
-        rSuccess = true
-
-        # TODO: Reuse Version from a centralized place
-        rSuccess = system("makensis /DVERSION=0.0.1.20090430 \"/DRELEASEDIR=#{iReleaseDir.gsub(/\//,'\\')}\" \"#{iPBSRootDir.gsub(/\//,'\\')}\\Distribution\\#{RUBY_PLATFORM}\\Installer\\install.nsi\"")
+      def createInstaller(iPBSRootDir, iReleaseDir, iInstallerDir, iVersion)
+        rSuccess = system("makensis /DVERSION=#{iVersion} \"/DRELEASEDIR=#{iReleaseDir.gsub(/\//,'\\')}\" \"#{iPBSRootDir.gsub(/\//,'\\')}\\Distribution\\#{RUBY_PLATFORM}\\Installer\\install.nsi\"")
+        
         if (rSuccess)
-          FileUtils.mv("#{iPBSRootDir}/Distribution/#{RUBY_PLATFORM}/Installer/pbs_0.0.1.20090430_setup.exe", "#{iInstallerDir}/pbs_0.0.1.20090430_setup.exe")
+          FileUtils.mv("#{iPBSRootDir}/Distribution/#{RUBY_PLATFORM}/Installer/pbs_#{iVersion}_setup.exe", "#{iInstallerDir}/pbs_0.0.1.20090430_setup.exe")
         end
 
         return rSuccess

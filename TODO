@@ -1,0 +1,52 @@
+* Write a complete User Guide.
+* Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
+* In the dependenciesloader dialog, test internet connection before proposing installing Gems and Dlls.
+* Create logExc, and use it by searching "Exception stack"
+* Gather all errors during startup, and display them all once startup is finished.
+* Externalize the dependencies loader in a separate package
+* Use the dependencies loader to get main dependencies (rubyzip...)
+* DependenciesLoaderDialog: The tree should have a little context menu for setting the decisions to ignore/specify directory/install-><Different locations>
+* MainTree: When adding first child to the Root item (Tag or SC), it is better to expand root item
+* ProgressBar during open/import/paste (in the common method)
+* External library directories have to be customizable in the options
+* Implement a better looking ProgessDialog for DependenciesLoaderDialog
+* Optionally remember plugins that we want to ignore always (if not installed), and set a way in options to remove them from the forget list.
+* Make the Bug dialog in logBug display in TextCtrl with the data to be copied/pasted by users in bug reports
+* REGRESSION
+* Find has to be integrated in the toolbar also.
+* Types config
+* Drop files on the main tree for URL shortcuts, files shortcuts
+* Drop text on the main tree for URL/Shell/Files Shortcuts
+* Importing Icon indexes from EXE/DLL using Icon Indexes
+* Click on the icon in the main tree should propose a quick combo to select alternative icons (with add at the bottom)
+* Scroll horizontal main tree while dragging on right and left edges and the horizontal scroll bar exists
+* ChooseIconDialog should look for web icons
+* ChooseIconDialog should look for directory icons
+* ChooseIconDialog should propose already used icons
+* Icons of Imports/Merge should have the same icons as Imports with a merge bitmap mask (do it for Open also)
+* Locale & Internationalization
+* Replace .Metadata['title'] with .getName
+* Plugin for Opera
+* Status bar displays last operation done
+* Create a tool that checks validity of Shortcuts (file exists or URL ok...)
+* Give some command line interface (auto open...)
+* Set metadata for Tags too
+* Create a dedicated Metadata object that handles also serialization of Wx::Bitmaps...
+* In the Tray plugin, resize icons to maximal values in the menus.
+* Files Export plugin should create Windows Shortcuts for Shell types as well.
+* Plugin for Safari
+* Change donations message
+* Export plugins should log success or failure
+* When never saved, command Save should trigger SaveAs.
+* Give plugins mechanism for additional tools (commands)
+* In options, provide a way to have automatic answers to dialogs asked during the delete command
+* See what must be committed for dependencies (mandatory and plugins)
+* ChooseIconDialog should propose an icon from the executable
+* Accept Drop of Windows Shortcuts
+* Icon of installer should have a little package bitmap to differentiate it
+* Set recently opened files in the File menu
+* Give the possibility to remove the main window (consider the main window as a plugin and give Tray the possibility to call it back ?)
+* XML export plugin: format output to be easily editable by hand
+* Replace all extensions removal made with [0..-6] with File.extname(...).size
+* Make website
+* Replace TODOs in README file

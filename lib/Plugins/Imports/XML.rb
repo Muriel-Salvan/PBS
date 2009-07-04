@@ -62,7 +62,7 @@ module PBS
                 # The icon
                 lIconBitmap = createBitmapFromStandardURI(iShortcutElement.attributes['icon'])
                 # The content
-                lContent = ioController.TypesPlugins[lTypeName][:plugin].createContentFromXMLText(iShortcutElement.elements['content'].text)
+                lContent = ioController.TypesPlugins[lTypeName][:plugin].createContentFromXMLText(iShortcutElement.elements['content'])
                 # The Tags
                 lTags = {}
                 iShortcutElement.elements['tags'].elements.each do |iTagElement|

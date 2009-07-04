@@ -94,11 +94,11 @@ module PBS
       # The XML text has been created by getContentAsXMLText.
       #
       # Parameters:
-      # * *iXMLText* (_String_): The XML text
+      # * *iXMLContentElement* (<em>REXML::Element</em>): The XML element
       # Return:
-      # * _Object_: Content created based on this XML text
-      def createContentFromXMLText(iXMLText)
-        return iXMLText
+      # * _Object_: Content created based on this XML element
+      def createContentFromXMLText(iXMLContentElement)
+        return iXMLContentElement.text
       end
 
     end

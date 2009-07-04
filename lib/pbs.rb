@@ -17,13 +17,6 @@ GC.disable
 
 module PBS
 
-  # Program version
-  $PBS_VERSION = '0.0.1.20090430'
-  # Tags linked to this version
-  $PBS_VERSION_TAGS = [
-    'Alpha'
-  ]
-
   # Class for the main application
   class MainApp < Wx::App
 
@@ -51,6 +44,18 @@ module PBS
       @Controller.registerIntegrationPluginsGUIs
       # Begin
       @Controller.notifyInit
+      # Load the startup file if needed
+      if ($PBS_StartupFile != nil)
+        if (File.exists?($PBS_StartupFile))
+          @Controller.undoableOperation("Load initial file #{File.basename($PBS_StartupFile)[0..-6]}") do
+            openData(@Controller, $PBS_StartupFile)
+            @Controller.changeCurrentFileName($PBS_StartupFile)
+          end
+        else
+          logErr "Unable to find file \"#{$PBS_StartupFile}\""
+        end
+      end
+
       lMainFrame.show()
     end
 
@@ -63,7 +68,7 @@ module PBS
   def self.getOptions
     rOptions = OptionParser.new
 
-    rOptions.banner = 'pbs.rb [-d|--devdebug] [-l|--log <Logfile>]'
+    rOptions.banner = 'pbs.rb [-d|--devdebug] [-l|--log <Logfile>] [-f|--file <PBSFile>]'
     rOptions.on('-d', '--devdebug',
       'Set developer debug interface.') do
       $PBS_DevDebug = true
@@ -72,6 +77,11 @@ module PBS
       '<Logfile>: Name of a file to log into.',
       'Set log file.') do |iArg|
       $PBS_LogFile = iArg
+    end
+    rOptions.on('-f', '--file <PBSFile>', String,
+      '<PBSFile>: Name of a file to load first.',
+      'Give a file to load just after starting PBS.') do |iArg|
+      $PBS_StartupFile = iArg
     end
 
     return rOptions
@@ -97,6 +107,7 @@ module PBS
 end
 
 # Require those files after having defined global $PBS_* variables, as it will be used during require
+require 'pbsversion.rb'
 # Common utilities
 require 'Tools.rb'
 require 'DataObject.rb'

@@ -36,6 +36,7 @@ Page license
 Page components
 Page directory
 Page instfiles
+UninstPage uninstConfirm
 UninstPage instfiles
 
 ;--------------------------------
@@ -44,6 +45,12 @@ InstType "Full"
 
 ;--------------------------------
 ; Sections giving what to install
+
+Section "PBS"
+  SectionIn 1 RO
+  SetOutPath $INSTDIR
+  File /r ${RELEASEDIR}\*.*
+SectionEnd
 
 Section "Create uninstaller (not needed for roaming)"
   SectionIn 1
@@ -57,21 +64,18 @@ Section "Create uninstaller (not needed for roaming)"
   WriteUninstaller "pbs_uninst.exe"
 SectionEnd
 
-Section "PBS"
-  SectionIn 1 RO
-  SetOutPath $INSTDIR
-  File /r ${RELEASEDIR}\*.*
-SectionEnd
-
 Section "Create shortcuts in start menu"
   SectionIn 1
   CreateDirectory "$SMPROGRAMS\PBS"
   CreateShortCut "$SMPROGRAMS\PBS\PBS.lnk" "$INSTDIR\pbs.exe" \
   "" "$INSTDIR\pbs.exe" 0 SW_SHOWNORMAL \
   "" "PBS: Portable Bookmarks and Shortcuts"
+  ; Test if the installer was created
+  IfFileExists $INSTDIR\pbs_uninst.exe 0 afteruninst
   CreateShortCut "$SMPROGRAMS\PBS\PBS_uninst.lnk" "$INSTDIR\pbs_uninst.exe" \
   "" "$INSTDIR\pbs_uninst.exe" 0 SW_SHOWNORMAL \
   "" "Uninstall PBS"
+  afteruninst:
 SectionEnd
 
 ;--------------------------------

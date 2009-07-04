@@ -7,9 +7,12 @@
 # This file is used directly from the root dir
 
 require 'fileutils'
+require 'optparse'
 
 # Require the platform specific distribution file
 require "Distribution/#{RUBY_PLATFORM}/ReleaseInfo.rb"
+# Require the version
+require 'pbsversion.rb'
 
 module PBS
 
@@ -83,19 +86,26 @@ module PBS
 
         # Compute the release directory name
         @ReleaseDir = "#{@PBSRootDir}/Releases/#{RUBY_PLATFORM}/#{Time.now.strftime('%Y_%m_%d_%H_%M_%S')}"
+        lReleaseVersion = $PBS_VERSION.split('.')[0..2].join('.')
         # Add options to the directory name
         if (iIncludeRuby)
           @ReleaseDir += '_Ruby'
+          lReleaseVersion += 'R'
         end
         if (iIncludeRubyGems)
           @ReleaseDir += '_Gems'
+          lReleaseVersion += 'G'
         end
         if (iIncludeWxRuby)
           @ReleaseDir += '_Wx'
+          lReleaseVersion += 'W'
         end
         if (iIncludeAllExt)
           @ReleaseDir += '_Ext'
+          lReleaseVersion += 'E'
         end
+        lInstallerDir = "#{@ReleaseDir}/Installer"
+        @ReleaseDir += '/Release'
         logOp('Check installed tools') do
           # Check that the tools we need to release are indeed here
           if (iIncludeWxRuby)
@@ -115,7 +125,13 @@ module PBS
           logOp('Copy core files') do
             # Copy in this directory every file that is not platform dependent
             # The core application (that could be bundled in a single binary - crate soon):
+            # * AUTHORS
             # * LICENSE
+            # * README
+            # * Bugs
+            # * ChangeLog
+            # * Credits
+            # * pbsversion.rb
             # * lib/*.rb
             # * lib/Controller/*.rb
             # * lib/Model/*.rb
@@ -127,7 +143,13 @@ module PBS
             # * Launch/#{RUBY_PLATFORM}/PlatformInfo.rb
             # * Ruby itself (if include Ruby)
             lCoreFilesList = [
+              'AUTHORS',
               'LICENSE',
+              'README',
+              'Bugs',
+              'ChangeLog',
+              'Credits',
+              'pbsversion.rb',
               'lib/*.rb',
               'lib/Controller/*.rb',
               'lib/Model/*.rb',
@@ -189,10 +211,9 @@ module PBS
               end
             end
             logOp('Create installer') do
-              lInstallerDir = "#{@ReleaseDir}/Installer"
               FileUtils::mkdir_p(lInstallerDir)
               # Create the installer for this distribution
-              rSuccess = @PlatformReleaseInfo.createInstaller(@PBSRootDir, @ReleaseDir, lInstallerDir)
+              rSuccess = @PlatformReleaseInfo.createInstaller(@PBSRootDir, @ReleaseDir, lInstallerDir, lReleaseVersion)
               if (!rSuccess)
                 puts "!!! Unable to create the installer"
               end
@@ -209,16 +230,70 @@ module PBS
 
     end
 
+    # Get command line parameters
+    #
+    # Return:
+    # * _OptionParser_: The options parser
+    def self.getOptions
+      rOptions = OptionParser.new
+
+      rOptions.banner = 'Release.rb [-r|--ruby] [-g|--rubygems] [-w|--wxruby] [-e|--ext]'
+      rOptions.on('-r', '--ruby',
+        'Include Ruby distribution in the release.') do
+        $PBS_Distribution_Ruby = true
+      end
+      rOptions.on('-g', '--rubygems',
+        'Include Ruby Gems in the release.') do
+        $PBS_Distribution_RubyGems = true
+      end
+      rOptions.on('-w', '--wxruby',
+        'Include WxRuby in the release.') do
+        $PBS_Distribution_WxRuby = true
+      end
+      rOptions.on('-e', '--ext',
+        'Include all ext directory in the release.') do
+        $PBS_Distribution_Ext = true
+      end
+
+      return rOptions
+    end
+
+    # Run Release
+    def self.run
+      # Default constants that are modified by command line options
+      $PBS_Distribution_Ruby = false
+      $PBS_Distribution_RubyGems = false
+      $PBS_Distribution_WxRuby = false
+      $PBS_Distribution_Ext = false
+      # Parse command line arguments
+      lOptions = self.getOptions
+      lSuccess = true
+      begin
+        lOptions.parse(ARGV)
+      rescue Exception
+        puts "Error while parsing arguments: #{$!}"
+        puts lOptions
+        lSuccess = false
+      end
+      if (lSuccess)
+        lSuccess = Releaser.new(Dir.getwd, ReleaseInfo.new).execute(
+          $PBS_Distribution_Ruby,
+          $PBS_Distribution_RubyGems,
+          $PBS_Distribution_WxRuby,
+          $PBS_Distribution_Ext)
+        if (lSuccess)
+          puts 'Release successful.'
+        else
+          puts 'Error while releasing.'
+        end
+      end
+    end
+
   end
 
 end
 
 # Execute everything
 if ($0 == __FILE__)
-  lSuccess = PBS::Distribution::Releaser.new(Dir.getwd, PBS::Distribution::ReleaseInfo.new).execute(true, true, true, true)
-  if (lSuccess)
-    puts 'Release successful.'
-  else
-    puts 'Error while releasing.'
-  end
+  PBS::Distribution::run
 end

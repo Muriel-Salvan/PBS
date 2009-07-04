@@ -1,0 +1,25 @@
+* When cascading conflicts into a cycle, Tags end up all deleted.
+** Rename a Tag getting conflict into another one: conflict dialog appears
+** Rename it in the conflict dialog to make it conflict with a third one, choose to merge using new values: a second conflict dialog appears
+** Rename it in the conflict dialog to make it conflict again with the first one, choose to merge using new values: a third conflict dialog appears
+** Merge using new values. The 3 Tags will be deleted.
+
+* When cascading conflicts, Shortcuts are translated but give errors doing so.
+** Rename a Tag getting conflict into another one: conflict dialog appears
+** Rename it in the conflict dialog to make it conflict with a third one, choose to merge using new values: a second conflict dialog appears
+** Merge using new values. The 3 Tags will be merged, but the translation of Shortcuts from the first one will have an error: !!! Shortcut Google is tagged with Tag1, which does not exist in the known tags.
+
+* Pasting a secondary selected Shortcut that was deleted restores also Tags of this Shortcut:
+** Copy a Tag, containing a Shortcut
+** Delete the shortcut
+** Paste the Tag. Normally the Shortcut should not reappear in the first Tag
+
+* Undo Import from FireFox3 does not use undoableOperation sometimes (can't reproduce it ?)
+
+* Sometimes exiting comes into conflict with the clipboard timer, resulting in an exception "instance of IO needed": we need to make sure that the previous loop has finished before exiting, and we must prevent new loops from beginning as soon as we want to exit.
+
+* When editing a tree label, shortcuts must be deactivated (can test with Del)
+
+* When loading a Gem that has several possible platforms, installGem waits for user input in the background. (several solutions: download manually specified gem file, or understand how gem works)
+
+* When importing an XML containing 2 Shortcuts differing only by name, and if the unicity criteria is based on description+content, it is still asked to resolve a conflict it should not
