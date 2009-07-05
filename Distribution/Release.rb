@@ -128,7 +128,6 @@ module PBS
             # * AUTHORS
             # * LICENSE
             # * README
-            # * Bugs
             # * ChangeLog
             # * Credits
             # * pbsversion.rb
@@ -146,7 +145,6 @@ module PBS
               'AUTHORS',
               'LICENSE',
               'README',
-              'Bugs',
               'ChangeLog',
               'Credits',
               'pbsversion.rb',
