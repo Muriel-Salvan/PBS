@@ -53,3 +53,5 @@
 * Should protect executing Shortcuts from exceptions (test with an invalid Shortcut)
 * Should run non-executable commands with the associated program (use start)
 * The Shell Type GUI should propose an open dialog to select file to execute
+* Some plugin commands should be applicable to only some shortcut types
+* Implement command plugin that retrieves favicons for URL not having any icon
