@@ -168,7 +168,7 @@ end
         rSuccess = system("makensis /DVERSION=#{iVersion} \"/DRELEASEDIR=#{iReleaseDir.gsub(/\//,'\\')}\" \"#{iPBSRootDir.gsub(/\//,'\\')}\\Distribution\\#{RUBY_PLATFORM}\\Installer\\install.nsi\"")
         
         if (rSuccess)
-          FileUtils.mv("#{iPBSRootDir}/Distribution/#{RUBY_PLATFORM}/Installer/pbs_#{iVersion}_setup.exe", "#{iInstallerDir}/pbs_0.0.1.20090430_setup.exe")
+          FileUtils.mv("#{iPBSRootDir}/Distribution/#{RUBY_PLATFORM}/Installer/pbs_#{iVersion}_setup.exe", "#{iInstallerDir}/pbs_#{iVersion}_setup.exe")
         end
 
         return rSuccess

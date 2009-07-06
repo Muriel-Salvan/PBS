@@ -8,7 +8,30 @@ module PBS
   # About Dialog
   class AboutDialog < Wx::Dialog
 
+    include Tools
+
     ABOUT_ICON = Tools::loadBitmap('Icon72.png')
+
+    # Return the file content
+    #
+    # Parameters:
+    # * *iFileName* (_String_): The file name, relative to PBS root dir
+    # Return:
+    # * <em>list<String></em>: The content
+    def getFileContent(iFileName)
+      rContent = []
+
+      lRealFileName = "#{$PBS_RootDir}/#{iFileName}"
+      if (File.exists?(lRealFileName))
+        File.open(lRealFileName, 'r') do |iFile|
+          rContent = iFile.readlines
+        end
+      else
+        logBug "Missing file #{lRealFileName}."
+      end
+
+      return rContent
+    end
 
     # Constructor
     #
@@ -24,6 +47,7 @@ module PBS
       lTCMessage = Wx::TextCtrl.new(self, Wx::ID_ANY, '',
         :style => Wx::TE_MULTILINE|Wx::TE_READONLY|Wx::TE_RICH|Wx::TE_RICH2|Wx::TE_AUTO_URL
       )
+      # Read the change log
       lTCMessage.append_text("PBS: Portable Bookmarks and Shortcuts
 
 Planning, Development, Testing, Documentation:
@@ -31,10 +55,35 @@ Muriel Salvan - http://murielsalvan.users.sourceforge.net
 
 This software is provided Free and Open Source - http://www.opensource.org -, under the BSD license - http://www.freebsd.org/copyright/license.html -.
 
-Changelog:
+=====================
+===== Changelog =====
+=====================
+#{getFileContent('ChangeLog')}
+=====================
 
-v 0.0.1.20090430
-* Initial release
+=====================
+===== Authors =====
+=====================
+#{getFileContent('AUTHORS')}
+=====================
+
+=====================
+===== Credits =====
+=====================
+#{getFileContent('Credits')}
+=====================
+
+=====================
+===== License =====
+=====================
+#{getFileContent('LICENSE')}
+=====================
+
+=====================
+===== TODO =====
+=====================
+#{getFileContent('TODO')}
+=====================
 ")
       lTCMessage.set_selection(0, 0)
       evt_text_url(lTCMessage) do |iEvent|
