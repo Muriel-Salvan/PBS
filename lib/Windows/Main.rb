@@ -190,10 +190,12 @@ module PBS
 
       # The close event
       evt_close do |iEvent|
+        # Reset this variable
+        $PBS_Exiting = nil
         @Controller.executeCommand(Wx::ID_EXIT, {
           :parentWindow => self
         })
-        if (!$PBS_Exiting)
+        if ($PBS_Exiting == nil)
           # There was a problem. Log it and close.
           logBug "An error occurred while closing. Forcing close."
           self.destroy
@@ -292,7 +294,9 @@ module PBS
       addMenuCommand(@EditMenu, Wx::ID_DELETE) do |iEvent, oValidator|
         oValidator.authorizeCmd(
           :selection => @TCMainTree.getCurrentSelection,
-          :parentWindow => self
+          :parentWindow => self,
+          :deleteTaggedShortcuts => nil,
+          :deleteOrphanShortcuts => nil
         )
       end
       @EditMenu.append_separator

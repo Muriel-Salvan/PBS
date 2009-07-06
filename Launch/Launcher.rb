@@ -53,7 +53,7 @@ module PBS
         # The platform dependent object
         $PBS_Platform = iPlatform
         # Global constants
-        $PBS_Exiting = false
+        $PBS_Exiting = nil
         $PBS_LogFile = nil
         $PBS_DevDebug = nil
         $PBS_StartupFile = nil

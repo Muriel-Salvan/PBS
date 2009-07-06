@@ -19,6 +19,9 @@ module PBS
         lWindow = iParams[:parentWindow]
         if (ioController.checkSavedWork(lWindow))
           ioController.notifyExit
+        else
+          # Mention that we chose to not exit explicitly
+          $PBS_Exiting = false
         end
       end
 
