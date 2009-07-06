@@ -55,3 +55,6 @@
 * The Shell Type GUI should propose an open dialog to select file to execute
 * Some plugin commands should be applicable to only some shortcut types
 * Implement command plugin that retrieves favicons for URL not having any icon
+* Tray icon: give the user the possibility to change the tray icon
+* Make a command that creates all relevant links to a SF.net project
+* In the main tree, F2 should edit the label

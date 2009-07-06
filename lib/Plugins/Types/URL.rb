@@ -76,7 +76,15 @@ module PBS
       # Parameters:
       # * *iContent* (_Object_): Content created by this type
       def run(iContent)
-        IO.popen("start #{iContent}")
+        # We must put " around the URL after the http:// prefix, as otherwise & symbol will not be recognized
+        lMatch = iContent.match(/^(http|https|ftp|ftps):\/\/(.*)$/)
+        if (lMatch == nil)
+          logErr "URL #{iContent} is not one of http://, https://, ftp:// or ftps://. Can't invoke it."
+        else
+          # TODO: This is Windows specific.
+          p "start #{lMatch[1]}://\"#{lMatch[2]}\""
+          IO.popen("start #{lMatch[1]}://\"#{lMatch[2]}\"")
+        end
       end
 
       # Get the content as an XML text.
