@@ -54,17 +54,43 @@ module PBS
       # * *iCmd* (_String_): The command to execute
       # * *iInTerminal* (_Boolean_): Do we execute this command in a separate terminal ?
       # Return:
-      # * _Boolean_: Success ?
+      # * _Exception_: Error, or nil if success
       def execShellCmdNoWait(iCmd, iInTerminal)
-        rSuccess = true
+        rException = nil
 
         if (iInTerminal)
-          rSuccess = system("start cmd /c #{iCmd}")
+          if (!system("start cmd /c #{iCmd}"))
+            rException = RuntimeError.new
+          end
         else
-          IO.popen(iCmd)
+          begin
+            IO.popen(iCmd)
+          rescue Exception
+            rException = $!
+          end
         end
 
-        return rSuccess
+        return rException
+      end
+
+      # Execute a given URL to be launched in a browser
+      #
+      # Parameters:
+      # * *iURL* (_String_): The URL to launch
+      # Return:
+      # * _String_: Error message, or nil if success
+      def launchURL(iURL)
+        rError = nil
+
+        # We must put " around the URL after the http:// prefix, as otherwise & symbol will not be recognized
+        lMatch = iURL.match(/^(http|https|ftp|ftps):\/\/(.*)$/)
+        if (lMatch == nil)
+          rError = "URL #{iURL} is not one of http://, https://, ftp:// or ftps://. Can't invoke it."
+        else
+          IO.popen("start #{lMatch[1]}://\"#{lMatch[2]}\"")
+        end
+
+        return rError
       end
 
     end

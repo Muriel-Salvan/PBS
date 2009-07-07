@@ -59,7 +59,7 @@ module PBS
         $PBS_StartupFile = nil
         # Global paths
         # Root dir used as a based for images directories, plugins to be required...
-        $PBS_RootDir = iRootDir
+        $PBS_RootDir = File.expand_path(iRootDir)
         $PBS_LibDir = "#{$PBS_RootDir}/lib"
         $PBS_GraphicsDir = "#{$PBS_LibDir}/Graphics"
         $PBS_ExtDir = "#{$PBS_RootDir}/ext/#{RUBY_PLATFORM}"

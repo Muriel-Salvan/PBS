@@ -47,7 +47,7 @@ module PBS
       lTCMessage = Wx::TextCtrl.new(self, Wx::ID_ANY, '',
         :style => Wx::TE_MULTILINE|Wx::TE_READONLY|Wx::TE_RICH|Wx::TE_RICH2|Wx::TE_AUTO_URL
       )
-      # Read the change log
+      # Set the text after initialization, otherwise URLs won't be displayed.
       lTCMessage.append_text("PBS: Portable Bookmarks and Shortcuts
 
 Planning, Development, Testing, Documentation:
@@ -78,17 +78,12 @@ This software is provided Free and Open Source - http://www.opensource.org -, un
 =====================
 #{getFileContent('LICENSE')}
 =====================
-
-=====================
-===== TODO =====
-=====================
-#{getFileContent('TODO')}
-=====================
 ")
       lTCMessage.set_selection(0, 0)
       evt_text_url(lTCMessage) do |iEvent|
+        # What happens when user clicks a URL in the text
         if (iEvent.mouse_event.button(Wx::MOUSE_BTN_LEFT))
-          IO.popen("start #{iEvent.url}")
+          $PBS_Platform.launchURL(iEvent.url)
         end
       end
       lSBIcon = Wx::StaticBitmap.new(self, Wx::ID_ANY, ABOUT_ICON)

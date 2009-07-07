@@ -120,6 +120,24 @@ module PBS
       return rBitmap
     end
 
+    # Set recursively children of a window as readonly
+    #
+    # Parameters:
+    # * *iWindow* (<em>Wx::Window</em>): The window
+    def setChildrenReadOnly(iWindow)
+      iWindow.children.each do |iChildWindow|
+        # Put here every window class that has to be disabled
+        if (iChildWindow.is_a?(Wx::TextCtrl))
+          iChildWindow.editable = false
+        elsif (iChildWindow.is_a?(Wx::BitmapButton))
+          iChildWindow.enable(false)
+        elsif (iChildWindow.is_a?(Wx::CheckBox))
+          iChildWindow.enable(false)
+        end
+        setChildrenReadOnly(iChildWindow)
+      end
+    end
+
     # Get the list of local library directories:
     # * From the ext directory
     # * From the ext gems
@@ -295,7 +313,7 @@ module PBS
           require 'rubygems/gem_commands'
         rescue Exception
           if (iAcceptDialogs)
-            logBug "PBS installation of RubyGems could not get required: #{$!}.\nException stack:\n#{$!.backtrace.join("\n")}"
+            logExc $!, 'PBS installation of RubyGems could not get required'
           else
             if ($PBS_ScreenOutputErr)
               $stderr << "PBS installation of RubyGems could not get required: #{$!}.\nException stack:\n#{$!.backtrace.join("\n")}\n"
@@ -342,7 +360,7 @@ module PBS
         end
       rescue Exception
         if (iAcceptDialogs)
-          logBug "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+          logExc $!, "RubyGems returned an exception while installing #{iInstallCmd}"
         else
           if ($PBS_ScreenOutputErr)
             $stderr << "RubyGems returned an exception while installing #{iInstallCmd}: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}\n"
@@ -387,17 +405,69 @@ module PBS
       ioBitmap.mask = Wx::Mask.new(lMaskBitmap)
     end
 
+    # Get a stack trace in a simple format:
+    # Remove $PBS_RootDir paths from it.
+    #
+    # Parameters:
+    # * *iCaller* (<em>list<String></em>): The caller
+    # * *iReferenceCaller* (<em>list<String></em>): The reference caller: we will not display lines from iCaller that also belong to iReferenceCaller [optional = nil]
+    # Return:
+    # * <em>list<String></em>): The simple stack
+    def getSimpleCaller(iCaller, iReferenceCaller = nil)
+      rSimpleCaller = []
+
+      lCaller = nil
+      # If there is a reference caller, remove the lines from lCaller that are also in iReferenceCaller
+      if (iReferenceCaller == nil)
+        lCaller = iCaller
+      else
+        lIdxCaller = iCaller.size - 1
+        lIdxRef = iReferenceCaller.size - 1
+        while ((lIdxCaller >= 0) and
+               (lIdxRef >= 0) and
+               (iCaller[lIdxCaller] == iReferenceCaller[lIdxRef]))
+          lIdxCaller -= 1
+          lIdxRef -= 1
+        end
+        # Here we have either one of the indexes that is -1, or the indexes point to different lines between the caller and its reference.
+        lCaller = iCaller[0..lIdxCaller+1]
+      end
+      lCaller.each do |iCallerLine|
+        lMatch = iCallerLine.match(/^(.*):([[:digit:]]*):in (.*)$/)
+        if (lMatch == nil)
+          # Did not get which format. Just add it blindly.
+          rSimpleCaller << iCallerLine
+        else
+          rSimpleCaller << "#{File.expand_path(lMatch[1]).gsub($PBS_RootDir, '')}:#{lMatch[2]}:in #{lMatch[3]}"
+        end
+      end
+
+      return rSimpleCaller
+    end
+
+    # Log an exception
+    # This is called when there is a bug due to an exception in the program. It has been set in many places to detect bugs.
+    #
+    # Parameters:
+    # * *iException* (_Exception_): Exception
+    # * *iMsg* (_String_): Message to log
+    def logExc(iException, iMsg)
+      logBug("#{iMsg}
+Exception: #{iException}
+Exception stack:
+#{getSimpleCaller(iException.backtrace, caller).join("\n")}
+...")
+    end
+
     # Log a bug
     # This is called when there is a bug in the program. It has been set in many places to detect bugs.
     #
     # Parameters:
     # * *iMsg* (_String_): Message to log
     def logBug(iMsg)
-      lCallers = []
-      caller[0..-2].each do |iCallerLine|
-        lCallers << iCallerLine.gsub($PBS_RootDir, '')
-      end
-      lCompleteMsg = "Bug: #{iMsg}\nStack:\n#{lCallers.join("\n")}\nNormally you should never encounter this message. Please fill a bug report to PBS with this information to make sure it will be corrected in future releases. Thanks."
+      lCompleteMsg = "Bug: #{iMsg}
+Stack:
+#{getSimpleCaller(caller[0..-2]).join("\n")}"
       # Log into stderr
       if ($PBS_ScreenOutputErr)
         $stderr << "!!! BUG !!! #{lCompleteMsg}\n"
@@ -406,11 +476,9 @@ module PBS
         Tools::logFile(lCompleteMsg)
       end
       # Display dialog
-      showModal(Wx::MessageDialog, nil,
-        lCompleteMsg,
-        :caption => 'Bug',
-        :style => Wx::OK|Wx::ICON_EXCLAMATION
-      ) do |iModalResult, iDialog|
+      # We require the file here, as we hope it will not be required often
+      require 'Windows/BugReportDialog'
+      showModal(BugReportDialog, nil, lCompleteMsg) do |iModalResult, iDialog|
         # Nothing to do
       end
     end
@@ -757,7 +825,7 @@ module PBS
           end
         end
       rescue
-        logBug "Exception while unzipping #{iZipFileName} into #{iDirName}: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+        logExc "Exception while unzipping #{iZipFileName} into #{iDirName}"
         rSuccess = false
       end
 
@@ -1059,13 +1127,13 @@ module PBS
       end
       # Then we draw on the bitmap itself
       lBitmapToMerge.draw do |iMergeDC|
-        ioDC.blit(0, 0, iBitmap.width, iBitmap.height, iMergeDC, 0, 0, Wx::COPY, false)
+        ioDC.blit(0, 0, lBitmapToMerge.width, lBitmapToMerge.height, iMergeDC, 0, 0, Wx::COPY, false)
       end
       # And then we draw the mask, once converted to monochrome (painting a coloured bitmap containing Alpha channel to a monochrome DC gives strange results. Bug ?)
       lMonoImageToMerge = lBitmapToMerge.convert_to_image
       lMonoImageToMerge = lMonoImageToMerge.convert_to_mono(lMonoImageToMerge.mask_red, lMonoImageToMerge.mask_green, lMonoImageToMerge.mask_blue)
       Wx::Bitmap.from_image(lMonoImageToMerge).draw do |iMergeDC|
-        ioMaskDC.blit(0, 0, iBitmap.width, iBitmap.height, iMergeDC, 0, 0, Wx::OR_INVERT, true)
+        ioMaskDC.blit(0, 0, lBitmapToMerge.width, lBitmapToMerge.height, iMergeDC, 0, 0, Wx::OR_INVERT, true)
       end
     end
 

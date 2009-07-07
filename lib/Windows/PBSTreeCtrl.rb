@@ -618,7 +618,6 @@ module PBS
             if (@DragMode == Wx::DRAG_MOVE)
               lMasks << BITMAP_PRIMARY_CUT
               lMasks << BITMAP_DRAG
-              p 1
             elsif (@DragMode == Wx::DRAG_COPY)
               lMasks << BITMAP_PRIMARY_COPY
               lMasks << BITMAP_DRAG
@@ -826,9 +825,8 @@ module PBS
       else
         iSC.Tags.each do |iTag, iNil|
           lTagID = @TagsToMainTree[iTag]
-          if (lTagID == nil)
-            logBug "Shortcut #{iSC.Metadata['title']} is tagged with #{iTag.Name}, which does not exist in the known tags."
-          else
+          # It is possible that iTag is not present, in the case of pasting a Shortcut whose Tag was deleted in the meantime
+          if (lTagID != nil)
             lNewNodeID = append_item(lTagID, '')
             set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC ])
             updateTreeNode(lNewNodeID)
@@ -845,7 +843,16 @@ module PBS
     def updateTree
       # First, freeze it for better performance during update
       freeze
-      yield
+      begin
+        yield
+      rescue Exception
+        # Unfreeze it
+        thaw
+        # Redraw it
+        refresh
+        # Propagate the exception
+        raise
+      end
       # Unfreeze it
       thaw
       # Redraw it
@@ -1068,11 +1075,9 @@ module PBS
       updateTree do
         (iSelection.SelectedPrimaryShortcuts + iSelection.SelectedSecondaryShortcuts).each do |iSCInfo|
           iSC, iParentTag = iSCInfo
-          # Find the node of the Tag
+          # Find the node of the Tag (it is possible that it does not exist anymore in case of deleted cut item)
           lParentNodeID = @TagsToMainTree[iParentTag]
-          if (lParentNodeID == nil)
-            logBug "Normally tag #{iParentTag.Name} should have been registered in the main tree, but unable to retrieve it."
-          else
+          if (lParentNodeID != nil)
             # Check each child, and update the one for our Shortcut
             children(lParentNodeID).each do |iChildNodeID|
               # If this child is for our SC, update it

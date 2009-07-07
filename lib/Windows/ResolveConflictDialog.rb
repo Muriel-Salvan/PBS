@@ -105,15 +105,7 @@ module PBS
       lSBExisting = Wx::StaticBox.new(self, Wx::ID_ANY, "Existing #{iObjectTypeName}")
       @ExistingObjectPanel = getExistingPanel
       # Set it read-only
-      @ExistingObjectPanel.children.each do |iChildWindow|
-        # Put here every window class that has to be disabled
-        [Wx::TextCtrl, Wx::BitmapButton].each do |iClass|
-          if (iChildWindow.is_a?(iClass))
-            iChildWindow.enable(false)
-            break
-          end
-        end
-      end
+      setChildrenReadOnly(@ExistingObjectPanel)
       lSBConflicting = Wx::StaticBox.new(self, Wx::ID_ANY, "Conflicting #{iObjectTypeName}")
       @ConflictingObjectPanel = getConflictingPanel
       lButtonsPanel = createButtonsPanel(self)

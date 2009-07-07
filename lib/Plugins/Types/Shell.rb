@@ -102,7 +102,10 @@ module PBS
           Dir.chdir(lDir)
         end
         # Execute command
-        $PBS_Platform.execShellCmdNoWait(lCmd, lInTerminal)
+        lException = $PBS_Platform.execShellCmdNoWait(lCmd, lInTerminal)
+        if (lException != nil)
+          logErr "Error while executing \"#{lCmd}\": #{lException}"
+        end
         # Change back the current directory
         if (lOldDir != nil)
           Dir.chdir(lOldDir)

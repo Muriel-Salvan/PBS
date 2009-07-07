@@ -28,7 +28,7 @@ module PBS
       begin
         yield
       rescue Exception
-        logBug "Exception encountered during execution of \"#{iOperationTitle}\": #{$!}.\nException stack:\n#{$!.backtrace.join("\n")}"
+        logExc $!, "Exception encountered during execution of \"#{iOperationTitle}\""
       end
       # Check possible errors
       if (!@CurrentTransactionErrors.empty?)
@@ -294,7 +294,7 @@ module PBS
       # First check if we haven't saved current work
       if (@CurrentOpenedFileModified)
         showModal(Wx::MessageDialog, iParentWindow,
-          "Current Shortcuts are not saved.\nAre you sure you want to discard current Shortcuts to load new ones ?",
+          "Current Shortcuts are not saved.\nAre you sure you want to discard current Shortcuts ?",
           :caption => 'Confirm discard',
           :style => Wx::YES_NO|Wx::NO_DEFAULT|Wx::ICON_EXCLAMATION
         ) do |iModalResult, iDialog|
@@ -336,7 +336,7 @@ module PBS
           begin
             lCommand[:plugin].execute(self)
           rescue
-            logBug "Command \"#{lCommand[:title]}\" (called without parameters) threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+            logExc $!, "Command \"#{lCommand[:title]}\" (called without parameters) threw an exception"
           end
         else
           if (lCommand[:parameters] != nil)
@@ -351,7 +351,7 @@ module PBS
           begin
             lCommand[:plugin].execute(self, iParams)
           rescue
-            logBug "Command \"#{lCommand[:title]}\" (called with parameters: #{iParams.inspect}) threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+            logExc $!, "Command \"#{lCommand[:title]}\" (called with parameters: #{iParams.inspect}) threw an exception"
           end
         end
       end

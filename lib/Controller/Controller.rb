@@ -103,7 +103,7 @@ module PBS
         begin
           ioController.ImportPlugins[@ImportPluginName][:plugin].execute(ioController, iParams[:parentWindow])
         rescue Exception
-          logBug "Plugin Imports/#{@ImportPluginName} threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+          logExc $!, "Plugin Imports/#{@ImportPluginName} threw an exception"
         end
         if (@Merge)
           ioController.Merging = false
@@ -135,7 +135,7 @@ module PBS
         begin
           iController.ExportPlugins[@ExportPluginName][:plugin].execute(iController, iParams[:parentWindow])
         rescue Exception
-          logBug "Plugin Exports/#{@ImportPluginName} threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+          logExc $!, "Plugin Exports/#{@ImportPluginName} threw an exception"
         end
       end
 
@@ -418,7 +418,7 @@ module PBS
           begin
             iRegisteredGUI.send(iMethod, *iParams)
           rescue Exception
-            logBug "A notified GUI (maybe from an Integration Plugin) threw an exception: #{$!}\nException stack:\n#{$!.backtrace.join("\n")}"
+            logExc $!, 'A notified GUI (maybe from an Integration Plugin) threw an exception'
           end
         end
       end
@@ -967,12 +967,12 @@ module PBS
             :bitmap => Wx::Bitmap.new("#{$PBS_GraphicsDir}/#{rPluginInfo[:bitmapName]}")
           } )
         rescue Exception
-          logBug "Error while getting info on plugin #{iPluginsTypeID}/#{iPluginName}: #{$!}\nCheck that method PBS::#{iPluginsTypeID}::Description::#{iPluginName}.pluginInfo has been correctly defined in it.\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
+          logExc "Error while getting info on plugin #{iPluginsTypeID}/#{iPluginName}.\nCheck that method PBS::#{iPluginsTypeID}::Description::#{iPluginName}.pluginInfo has been correctly defined in it.\nThis plugin will be ignored."
           # Record the error
           rPluginInfo[:exception] = $!
         end
       rescue Exception
-        logBug "Error while loading one of the #{iPluginsTypeID} plugin (#{iPluginName}): #{$!}\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
+        logExc "Error while loading one of the #{iPluginsTypeID} plugin (#{iPluginName}).\nThis plugin will be ignored."
         # Record the error
         rPluginInfo[:exception] = $!
       end
@@ -1058,11 +1058,11 @@ end
 "
           )
         rescue Exception
-          logBug "Error while instantiating one of the #{iPluginTypeID} plugin (#{lRequireName}): #{$!}\nCheck that class PBS::#{iPluginTypeID}::#{iPluginName} has been correctly defined in it.\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
+          logExc "Error while instantiating one of the #{iPluginTypeID} plugin (#{lRequireName}).\nCheck that class PBS::#{iPluginTypeID}::#{iPluginName} has been correctly defined in it.\nThis plugin will be ignored."
           ioPluginInfo[:exception] = $!
         end
       rescue Exception
-        logBug "Error while loading one of the #{iPluginTypeID} plugin (#{lRequireName}): #{$!}\nThis plugin will be ignored.\nException stack:\n#{$!.backtrace.join("\n")}"
+        logExc "Error while loading one of the #{iPluginTypeID} plugin (#{lRequireName}).\nThis plugin will be ignored."
         ioPluginInfo[:exception] = $!
       end
     end
@@ -1167,7 +1167,7 @@ end
             rSame = (lValue1 == lValue2)
           end
         end
-        if (rSame)
+        if (!rSame)
           # No need to continue
           break
         end
