@@ -1,5 +1,22 @@
 = PBS Release History
 
+== 0.0.2.20090708 (Alpha)
+
+* Reorganized TODO list.
+* Protected the main tree update against exceptions.
+* Corrected some credits.
+* Corrected discard Shortcuts message.
+* Create logExc, and use it by searching "Exception stack"
+* Make the Bug dialog in logBug display in TextCtrl with the data to be copied/pasted by users in bug reports
+* Bug correction (#2817475): URLs having & symbol were not invoked correctly
+* Bug correction: Running a Shell Shortcut that does not exist crashes.
+* Bug correction: In the conflict dialog, the existing values are not read-only
+* Bug correction (#2816993): Wrong conflicts detection in Shortcuts
+* Bug correction: Cut some specific Shortcuts result in a C++RuntimeError (Try with favicon of http://www.cfa.harvard.edu)
+* Bug correction: TODO file is not released, therefore issuing an error when About dialog is displayed
+* Bug correction: Cut a Shortcut in a Tag, Delete the Tag, and Cut another Shortcut: error message
+* Bug correction: Cut a Shortcut in a Tag, Delete the Tag, and Paste in another Tag: error message
+
 == 0.0.1.20090706 (Alpha)
 
 * Initial public release.
