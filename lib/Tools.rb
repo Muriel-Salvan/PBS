@@ -824,8 +824,8 @@ Stack:
             end
           end
         end
-      rescue
-        logExc "Exception while unzipping #{iZipFileName} into #{iDirName}"
+      rescue Exception
+        logExc $!, "Exception while unzipping #{iZipFileName} into #{iDirName}"
         rSuccess = false
       end
 
@@ -1185,7 +1185,7 @@ Stack:
       lAll.selectTag(iController.RootTag)
       # Serialize the selection and marshal it
       lData = Marshal.dump(lAll.getSerializedSelection)
-      # The write everything in the file
+      # Then write everything in the file
       File.open(iFileName, 'wb') do |iFile|
         iFile.write(lData)
       end
@@ -1204,6 +1204,92 @@ Stack:
       end
       # Unmarshal it and apply it to our controller in the Root Tag.
       Marshal.load(lData).createSerializedTagsShortcuts(ioController, ioController.RootTag, nil)
+    end
+
+    # Get a serialized version of a map.
+    # This returns a map containing objects that can be marshalled.
+    # It calls recursively in case of embedded maps.
+    #
+    # Parameters:
+    # * *iMap* (<em>map<Object,Object></em>): The map to serialize
+    # Return:
+    # * <em>map<Object,Object></em>: the serialized map
+    def serializeMap(iMap)
+      rSerializedMap = {}
+
+      iMap.each do |iKey, iValue|
+        if (iValue.is_a?(Wx::Bitmap))
+          # TODO (WxRuby): Remove this processing once marshal_dump and marshal_load have been implemented in Wx::Bitmap.
+          # We convert Bitmaps into Strings manually.
+          rSerializedMap[iKey] = [ Wx::Bitmap, iValue.getSerialized ]
+        elsif (iValue.is_a?(Hash))
+          rSerializedMap[iKey] = serializeMap(iValue)
+        else
+          rSerializedMap[iKey] = iValue
+        end
+      end
+
+      return rSerializedMap
+    end
+
+    # Get an unserialized version of a map.
+    # This returns a map containing objects that were previously marshalled.
+    # It calls recursively in case of embedded maps.
+    #
+    # Parameters:
+    # * *iMap* (<em>map<Object,Object></em>): The map to unserialize
+    # Return:
+    # * <em>map<Object,Object></em>: the unserialized map
+    def unserializeMap(iMap)
+      rUnserializedMap = {}
+
+      iMap.each do |iKey, iValue|
+        if ((iValue.is_a?(Array)) and
+            (iValue.size == 2) and
+            (iValue[0] == Wx::Bitmap))
+          # TODO (WxRuby): Remove this processing once marshal_dump and marshal_load have been implemented in Wx::Bitmap.
+          # We convert Bitmaps into Strings manually.
+          lBitmap = Wx::Bitmap.new
+          lBitmap.setSerialized(iValue[1])
+          rUnserializedMap[iKey] = lBitmap
+        elsif (iValue.is_a?(Hash))
+          rUnserializedMap[iKey] = unserializeMap(iValue)
+        else
+          rUnserializedMap[iKey] = iValue
+        end
+      end
+
+      return rUnserializedMap
+    end
+
+    # Save options data in a file
+    #
+    # Parameters:
+    # * *iOptions* (<em>map<Symbol,Object></em>): The options
+    # * *iFileName* (_String_): The file name to save into
+    def saveOptionsData(iOptions, iFileName)
+      # Serialize the options and marshal it
+      lData = Marshal.dump(serializeMap(iOptions))
+      # Then write everything in the file
+      File.open(iFileName, 'wb') do |iFile|
+        iFile.write(lData)
+      end
+    end
+
+    # Open options data from a file
+    #
+    # Parameters:
+    # * *iFileName* (_String_): The file name to load from
+    # Return:
+    # * <em>map<Symbol,Object></em>: The options
+    def openOptionsData(iFileName)
+      # First read the file
+      lData = nil
+      File.open(iFileName, 'rb') do |iFile|
+        lData = iFile.read
+      end
+      # Unmarshal it
+      return unserializeMap(Marshal.load(lData))
     end
 
     # Get a new Unique ID for Copy/Paste operations

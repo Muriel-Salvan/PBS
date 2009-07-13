@@ -112,6 +112,8 @@ module PBS
       # This class is used to represent the complete data of a Shortcut, without any reference (other than IDs) to external objects.
       class Shortcut
 
+        include Tools
+
         # The name of the Type plugin
         #    String
         attr_reader :TypePluginName
@@ -169,19 +171,7 @@ module PBS
         # * *iTagsSet* (<em>map<Tag,nil></em>): The Tags set to associate this Shortcut to
         def createShortcut(ioController, iTagsSet)
           # TODO (WxRuby): Once marshal_dump and marshal_load are set correctly for Wx::Bitmap, remove the Metadata conversion
-          lMetadata = {}
-          @Metadata.each do |iKey, iValue|
-            if ((iValue.is_a?(Array)) and
-                (iValue.size == 2) and
-                (iValue[0] == Wx::Bitmap))
-              lBitmap = Wx::Bitmap.new
-              lBitmap.setSerialized(iValue[1])
-              lMetadata[iKey] = lBitmap
-            else
-              lMetadata[iKey] = iValue
-            end
-          end
-          ioController.createShortcut(@TypePluginName, @Content, lMetadata, iTagsSet)
+          ioController.createShortcut(@TypePluginName, @Content, unserializeMap(@Metadata), iTagsSet)
         end
 
       end
@@ -601,21 +591,11 @@ module PBS
       # Add iShortcut in the list of Tags if it is not already there
       lShortcutID = iShortcut.object_id
       if (ioSerializedShortcuts[lShortcutID] == nil)
-        lSerializedMetadata = {}
-        # TODO (WxRuby): Remove this processing once marshal_dump and marshal_load have been implemented in Wx::Bitmap.
-        # We convert Bitmaps into Strings manually.
-        iShortcut.Metadata.each do |iKey, iValue|
-          if (iValue.is_a?(Wx::Bitmap))
-            lSerializedMetadata[iKey] = [ Wx::Bitmap, iValue.getSerialized ]
-          else
-            lSerializedMetadata[iKey] = iValue
-          end
-        end
         # Add it
         ioSerializedShortcuts[lShortcutID] = MultipleSelection::Serialized::Shortcut.new(
           iShortcut.Type.pluginName,
           iShortcut.Content,
-          lSerializedMetadata
+          serializeMap(iShortcut.Metadata)
         )
         # Fill the correspondance map between IDs and Shortcuts
         @SerializedShortcutsIDs[lShortcutID] = iShortcut

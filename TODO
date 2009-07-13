@@ -57,6 +57,7 @@
 **** Replace all extensions removal made with [0..-6] with File.extname(...).size
 **** Replace TODOs in README file
 **** Implement Send bug reports in BugReportDialog
+**** Give ability to load several files on startup (Open & Merge behaviour)
 
 ** Plugins
 *** Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
@@ -74,6 +75,5 @@
 *** The Shell Type GUI should propose an open dialog to select file to execute
 *** Some plugin commands should be applicable to only some shortcut types
 *** Implement command plugin that retrieves favicons for URL not having any icon
-*** Tray icon: give the user the possibility to change the tray icon
 *** Make a command that creates all relevant links to a SF.net project
-*** Tray menu config: choose to display a specific Tag as the root menu, instead of the normal root Tag (and eventually add the norml root Tag after a separator if needed)
+*** Tray: Adding option of size of icons in menu (different sizes for items in first menu than in consecutive ones)

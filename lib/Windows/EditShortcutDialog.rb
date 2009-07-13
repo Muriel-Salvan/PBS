@@ -13,7 +13,6 @@ module PBS
     include Tools
 
     # Populate a TreeCtrl component with Tags and checkboxes.
-    # Keep inserted tags in a map filled by the method.
     #
     # Parameters:
     # * *iRootID* (_Integer_): ID of one of the tree's node where tags will be inserted

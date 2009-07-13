@@ -10,6 +10,9 @@ module PBS
   # If you wish to modify data, use methods defined in the Actions module. Therefore your modifications will be protected with Undo methods, and you will not mess other Commands' Undo doing so.
   module Readers
 
+    # The default Tag icon
+    DEFAULT_TAG_ICON = Tools::loadBitmap('Tag.png')
+
     # The current opened file name
     #   String
     attr_reader :CurrentOpenedFileName
@@ -85,6 +88,24 @@ module PBS
     # The Redo stack
     #   list< Controller::UndoableOperation >
     attr_reader :RedoStack
+
+    # Get the icon associated to a Tag.
+    # Even if it was set to nil, the default icon will be returned.
+    # This method ensures a valid Wx::Bitmap object will be returned.
+    #
+    # Parameters:
+    # * *iTag* (_Tag_): The Tag
+    # Return:
+    # * <em>Wx::Bitmap</em>: The icon
+    def getTagIcon(iTag)
+      rIcon = iTag.Icon
+
+      if (rIcon == nil)
+        rIcon = DEFAULT_TAG_ICON
+      end
+
+      return rIcon
+    end
 
     # Get the icon associated to a Shortcut.
     # Even if it was set to nil, the default icon will be returned.

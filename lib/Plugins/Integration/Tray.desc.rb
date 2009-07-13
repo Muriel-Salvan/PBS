@@ -24,7 +24,8 @@ module PBS
         def pluginInfo
           return {
             :title => 'Tray Icon',
-            :description => 'Create a menu in the Tray to access Shortcuts'
+            :description => 'Create a menu in the Tray to access Shortcuts',
+            :bitmapName => 'Tray.png'
           }
         end
 

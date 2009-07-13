@@ -707,7 +707,11 @@ module PBS
         :externalLibDirs => {},
         # The list of directories storing some system libraries, per architecture
         # map< String, list< String > >
-        :externalDLLDirs => {}
+        :externalDLLDirs => {},
+        # The options linked to each instance of Integration plugins:
+        # For each Plugin ID, there is a list of [ Tag to represent in this plugin, Is it active ?, Options ]
+        # map< String, list< [ Tag, Boolean, Object ] > >
+        :intPluginsOptions => {}
       }
 
       # The GUIS registered
@@ -938,6 +942,12 @@ module PBS
         })
       end
 
+      # Initialize options
+      # TODO: Load them from the place they were saved before
+      @Options[:intPluginsOptions]['Tray'] = [
+        [ @RootTag, true, { :icon => nil }, nil ]
+      ]
+
     end
 
     # Read the description of a plugin from its description file
@@ -967,12 +977,12 @@ module PBS
             :bitmap => Wx::Bitmap.new("#{$PBS_GraphicsDir}/#{rPluginInfo[:bitmapName]}")
           } )
         rescue Exception
-          logExc "Error while getting info on plugin #{iPluginsTypeID}/#{iPluginName}.\nCheck that method PBS::#{iPluginsTypeID}::Description::#{iPluginName}.pluginInfo has been correctly defined in it.\nThis plugin will be ignored."
+          logExc $!, "Error while getting info on plugin #{iPluginsTypeID}/#{iPluginName}.\nCheck that method PBS::#{iPluginsTypeID}::Description::#{iPluginName}.pluginInfo has been correctly defined in it.\nThis plugin will be ignored."
           # Record the error
           rPluginInfo[:exception] = $!
         end
       rescue Exception
-        logExc "Error while loading one of the #{iPluginsTypeID} plugin (#{iPluginName}).\nThis plugin will be ignored."
+        logExc $!, "Error while loading one of the #{iPluginsTypeID} plugin (#{iPluginName}).\nThis plugin will be ignored."
         # Record the error
         rPluginInfo[:exception] = $!
       end
@@ -1058,11 +1068,11 @@ end
 "
           )
         rescue Exception
-          logExc "Error while instantiating one of the #{iPluginTypeID} plugin (#{lRequireName}).\nCheck that class PBS::#{iPluginTypeID}::#{iPluginName} has been correctly defined in it.\nThis plugin will be ignored."
+          logExc $!, "Error while instantiating one of the #{iPluginTypeID} plugin (#{lRequireName}).\nCheck that class PBS::#{iPluginTypeID}::#{iPluginName} has been correctly defined in it.\nThis plugin will be ignored."
           ioPluginInfo[:exception] = $!
         end
       rescue Exception
-        logExc "Error while loading one of the #{iPluginTypeID} plugin (#{lRequireName}).\nThis plugin will be ignored."
+        logExc $!, "Error while loading one of the #{iPluginTypeID} plugin (#{lRequireName}).\nThis plugin will be ignored."
         ioPluginInfo[:exception] = $!
       end
     end
@@ -1216,20 +1226,7 @@ end
     # Return:
     # * _Boolean_: Does a Shortcut equal another serialized content ?
     def shortcutSameAsSerialized?(iShortcut, iOtherContent, iOtherMetadata)
-      lMetadata = {}
-      iOtherMetadata.each do |iKey, iValue|
-        if ((iValue.is_a?(Array)) and
-            (iValue.size == 2) and
-            (iValue[0] == Wx::Bitmap))
-          lBitmap = Wx::Bitmap.new
-          lBitmap.setSerialized(iValue[1])
-          lMetadata[iKey] = lBitmap
-        else
-          lMetadata[iKey] = iValue
-        end
-      end
-
-      return shortcutSameAs?(iShortcut, iOtherContent, lMetadata)
+      return shortcutSameAs?(iShortcut, iOtherContent, unserializeMap(iOtherMetadata))
     end
 
     # Ensure that we are in a current undoableOperation, and create a default one if not.

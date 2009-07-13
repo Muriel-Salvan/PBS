@@ -41,8 +41,6 @@ module PBS
     BITMAP_DRAG_NONE = Tools::loadBitmap('DragNDropCancel.png')
 
     # Define default Tag and Shortcuts icons
-    ICON_DEFAULT_TAG = Tools::loadBitmap('Tag.png')
-    ICON_DEFAULT_SHORTCUT = Tools::loadBitmap('Shortcut.png')
     ICON_ROOT_TAG = Tools::loadBitmap('Icon16.png')
 
     # The class defining the behaviour of the main tree for drop operations
@@ -650,19 +648,10 @@ module PBS
         lIdxImage = @ImageListManager.getImageIndex(lImageID) do
           if (lMasks.empty?)
             # Just return the original icon, without modifications
-            if (lObject.Icon != nil)
-              next lObject.Icon
-            else
-              next ICON_DEFAULT_TAG
-            end
+            next @Controller.getTagIcon(lObject)
           else
             # We will apply some layers, so clone the original bitmap
-            rBitmap = nil
-            if (lObject.Icon != nil)
-              rBitmap = lObject.Icon.clone
-            else
-              rBitmap = ICON_DEFAULT_TAG.clone
-            end
+            rBitmap = @Controller.getTagIcon(lObject).clone
             applyBitmapLayers(rBitmap, lMasks)
             next rBitmap
           end

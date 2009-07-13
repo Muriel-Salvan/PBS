@@ -22,7 +22,7 @@ module PBS
       def execute(ioController, iParams)
         lWindow = iParams[:parentWindow]
         # Display Options dialog
-        showModal(OptionsDialog, lWindow, ioController.Options) do |iModalResult, iDialog|
+        showModal(OptionsDialog, lWindow, ioController.Options, ioController) do |iModalResult, iDialog|
           case iModalResult
           when Wx::ID_OK
             lOldOptions = ioController.Options.clone

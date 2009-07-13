@@ -44,6 +44,8 @@ module PBS
       @Controller.registerIntegrationPluginsGUIs
       # Begin
       @Controller.notifyInit
+      # Notify everybody that options have been changed to initialize them
+      @Controller.notifyOptionsChanged({})
       # Load the startup file if needed
       if ($PBS_StartupFile != nil)
         if (File.exists?($PBS_StartupFile))

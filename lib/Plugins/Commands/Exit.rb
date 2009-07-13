@@ -9,7 +9,7 @@ module PBS
 
     class Exit
 
-      # Command that saves the file in a new name
+      # Command that exits PBS
       #
       # Parameters:
       # * *ioController* (_Controller_): The data model controller

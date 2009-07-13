@@ -24,7 +24,6 @@ module PBS
         if (lIconBitmap == nil)
           lIconBitmap = @Controller.TypesPlugins[@Type.pluginName][:bitmap]
         end
-        @BBIcon.bitmap_label = lIconBitmap
         if (lIconBitmap.is_ok)
           @BBIcon.bitmap_label = lIconBitmap
         else
@@ -73,10 +72,12 @@ module PBS
         lMainSizer.add_item([0,0], :proportion => 1)
         lMainSizer.add_item(lSTTitle, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
         lMainSizer.add_item(@TCTitle, :flag => Wx::GROW, :proportion => 0)
+
         lIconSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
         lIconSizer.add_item(lSTIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
         lIconSizer.add_item([8,0], :proportion => 0)
         lIconSizer.add_item(@BBIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        
         lMainSizer.add_item([0,8], :proportion => 0)
         lMainSizer.add_item(lIconSizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
         lMainSizer.add_item([0,0], :proportion => 1)
