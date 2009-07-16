@@ -57,6 +57,9 @@ module PBS
         $PBS_LogFile = nil
         $PBS_DevDebug = nil
         $PBS_StartupFile = nil
+        # Command line only variables
+        $PBS_DisplayUsage = nil
+        $PBS_UsageError = nil
         # Global paths
         # Root dir used as a based for images directories, plugins to be required...
         $PBS_RootDir = File.expand_path(iRootDir)
@@ -67,6 +70,8 @@ module PBS
         $PBS_ExtDllsDir = "#{$PBS_ExtDir}/libs"
         # Add the main library directory to the load path, as well as libraries needed for PBS without plugins
         $LOAD_PATH.concat( [
+          # Add Root dir as some environments do not have it
+          $PBS_RootDir,
           $PBS_LibDir,
           "#{$PBS_RootDir}/ext/rubyzip-0.9.1/lib"
         ] )

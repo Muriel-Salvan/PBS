@@ -127,7 +127,7 @@ end
 if (!lSuccess)
   \# Use allinoneruby
   puts \"Ruby not found in environment. Using shipped Ruby.\"
-  lSuccess = PBS::shellExecute(\"start \\\"\#{lCurrentDir}/Launch/#{RUBY_PLATFORM}/bin/rubyw-#{RUBY_VERSION}.exe\\\" \\\"\#{lCurrentDir}/Launch/Launcher.rb\\\" \#{ARGV.join(' ')}\")
+  lSuccess = PBS::shellExecute(\"start \\\"Title\\\" \\\"\#{lCurrentDir}/Launch/#{RUBY_PLATFORM}/bin/rubyw-#{RUBY_VERSION}.exe\\\" \\\"\#{lCurrentDir}/Launch/Launcher.rb\\\" \#{ARGV.join(' ')}\")
   if (!lSuccess)
     puts 'Unable to launch PBS. Please reinstall it.'
     puts 'Hit enter to quit.'

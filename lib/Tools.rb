@@ -528,6 +528,29 @@ Stack:
       end
     end
 
+    # Log a normal message to the user
+    # This is used to display a simple message to the user
+    #
+    # Parameters:
+    # * *iMsg* (_String_): Message to log
+    def logMsg(iMsg)
+      # Log into stderr
+      if ($PBS_ScreenOutput)
+        $stdout << "#{iMsg}\n"
+      end
+      if ($PBS_LogFile != nil)
+        Tools::logFile(iMsg)
+      end
+      # Display dialog
+      showModal(Wx::MessageDialog, nil,
+        iMsg,
+        :caption => 'Notification',
+        :style => Wx::OK|Wx::ICON_INFORMATION
+      ) do |iModalResult, iDialog|
+        # Nothing to do
+      end
+    end
+
     # Log an info.
     # This is just common journal.
     #
@@ -1262,6 +1285,58 @@ Stack:
       return rUnserializedMap
     end
 
+    # Serialize options
+    #
+    # Parameters:
+    # * *iOptions* (<em>map<Symbol,Object></em>): The options to be serialized
+    # Return:
+    # * <em>map<Symbol,Object></em>: The serialized options
+    def serializeOptions(iOptions)
+      lSerializableOptions = {}
+      iOptions.each do |iKey, iValue|
+        if (iKey == :intPluginsOptions)
+          lSerializableOptions[:intPluginsOptions] = {}
+          # We have to remove the instances information
+          iValue.each do |iPluginID, iPluginsList|
+            lSerializableOptions[:intPluginsOptions][iPluginID] = []
+            iPluginsList.each do |ioInstantiatedPluginInfo|
+              iTagID, iActive, iInstanceOptions, ioInstanceInfo = ioInstantiatedPluginInfo
+              lSerializableOptions[:intPluginsOptions][iPluginID] << [ iTagID, iActive, iInstanceOptions ]
+            end
+          end
+        else
+          lSerializableOptions[iKey] = iValue
+        end
+      end
+      return serializeMap(lSerializableOptions)
+    end
+
+    # Unserialize options
+    #
+    # Parameters:
+    # * *iSerializedOptions* (<em>map<Symbol,Object></em>): The serialized options
+    # Return:
+    # * <em>map<Symbol,Object></em>: The unserialized options
+    def unserializeOptions(iSerializedOptions)
+      lOptions = {}
+      iSerializedOptions.each do |iKey, iValue|
+        if (iKey == :intPluginsOptions)
+          lOptions[:intPluginsOptions] = {}
+          # We have to add empty instances information
+          iValue.each do |iPluginID, iPluginsList|
+            lOptions[:intPluginsOptions][iPluginID] = []
+            iPluginsList.each do |ioInstantiatedPluginInfo|
+              iTagID, iActive, iInstanceOptions = ioInstantiatedPluginInfo
+              lOptions[:intPluginsOptions][iPluginID] << [ iTagID, iActive, iInstanceOptions, [ nil, nil ] ]
+            end
+          end
+        else
+          lOptions[iKey] = iValue
+        end
+      end
+      return unserializeMap(lOptions)
+    end
+
     # Save options data in a file
     #
     # Parameters:
@@ -1269,7 +1344,7 @@ Stack:
     # * *iFileName* (_String_): The file name to save into
     def saveOptionsData(iOptions, iFileName)
       # Serialize the options and marshal it
-      lData = Marshal.dump(serializeMap(iOptions))
+      lData = Marshal.dump(serializeOptions(iOptions))
       # Then write everything in the file
       File.open(iFileName, 'wb') do |iFile|
         iFile.write(lData)
@@ -1289,7 +1364,7 @@ Stack:
         lData = iFile.read
       end
       # Unmarshal it
-      return unserializeMap(Marshal.load(lData))
+      return unserializeOptions(Marshal.load(lData))
     end
 
     # Get a new Unique ID for Copy/Paste operations

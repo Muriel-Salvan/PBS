@@ -136,8 +136,9 @@ module PBS
       # Delete any integration plugin instance
       @Options[:intPluginsOptions].each do |iPluginID, ioPluginsList|
         ioPluginsList.each do |ioInstantiatedPluginInfo|
-          iTag, iActive, iOptions, ioInstance = ioInstantiatedPluginInfo
-          if (iActive)
+          iTagID, iActive, iOptions, ioInstanceInfo = ioInstantiatedPluginInfo
+          ioInstance, iTag = ioInstanceInfo
+          if (ioInstance != nil)
             # We have to delete the instance
             @IntegrationPlugins[iPluginID][:plugin].deleteInstance(ioInstance)
           end
@@ -156,45 +157,21 @@ module PBS
       # Notify each integration plugin that its own set of options has changed
       @Options[:intPluginsOptions].each do |iPluginID, ioPluginsList|
         ioPluginsList.each do |ioInstantiatedPluginInfo|
-          iTag, iActive, iOptions, ioInstance = ioInstantiatedPluginInfo
+          iTagID, iActive, iOptions, ioInstanceInfo = ioInstantiatedPluginInfo
           # Retrieve its old options
-          lOldTag = nil
-          lOldActive = nil
+          lOldTagID = nil
           lOldOptions = nil
           if (iOldOptions[:intPluginsOptions] != nil)
             iOldOptions[:intPluginsOptions][iPluginID].each do |iOldInstantiatedPluginInfo|
-              iOldTag, iOldActive, iOldOptions, iOldInstance = iOldInstantiatedPluginInfo
-              if (iOldInstance == ioInstance)
+              iOldTagID, iOldActive, iOldOptions, iOldInstanceInfo = iOldInstantiatedPluginInfo
+              if (iOldInstanceInfo.object_id == ioInstanceInfo.object_id)
                 # We found the same instance
-                lOldTag = iOldTag
-                lOldActive = iOldActive
+                lOldTagID = iOldTagID
                 lOldOptions = iOldOptions
               end
             end
           end
-          # Now we notify or take actions in creating/deleting instances if there are changes
-          if (iActive)
-            if ((lOldActive == nil) or
-                (!lOldActive))
-              # We have to create the instance
-              ioInstantiatedPluginInfo[3] = @IntegrationPlugins[iPluginID][:plugin].createNewInstance
-              # And notify its options
-              ioInstantiatedPluginInfo[3].onPluginOptionsChanged(iOptions, iTag, lOldOptions, lOldTag)
-            else
-              # Check if its options have changed
-              if ((lOldTag != iTag) or
-                  (lOldOptions != iOptions))
-                # It has changed: notify it
-                ioInstance.onPluginOptionsChanged(iOptions, iTag, lOldOptions, lOldTag)
-              end
-            end
-          else
-            if ((lOldActive != nil) and
-                (lOldActive))
-              # We have to delete the instance
-              @IntegrationPlugins[iPluginID][:plugin].deleteInstance(ioInstance)
-            end
-          end
+          updateIntPluginsInstance(iPluginID, ioInstantiatedPluginInfo, lOldOptions, lOldTagID)
         end
       end
     end

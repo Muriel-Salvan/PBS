@@ -34,7 +34,6 @@ module PBS
     end
 
     # Its children tags
-    # Do not use this write accessor except in the constructor of its Children
     #   list< Tag >
     attr_reader :Children
 

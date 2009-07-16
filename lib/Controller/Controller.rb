@@ -260,9 +260,202 @@ module PBS
 
     end
 
+    # Class used to receive notifications about Tags modifications that might alter Options
+    class OptionsListener
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iController* (_Controller_): The controller
+      def initialize(iController)
+        @Controller = iController
+      end
+
+      # Notify that a given Tag's children list has changed
+      #
+      # Parameters:
+      # * *iParentTag* (_Tag_): The Tag whose children list has changed
+      # * *iOldChildrenList* (<em>list<Tag></em>): The old children list
+      def onTagChildrenUpdate(iParentTag, iOldChildrenList)
+        # List of impacted Tag names
+        # list< String >
+        lImpactedTagNames = []
+        # First check removed Tag names
+        iOldChildrenList.each do |iOldSubTag|
+          if (!iParentTag.Children.include?(iOldSubTag))
+            # iOldSubTag was deleted
+            lImpactedTagNames << iOldSubTag.Name
+          end
+        end
+        # The check added Tags
+        iParentTag.Children.each do |iNewSubTag|
+          if (!iOldChildrenList.include?(iNewSubTag))
+            # iNewSubTag was added
+            lImpactedTagNames << iNewSubTag.Name
+          end
+        end
+        # Now, every integration plugin that is instantiated for a Tag which has at least 1 of the impacted Tags' name among its ID should be checked.
+        @Controller.checkIntPluginsTags(lImpactedTagNames)
+      end
+
+      # An update has occured on a Tag's data
+      #
+      # Parameters:
+      # * *iTag* (_Tag_): The Tag whose data was invalidated
+      # * *iOldName* (_String_): The previous name
+      # * *iOldIcon* (<em>Wx::Bitmap</em>): The previous icon (can be nil)
+      def onTagDataUpdate(iTag, iOldName, iOldIcon)
+        # List of impacted Tag names
+        # list< String >
+        lImpactedTagNames = []
+        # We update the tree accordingly
+        if (iTag.Name != iOldName)
+          # iTag has been renamed
+          lImpactedTagNames << iOldName
+          lImpactedTagNames << iTag.Name
+        end
+        # Now, every integration plugin that is instantiated for a Tag which has at least 1 of the impacted Tags' name among its ID should be checked.
+        @Controller.checkIntPluginsTags(lImpactedTagNames)
+      end
+
+    end
+
     # Do we merge the next command launched ?
     #   Boolean
     attr_accessor :Merging
+
+    # Update the instantiated plugins instance
+    #
+    # Parameters:
+    # * *iPluginID* (_String_): The integration plugin ID
+    # * *ioInstantiatedPluginInfo* (<em>[list<String>,Boolean,Object,[Object,Tag]]</em>): The instantiated plugin info
+    # * *iOldOptions* (_Object_): Old options (used for notifications only)
+    # * *iOldTagID* (<em>list<String></em>): Old Tag ID (used for notifications only)
+    # * *iNotifyChanges* (_Boolean_): Do we notify the user about changes in plugin instances ? [optional = false]
+    def updateIntPluginsInstance(iPluginID, ioInstantiatedPluginInfo, iOldOptions, iOldTagID, iNotifyChanges = false)
+      iTagID, iActive, iOptions, ioInstanceInfo = ioInstantiatedPluginInfo
+      ioInstance, iTag = ioInstanceInfo
+      # We notify or take actions in creating/deleting instances if there are changes
+      if (iActive)
+        if (ioInstance == nil)
+          # We have to create the instance
+          lTag = iTag
+          if (lTag == nil)
+            # First check if the TagID points to a correct Tag
+            lTags = getTagsFromTagID(iTagID, @RootTag)
+            if (lTags.empty?)
+              # No Tag corresponds to this TagID
+              logErr "Unable to get a Tag corresponding to ID #{iTagID.join('/')}: instance of integration plugin #{@IntegrationPlugins[iPluginID][:title]} will be ignored."
+            else
+              if (lTags.size > 1)
+                # Several Tags correspond
+                logErr "Several Tags correspond to ID #{iTagID.join('/')}: instance of integration plugin #{@IntegrationPlugins[iPluginID][:title]} will be instantiated for an arbitrary one.\nPlease name your Tags differently if you want to remove the ambiguity."
+              end
+              lTag = lTags[0]
+              ioInstanceInfo[1] = lTag
+            end
+          end
+          if (lTag == nil)
+            # We can't create it for now. We need to have the correct existing Tag. Disable it for now to avoid further errors each time we change options.
+            ioInstantiatedPluginInfo[1] = false
+          else
+            logDebug "Instantiate integration plugin #{iPluginID} for Tag #{lTag.Name}"
+            begin
+              ioInstanceInfo[0] = @IntegrationPlugins[iPluginID][:plugin].createNewInstance
+              # And notify its options
+              ioInstanceInfo[0].onPluginOptionsChanged(iOptions, lTag, iOldOptions, iOldTagID)
+              if (iNotifyChanges)
+                logMsg "Plugin #{@IntegrationPlugins[iPluginID][:title]} has been instantiated for Tag #{lTag.Name}"
+              end
+            rescue Exception
+              logExc $!, "Exception while instantiating plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+            end
+          end
+        else
+          if (iOldTagID != iTagID)
+            # It has changed: notify it
+            lTag = nil
+            # We need to find the new Tag corresponding to this new TagID
+            lTags = getTagsFromTagID(iTagID, @RootTag)
+            if (lTags.empty?)
+              # No Tag corresponds to this TagID
+              logErr "Unable to get a Tag corresponding to ID #{iTagID.join('/')}: instance of integration plugin #{@IntegrationPlugins[iPluginID][:title]} will be ignored."
+            else
+              if (lTags.size > 1)
+                # Several Tags correspond
+                logErr "Several Tags correspond to ID #{iTagID.join('/')}: instance of integration plugin #{@IntegrationPlugins[iPluginID][:title]} will be instantiated for an arbitrary one.\nPlease name your Tags differently if you want to remove the ambiguity."
+              end
+              lTag = lTags[0]
+              ioInstanceInfo[1] = lTag
+            end
+            if (lTag == nil)
+              # We have to remove the instance, as its Tag can't be found
+              logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+              begin
+                @IntegrationPlugins[iPluginID][:plugin].deleteInstance(ioInstance)
+              rescue Exception
+                logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+              end
+              ioInstanceInfo[0] = nil
+              # Also reset the Tag, as we will want to recompute it when instantiating
+              ioInstanceInfo[1] = nil
+            else
+              # Notify options changed
+              logDebug "Notify changing options for integration plugin #{iPluginID} for Tag #{lTag.Name}"
+              begin
+                ioInstance.onPluginOptionsChanged(iOptions, lTag, iOldOptions, iOldTagID)
+              rescue Exception
+                logExc $!, "Exception while notifying plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+              end
+            end
+          elsif (iOldOptions != iOptions)
+            # It has changed: notify it
+            logDebug "Notify changing options for integration plugin #{iPluginID} for Tag #{lTag.Name}"
+            begin
+              ioInstance.onPluginOptionsChanged(iOptions, iTag, iOldOptions, iOldTagID)
+            rescue Exception
+              logExc $!, "Exception while notifying plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+            end
+          end
+        end
+      else
+        if (ioInstance != nil)
+          # We have to delete the instance
+          logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+          begin
+            @IntegrationPlugins[iPluginID][:plugin].deleteInstance(ioInstance)
+          rescue Exception
+            logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+          end
+          ioInstanceInfo[0] = nil
+          # Also reset the Tag, as we will want to recompute it when instantiating
+          ioInstanceInfo[1] = nil
+        end
+      end
+    end
+
+    # Check integration plugins instantiated for some specific Tags after some changes in the Tags
+    #
+    # Parameters:
+    # * *iTagNames* (<em>list<String></em>): List of Tag names that may be impacted
+    def checkIntPluginsTags(iTagNames)
+      if (!iTagNames.empty?)
+        # For each plugin, check if there is a name part of iTagNames
+        @Options[:intPluginsOptions].each do |iPluginID, ioPluginsList|
+          ioPluginsList.each do |ioInstantiatedPluginInfo|
+            iTagID, iActive, iOptions, ioInstanceInfo = ioInstantiatedPluginInfo
+            # Check if iTagID might be impacted
+            iTagNames.each do |iTagName|
+              if (iTagID.include?(iTagName))
+                # Yes, it can be impacted
+                updateIntPluginsInstance(iPluginID, ioInstantiatedPluginInfo, nil, nil, true)
+                break
+              end
+            end
+          end
+        end
+      end
+    end
 
     # Test if a given data does not violate unicity constraints for a Tag if it was to be added
     #
@@ -695,6 +888,7 @@ module PBS
       @Clipboard_SerializedSelection = nil
 
       # Options
+      # TODO: Load them from the place they were saved before
       # Fill this with the default options
       # map< Symbol, Object >
       @Options = {
@@ -709,11 +903,16 @@ module PBS
         # map< String, list< String > >
         :externalDLLDirs => {},
         # The options linked to each instance of Integration plugins:
-        # For each Plugin ID, there is a list of [ Tag to represent in this plugin, Is it active ?, Options ]
-        # map< String, list< [ Tag, Boolean, Object ] > >
+        # For each Plugin ID, there is a list of [ Tag ID to represent in this plugin, Is it active ?, Options, [ Instantiated plugin, Tag ] ]
+        # The instantiated plugin and Tag objects are in a separate list as it is needed to have a single object for cloned options (this object will be used to retrieve correspondances between old and new options).
+        # map< String, list< [ TagID, Boolean, Object, [ Object, Object ] ] > >
         :intPluginsOptions => {}
       }
-
+      # TODO: Remove when Options handling is made correctly
+      @Options[:intPluginsOptions]['Tray'] = [
+        [ [], true, { :icon => nil }, [ nil, nil ] ]
+      ]
+      
       # The GUIS registered
       # list< Object >
       @RegisteredGUIs = []
@@ -942,11 +1141,7 @@ module PBS
         })
       end
 
-      # Initialize options
-      # TODO: Load them from the place they were saved before
-      @Options[:intPluginsOptions]['Tray'] = [
-        [ @RootTag, true, { :icon => nil }, nil ]
-      ]
+      registerGUI(OptionsListener.new(self))
 
     end
 
@@ -1096,6 +1291,50 @@ end
           loadPlugin(lPluginInfo, ioPluginsMap, iPluginsID, lPluginName, iParams)
         end
       end
+    end
+
+    # Get the Tags associated to a given TagID, starting from a given Tag
+    #
+    # Parameters:
+    # * *iTagID* (<em>list<String></em>): The Tag ID
+    # * *iTag* (_Tag_): The Tag to start the search from
+    # Return:
+    # * <em>list<Tag></em>: The retrieved Tags
+    def getTagsFromTagID(iTagID, iTag)
+      rFoundTags = []
+
+      if (iTagID.empty?)
+        rFoundTags << iTag
+      else
+        lFirstChildName = iTagID[0]
+        # Check if there is a child of iTag of this name
+        iTag.Children.each do |iSubTag|
+          if (iSubTag.Name == lFirstChildName)
+            # Found it
+            rFoundTags += getTagsFromTagID(iTagID[1..-1], iSubTag)
+          end
+        end
+      end
+
+      return  rFoundTags
+    end
+
+    # Get a Tag ID of a given Tag
+    #
+    # Parameters:
+    # * *iTag* (_Tag_): The Tag
+    # Return:
+    # * <em>list<String></em>: The Tag ID
+    def getTagID(iTag)
+      rID = []
+
+      lCurrentTag = iTag
+      while (lCurrentTag != @RootTag)
+        rID.insert(0, lCurrentTag.Name)
+        lCurrentTag = lCurrentTag.Parent
+      end
+
+      return rID
     end
 
     # Does a Tag equal another content ?

@@ -34,6 +34,12 @@ module PBS
 
     # Initialize the application
     def on_init
+      if ($PBS_UsageError != nil)
+        logErr "Error while parsing command line arguments: #{$PBS_UsageError}.\n\nUsage:\n#{PBS::getOptions}."
+      end
+      if ($PBS_DisplayUsage)
+        logMsg "Usage:\n#{PBS::getOptions}"
+      end
       lMainFrame = MainFrame.new(nil, @Controller)
       @Controller.init
       lMainFrame.init
@@ -70,10 +76,14 @@ module PBS
   def self.getOptions
     rOptions = OptionParser.new
 
-    rOptions.banner = 'pbs.rb [-d|--devdebug] [-l|--log <Logfile>] [-f|--file <PBSFile>]'
+    rOptions.banner = 'pbs.rb [-d|--devdebug] [-l|--log <Logfile>] [-f|--file <PBSFile>] [-h|--help]'
     rOptions.on('-d', '--devdebug',
       'Set developer debug interface.') do
       $PBS_DevDebug = true
+    end
+    rOptions.on('-h', '--help',
+      'Display help usage.') do
+      $PBS_DisplayUsage = true
     end
     rOptions.on('-l', '--log <Logfile>', String,
       '<Logfile>: Name of a file to log into.',
@@ -92,18 +102,18 @@ module PBS
   # Run PBS
   def self.run
     # Parse command line arguments
-    lOptions = self.getOptions
-    lSuccess = true
+    lOptions = PBS::getOptions
     begin
-      lOptions.parse(ARGV)
+      lRemainingArguments = lOptions.parse(ARGV)
+      if (!lRemainingArguments.empty?)
+        raise RuntimeError, "Unknown arguments: \"#{lRemainingArguments.join(' ')}\""
+      end
     rescue Exception
       puts "Error while parsing arguments: #{$!}"
       puts lOptions
-      lSuccess = false
+      $PBS_UsageError = $!
     end
-    if (lSuccess)
-      MainApp.new(PBS::Controller.new).main_loop
-    end
+    MainApp.new(PBS::Controller.new).main_loop
   end
 
 end

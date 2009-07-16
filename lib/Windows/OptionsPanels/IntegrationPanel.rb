@@ -17,6 +17,7 @@ module PBS
 
       IMAGE_CHECKBOX_CHECKED = Tools::loadBitmap('Checkbox_Checked.png')
       IMAGE_CHECKBOX_UNCHECKED = Tools::loadBitmap('Checkbox_UnChecked.png')
+      BITMAP_UNKNOWN_TAG = Tools::loadBitmap('UnknownTag.png')
 
       # Constructor
       #
@@ -34,7 +35,7 @@ module PBS
 
         @Controller = iController
         # The displayed list info, stores the same info as PluginsOptions, but ensures that the order will not be altered.
-        # list< [ String, Tag, Boolean, Object, Object ] >
+        # list< [ String, list<String>, Boolean, Object, Object ] >
         @DisplayedList = nil
 
         # Create the image list
@@ -48,7 +49,7 @@ module PBS
       # Set the list based on given options
       #
       # Parameters:
-      # * *iDisplayedList* (<em>list<[String,Tag,Boolean,Object,Object]></em>): The list of plugins
+      # * *iDisplayedList* (<em>list<[String,list<String>,Boolean,Object,Object]></em>): The list of plugins
       def setOptions(iDisplayedList)
         @DisplayedList = iDisplayedList
         set_item_count(@DisplayedList.size)
@@ -78,11 +79,17 @@ module PBS
 
         case iIdxColumn
         when 0
+          # Active checkbox
           rText = ''
         when 1
+          # Name of the integration plugin
           rText = @Controller.IntegrationPlugins[@DisplayedList[iIdxItem][0]][:title]
         when 2
-          rText = @DisplayedList[iIdxItem][1].Name
+          # Tag ID
+          rText = @DisplayedList[iIdxItem][1].join('/')
+          if (rText.empty?)
+            rText = 'Root'
+          end
         else
           logBug "Unknown column ID #{iIdxColumn} for text list display."
         end
@@ -122,7 +129,12 @@ module PBS
             Tag,
             @DisplayedList[iIdxItem][1]
           ] ) do
-            next @Controller.getTagIcon(@DisplayedList[iIdxItem][1])
+            if (@DisplayedList[iIdxItem][4][1] == nil)
+              # This Tag does not exist in this data.
+              next BITMAP_UNKNOWN_TAG
+            else
+              next @Controller.getTagIcon(@DisplayedList[iIdxItem][4][1])
+            end
           end
         else
           logBug "Unknown column ID #{iIdxColumn} for image list display."
@@ -155,7 +167,10 @@ module PBS
         @ConfigPanel = iController.IntegrationPlugins[ioDisplayedItem[0]][:plugin].getConfigPanel(self)
         @ConfigPanel.setData(ioDisplayedItem[3])
         lSTTag = Wx::StaticText.new(self, Wx::ID_ANY, 'Tag:')
-        lSTTagName = Wx::StaticText.new(self, Wx::ID_ANY, ioDisplayedItem[1].Name)
+        lSTTagName = Wx::StaticText.new(self, Wx::ID_ANY, ioDisplayedItem[1].join('/'))
+        if (lSTTagName.label.empty?)
+          lSTTagName.label = 'Root'
+        end
         lBBSelectTag = Wx::BitmapButton.new(self, Wx::ID_ANY, BITMAP_SELECTTAG)
         lCBActive = Wx::CheckBox.new(self, Wx::ID_ANY, 'Active')
         lCBActive.value = ioDisplayedItem[2]
@@ -196,14 +211,17 @@ module PBS
             if (iModalResult == Wx::ID_OK)
               lTag = iDialog.getSelectedTag
               if (lTag != nil)
-                # Update display
-                lSTTagName.label = lTag.Name
                 # Fit
                 lOldSize = self.size
                 self.fit
                 self.size = lOldSize
                 # Modify underlying data
-                ioDisplayedItem[1] = lTag
+                ioDisplayedItem[1] = iController.getTagID(lTag)
+                # Update display
+                lSTTagName.label = ioDisplayedItem[1].join('/')
+                if (lSTTagName.label.empty?)
+                  lSTTagName.label = 'Root'
+                end
                 # Notify for modification
                 ioNotifier.refreshList
               end
@@ -246,7 +264,8 @@ module PBS
       @NewMenu = nil
 
       # The displayed list info, stores the same info as PluginsOptions, but ensures that the order will not be altered.
-      # list< [ String, Tag, Boolean, Object, Object ] >
+      # The last object of each item is the instance info. It is used to keep track of the instantiated objects for this options.
+      # list< [ String, Object, Boolean, Object, Object ] >
       @DisplayedList = []
 
       # Components
@@ -353,9 +372,9 @@ module PBS
       @DisplayedList = []
       iOptions[:intPluginsOptions].each do |iPluginID, iPluginsList|
         iPluginsList.each do |iInstantiatedPluginInfo|
-          iTag, iActive, iOptions, iInstance = iInstantiatedPluginInfo
+          iTagID, iActive, iOptions, iInstanceInfo = iInstantiatedPluginInfo
           # We clone the options as we might modify them
-          @DisplayedList << [ iPluginID, iTag, iActive, iOptions.clone, iInstance ]
+          @DisplayedList << [ iPluginID, iTagID, iActive, iOptions.clone, iInstanceInfo ]
         end
       end
       # Reflect new data in sub components
@@ -373,15 +392,15 @@ module PBS
       # Then write options based on @DisplayedList
       oOptions[:intPluginsOptions] = {}
       @DisplayedList.each do |iItemInfo|
-        iPluginID, iTag, iActive, iOptions, iInstance = iItemInfo
+        iPluginID, iTagID, iActive, iOptions, iInstanceInfo = iItemInfo
         if (oOptions[:intPluginsOptions][iPluginID] == nil)
           oOptions[:intPluginsOptions][iPluginID] = []
         end
         oOptions[:intPluginsOptions][iPluginID] << [
-          iTag,
+          iTagID,
           iActive,
           iOptions,
-          iInstance
+          iInstanceInfo
         ]
       end
     end

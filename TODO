@@ -22,7 +22,6 @@
 **** Optionally remember plugins that we want to ignore always (if not installed), and set a way in options to remove them from the forget list.
 
 *** Main window
-**** MainTree: When adding first child to the Root item (Tag or SC), it is better to expand root item
 **** Find has to be integrated in the toolbar also.
 **** Drop files on the main tree for URL shortcuts, files shortcuts
 **** Drop text on the main tree for URL/Shell/Files Shortcuts
@@ -48,7 +47,7 @@
 **** Locale & Internationalization
 **** Replace .Metadata['title'] with .getName
 **** Set metadata for Tags too
-**** Create a dedicated Metadata object that handles also serialization of Wx::Bitmaps...
+**** Create a dedicated Metadata object that handles also serialization of Wx::Bitmaps... and remove serializeMap and unserializeMap
 **** In options, provide a way to have automatic answers to dialogs asked during the delete command
 **** See what must be committed for dependencies (mandatory and plugins)
 **** ChooseIconDialog should propose an icon from the executable of a Shell Shortcut
@@ -58,12 +57,12 @@
 **** Replace TODOs in README file
 **** Implement Send bug reports in BugReportDialog
 **** Give ability to load several files on startup (Open & Merge behaviour)
+**** Command line option loading options file
 
 ** Plugins
 *** Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
 *** Plugin for Opera
 *** Create a tool that checks validity of Shortcuts (file exists or URL ok...)
-*** In the Tray plugin, resize icons to maximal values in the menus.
 *** Files Export plugin should create Windows Shortcuts for Shell types as well.
 *** Plugin for Safari
 *** Export plugins should log success or failure
