@@ -1,5 +1,46 @@
 = PBS Release History
 
+== 0.0.3.20090716 (Alpha)
+
+=== Tray Integration Plugin ===
+* Added an icon to the Tray integration plugin
+* Tray icon: give the user the possibility to change the tray icon
+* Tray integration plugin now displays the given Tag menu
+
+=== Integration plugins framework ===
+* Possibility to instantiate several instances for each integration plugin
+* Each integration plugin instance may have its own set of options
+* Each integration plugin instance can be activated or diabled
+* Each integration plugin instance can be assigned to a specific Tag
+* Integration plugins are created/deleted when Tags change, with warnings sent to user
+* Display missing Tags for integration plugins options panel with an icon reflecting their missing state.
+* Integration plugins instance now store a Tag ID instead of a real Tag. Now the options can adapt to several data: even if the Tag does not exist, the options remain.
+
+=== Options ===
+* Options dialog has been split in several files for easier maintenance
+* Added the possibility to load/save options from/to files
+* Options are now saved correctly in a local file.
+* Saving options file is protected with exception handling.
+
+=== Other ===
+* Created dialog to select a specific Tag
+* Factorized the serialization of a map containing recusively other maps and problematic objects (such as Wx::Bitmap)
+* Implemented simple way to retrieve a Tag's icon
+* Changed incorrect comments from code copy/paste
+* Removed useless Bitmaps creations
+* Added -h|--help command line option
+* Display command line parsing errors in a message dialog at startup time.
+* Added a method to log a simple message to the user: logMsg
+* Protected destroying plugin windows at exit with exception handling.
+* Corrected Releases to include OptionsPanels also.
+* Corrected startup message.
+
+=== Bugs correction ===
+* Bug correction: Some exception logger calls were buggy
+* Bug correction: pbs.exe did not manage to launch if Ruby was not installed.
+* Bug correction: Some environments did not have the current directory in their PATH, therefore issuing an error while requiring pbsversion.rb
+* Bug correction: Options serialization works correctly
+
 == 0.0.2.20090708 (Alpha)
 
 * Reorganized TODO list.

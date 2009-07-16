@@ -1149,7 +1149,7 @@ module PBS
 
       if (@DefaultOptionsLoaded)
         # Now we instantiate 1 instance per integration plugin on the Root Tag.
-        logMsg 'Default options loaded: instantiating integration plugins for root Tag.\nIf you want to modify these settings, please go to menu Tools/Setup/Integration plugins.'
+        logMsg "Default options loaded: instantiating integration plugins for root Tag.\nIf you want to modify these settings, please go to menu Tools/Setup/Integration plugins."
         @IntegrationPlugins.each do |iPluginID, iPluginInfo|
           @Options[:intPluginsOptions][iPluginID] = [
             [ [], true, iPluginInfo[:plugin].getDefaultOptions, [ nil, nil ] ]

@@ -135,6 +135,7 @@ module PBS
             # * lib/Controller/*.rb
             # * lib/Model/*.rb
             # * lib/Windows/*.rb
+            # * lib/Windows/OptionsPanels/*.rb
             # * ext/rubygems/**/* (if include RubyGems)
             # * ext/rubyzip-0.9.1/**/*
             # * ext/#{RUBY_PLATFORM}/zlib/**/*
@@ -152,6 +153,7 @@ module PBS
               'lib/Controller/*.rb',
               'lib/Model/*.rb',
               'lib/Windows/*.rb',
+              'lib/Windows/OptionsPanels/*.rb',
               'ext/rubyzip-0.9.1/**/*',
               "ext/#{RUBY_PLATFORM}/zlib/**/*",
               'Launch/Launcher.rb',
