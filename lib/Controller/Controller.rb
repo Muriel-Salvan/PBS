@@ -860,6 +860,9 @@ module PBS
       @CurrentOpenedFileModified = false
       @Merging = false
 
+      # Do we load the default options ?
+      @DefaultOptionsLoaded = false
+
       # Undo/Redo management
       # Controller::UndoableOperation
       @CurrentUndoableOperation = nil
@@ -888,30 +891,31 @@ module PBS
       @Clipboard_SerializedSelection = nil
 
       # Options
-      # TODO: Load them from the place they were saved before
-      # Fill this with the default options
-      # map< Symbol, Object >
-      @Options = {
-        :tagsUnicity => TAGSUNICITY_NONE,
-        :shortcutsUnicity => SHORTCUTSUNICITY_ALL,
-        :tagsConflict => TAGSCONFLICT_ASK,
-        :shortcutsConflict => SHORTCUTSCONFLICT_ASK,
-        # The list of directories storing some libraries, per architecture
-        # map< String, list< String > >
-        :externalLibDirs => {},
-        # The list of directories storing some system libraries, per architecture
-        # map< String, list< String > >
-        :externalDLLDirs => {},
-        # The options linked to each instance of Integration plugins:
-        # For each Plugin ID, there is a list of [ Tag ID to represent in this plugin, Is it active ?, Options, [ Instantiated plugin, Tag ] ]
-        # The instantiated plugin and Tag objects are in a separate list as it is needed to have a single object for cloned options (this object will be used to retrieve correspondances between old and new options).
-        # map< String, list< [ TagID, Boolean, Object, [ Object, Object ] ] > >
-        :intPluginsOptions => {}
-      }
-      # TODO: Remove when Options handling is made correctly
-      @Options[:intPluginsOptions]['Tray'] = [
-        [ [], true, { :icon => nil }, [ nil, nil ] ]
-      ]
+      if (File.exists?($PBS_OptionsFile))
+        # Load options from the file
+        @Options = openOptionsData($PBS_OptionsFile)
+      else
+        @DefaultOptionsLoaded = true
+        # Fill this with the default options
+        # map< Symbol, Object >
+        @Options = {
+          :tagsUnicity => TAGSUNICITY_NONE,
+          :shortcutsUnicity => SHORTCUTSUNICITY_ALL,
+          :tagsConflict => TAGSCONFLICT_ASK,
+          :shortcutsConflict => SHORTCUTSCONFLICT_ASK,
+          # The list of directories storing some libraries, per architecture
+          # map< String, list< String > >
+          :externalLibDirs => {},
+          # The list of directories storing some system libraries, per architecture
+          # map< String, list< String > >
+          :externalDLLDirs => {},
+          # The options linked to each instance of Integration plugins:
+          # For each Plugin ID, there is a list of [ Tag ID to represent in this plugin, Is it active ?, Options, [ Instantiated plugin, Tag ] ]
+          # The instantiated plugin and Tag objects are in a separate list as it is needed to have a single object for cloned options (this object will be used to retrieve correspondances between old and new options).
+          # map< String, list< [ TagID, Boolean, Object, [ Object, Object ] ] > >
+          :intPluginsOptions => {}
+        }
+      end
       
       # The GUIS registered
       # list< Object >
@@ -1143,6 +1147,15 @@ module PBS
 
       registerGUI(OptionsListener.new(self))
 
+      if (@DefaultOptionsLoaded)
+        # Now we instantiate 1 instance per integration plugin on the Root Tag.
+        logMsg 'Default options loaded: instantiating integration plugins for root Tag.\nIf you want to modify these settings, please go to menu Tools/Setup/Integration plugins.'
+        @IntegrationPlugins.each do |iPluginID, iPluginInfo|
+          @Options[:intPluginsOptions][iPluginID] = [
+            [ [], true, iPluginInfo[:plugin].getDefaultOptions, [ nil, nil ] ]
+          ]
+        end
+      end
     end
 
     # Read the description of a plugin from its description file

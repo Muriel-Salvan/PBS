@@ -1346,8 +1346,12 @@ Stack:
       # Serialize the options and marshal it
       lData = Marshal.dump(serializeOptions(iOptions))
       # Then write everything in the file
-      File.open(iFileName, 'wb') do |iFile|
-        iFile.write(lData)
+      begin
+        File.open(iFileName, 'wb') do |iFile|
+          iFile.write(lData)
+        end
+      rescue Exception
+        logExc $!, "Exception while writing options in file #{iFileName}."
       end
     end
 

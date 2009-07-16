@@ -140,11 +140,18 @@ module PBS
           ioInstance, iTag = ioInstanceInfo
           if (ioInstance != nil)
             # We have to delete the instance
-            @IntegrationPlugins[iPluginID][:plugin].deleteInstance(ioInstance)
+            logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+            begin
+              @IntegrationPlugins[iPluginID][:plugin].deleteInstance(ioInstance)
+            rescue Exception
+              logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+            end
           end
         end
       end
-      # TODO: Save options
+      # Save options
+      saveOptionsData(@Options, $PBS_OptionsFile)
+      # Notify everybody
       notifyRegisteredGUIs(:onExit)
     end
 

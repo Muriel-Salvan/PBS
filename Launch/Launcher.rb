@@ -68,6 +68,7 @@ module PBS
         $PBS_ExtDir = "#{$PBS_RootDir}/ext/#{RUBY_PLATFORM}"
         $PBS_ExtGemsDir = "#{$PBS_ExtDir}/gems"
         $PBS_ExtDllsDir = "#{$PBS_ExtDir}/libs"
+        $PBS_OptionsFile = "#{$PBS_RootDir}/Options.pbso"
         # Add the main library directory to the load path, as well as libraries needed for PBS without plugins
         $LOAD_PATH.concat( [
           # Add Root dir as some environments do not have it

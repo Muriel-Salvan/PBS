@@ -58,6 +58,7 @@
 **** Implement Send bug reports in BugReportDialog
 **** Give ability to load several files on startup (Open & Merge behaviour)
 **** Command line option loading options file
+**** Find a way to not depend on a PBS locally installed Option file: USB keys can be read-only !
 
 ** Plugins
 *** Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
