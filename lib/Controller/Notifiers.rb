@@ -149,6 +149,10 @@ module PBS
           end
         end
       end
+      # Write tips index in options first
+      if (@TipsProvider != nil)
+        @Options[:lastIdxTip] = @TipsProvider.current_tip
+      end
       # Save options
       saveOptionsData(@Options, $PBS_OptionsFile)
       # Notify everybody

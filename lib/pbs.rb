@@ -64,7 +64,12 @@ module PBS
         end
       end
 
-      lMainFrame.show()
+      # If we ask for startup tips, go on !
+      if (@Controller.Options[:displayStartupTips])
+        @Controller.showTips(lMainFrame)
+      end
+
+      lMainFrame.show
     end
 
   end

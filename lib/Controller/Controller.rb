@@ -21,6 +21,7 @@ module PBS
   ID_NEW_TAG = 1001
   ID_STATS = 1002
   ID_DEVDEBUG = 1003
+  ID_TIPS = 1004
   # Following constants are used in dialogs (for Buttons IDs and so return values)
   ID_MERGE_EXISTING = 2000
   ID_MERGE_CONFLICTING = 2001
@@ -863,6 +864,9 @@ module PBS
       # Do we load the default options ?
       @DefaultOptionsLoaded = false
 
+      # The tips provider
+      @TipsProvider = nil
+
       # Undo/Redo management
       # Controller::UndoableOperation
       @CurrentUndoableOperation = nil
@@ -891,30 +895,35 @@ module PBS
       @Clipboard_SerializedSelection = nil
 
       # Options
+      # Fill this with the default options
+      # map< Symbol, Object >
+      @Options = {
+        :tagsUnicity => TAGSUNICITY_NONE,
+        :shortcutsUnicity => SHORTCUTSUNICITY_ALL,
+        :tagsConflict => TAGSCONFLICT_ASK,
+        :shortcutsConflict => SHORTCUTSCONFLICT_ASK,
+        # The list of directories storing some libraries, per architecture
+        # map< String, list< String > >
+        :externalLibDirs => {},
+        # The list of directories storing some system libraries, per architecture
+        # map< String, list< String > >
+        :externalDLLDirs => {},
+        # The options linked to each instance of Integration plugins:
+        # For each Plugin ID, there is a list of [ Tag ID to represent in this plugin, Is it active ?, Options, [ Instantiated plugin, Tag ] ]
+        # The instantiated plugin and Tag objects are in a separate list as it is needed to have a single object for cloned options (this object will be used to retrieve correspondances between old and new options).
+        # map< String, list< [ TagID, Boolean, Object, [ Object, Object ] ] > >
+        :intPluginsOptions => {},
+        # Last tip index shown
+        # Integer
+        :lastIdxTip => 0,
+        # Do we display tips at startup ?
+        :displayStartupTips => true
+      }
       if (File.exists?($PBS_OptionsFile))
         # Load options from the file
-        @Options = openOptionsData($PBS_OptionsFile)
+        @Options.merge!(openOptionsData($PBS_OptionsFile))
       else
         @DefaultOptionsLoaded = true
-        # Fill this with the default options
-        # map< Symbol, Object >
-        @Options = {
-          :tagsUnicity => TAGSUNICITY_NONE,
-          :shortcutsUnicity => SHORTCUTSUNICITY_ALL,
-          :tagsConflict => TAGSCONFLICT_ASK,
-          :shortcutsConflict => SHORTCUTSCONFLICT_ASK,
-          # The list of directories storing some libraries, per architecture
-          # map< String, list< String > >
-          :externalLibDirs => {},
-          # The list of directories storing some system libraries, per architecture
-          # map< String, list< String > >
-          :externalDLLDirs => {},
-          # The options linked to each instance of Integration plugins:
-          # For each Plugin ID, there is a list of [ Tag ID to represent in this plugin, Is it active ?, Options, [ Instantiated plugin, Tag ] ]
-          # The instantiated plugin and Tag objects are in a separate list as it is needed to have a single object for cloned options (this object will be used to retrieve correspondances between old and new options).
-          # map< String, list< [ TagID, Boolean, Object, [ Object, Object ] ] > >
-          :intPluginsOptions => {}
-        }
       end
       
       # The GUIS registered
@@ -1149,13 +1158,29 @@ module PBS
 
       if (@DefaultOptionsLoaded)
         # Now we instantiate 1 instance per integration plugin on the Root Tag.
-        logMsg "Default options loaded: instantiating integration plugins for root Tag.\nIf you want to modify these settings, please go to menu Tools/Setup/Integration plugins."
         @IntegrationPlugins.each do |iPluginID, iPluginInfo|
           @Options[:intPluginsOptions][iPluginID] = [
             [ [], true, iPluginInfo[:plugin].getDefaultOptions, [ nil, nil ] ]
           ]
         end
       end
+
+      # Handle tips
+      lTipsFile = "#{$PBS_RootDir}/tips.txt"
+      # Count number of tips
+      lNbrTips = 0
+      if (File.exists?(lTipsFile))
+        File.open(lTipsFile, 'r') do |iFile|
+          lNbrTips = iFile.readlines.size
+        end
+        if (@Options[:lastIdxTip] >= lNbrTips)
+          @Options[:lastIdxTip] = 0
+        end
+        @TipsProvider = Wx::create_file_tip_provider(lTipsFile, @Options[:lastIdxTip])
+      else
+        logBug "Missing Tips file: #{lTipsFile}."
+      end
+
     end
 
     # Read the description of a plugin from its description file
@@ -1303,6 +1328,18 @@ end
           # We can load it
           loadPlugin(lPluginInfo, ioPluginsMap, iPluginsID, lPluginName, iParams)
         end
+      end
+    end
+
+    # Show tips
+    #
+    # Parameters:
+    # * *iParentWindow* (<em>Wx::Window</em>): The parent window
+    def showTips(iParentWindow)
+      if (@TipsProvider != nil)
+        @Options[:displayStartupTips] = Wx::show_tip(iParentWindow, @TipsProvider)
+      else
+        logBug 'Tips could not be loaded correctly.'
       end
     end
 

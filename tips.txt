@@ -1,0 +1,11 @@
+Welcome to PBS: Portable Bookmarks and Shortcuts. You can find any documentation on http://pbstool.sourceforge.net
+A Shortcut is a simple item referencing some content (internet address, shell command...).
+A Tag is a label. You can use them to categorize your Shortcuts. A Shortcut can be associated to several Tags at once.
+PBS integrates in many places of your system to give you fast and easy access to your Shortcuts. You can change these settings in "Tools/Setup/Integration plugins".
+You can drag and drop content from several running PBS applications. Start dragging from the main tree.
+You can copy/paste/cut content from several running PBS applications. Start in the main tree.
+There is a handy contextual menu: try right-clicking on a Shortcut or a Tag from the main tree.
+The root Tag in the main tree can be used to drop or paste content. Selecting the root Tag selects all Tags and Shortcuts.
+Everything in PBS is undoable, even opening a new file, overwriting existing work.
+It is very easy to contribute to PBS by writing plugins for importing/exporting, for integrating PBS in other places, for creating new Shortcuts types. Check the documentation on http://pbstool.sourceforge.net/wiki/index.php/PBS_internal_architecture
+PBS has been developed by Muriel Salvan: murielsalvan@users.sourceforge.net
