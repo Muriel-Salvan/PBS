@@ -130,6 +130,7 @@ module PBS
             # * README
             # * ChangeLog
             # * Credits
+            # * Tips.txt
             # * pbsversion.rb
             # * lib/*.rb
             # * lib/Controller/*.rb
@@ -148,6 +149,7 @@ module PBS
               'README',
               'ChangeLog',
               'Credits',
+              'Tips.txt',
               'pbsversion.rb',
               'lib/*.rb',
               'lib/Controller/*.rb',

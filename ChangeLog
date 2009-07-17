@@ -1,5 +1,45 @@
 = PBS Release History
 
+== 0.0.4.20090717 (Alpha)
+
+=== Important notice ===
+
+This release breaks some compatibility with previous ones:
+* Previous .pbss and .pbso files will not be read correctly (be careful, as they will be read, but will corrupt data). You need to first export your data in XML format using your current PBS version, then update PBS and import your XML file. Read carefully next point if you have some Shell Shortcuts in your data to be migrated.
+* Previously exported XML files containing at least 1 Shell Shortcut (URL Shortcuts are fine) will fail to be imported. If you need to import such an XML file, please first uncomment (remove leading #) lines 141-155 in lib/Plugins/Types/Shell.rb file, restart PBS and import your XML files previously exported by PBS v <= 0.0.3. Once this migration has been done, please re-comment lines of Shell.rb in order to be able to read newly exported XML files. Sorry about the inconvenience.
+
+So, to sum up: don't load previously saved .pbss and .pbso files, as there is a compatibility break in the file format in 0.0.4
+If you still want to retrieve your previously loaded data, here are the steps to perform BEFORE installing 0.0.4:
+1. Run previous PBS version
+2. Export your Shortcuts in an XML file
+3. Install new 0.0.4 version
+4. IF you have some Shell Shortcuts (not Internet bookmarks) that have been exported in the XML file:
+   Edit file lib/Plugins/Types/Shell.rb and uncomment lines 141-155.
+5. Run new PBS 0.0.4 version
+6. Import your XML file
+7. You can now save it in a .pbss file that you can reopen without corrupting any data
+8. IF you have uncommented lines at step 4., re-comment them (otherwise you will not be able to read XML files that will be exported with version 0.0.4), and restart PBS for changes to be taken into account.
+
+=== Startup tips ===
+
+* Implemented startup tips
+* Put a menu for startup tips (kind of easy help)
+* Populate startup tips with useful hints
+
+=== Other ===
+
+* Updated Credits
+
+=== Bugs correction ===
+
+* Bug correction: Open a file deleting previous data generates error messages about non protected operations.
+* Bug correction: exporting XML file produces wrong XML tags for Shell Shortcuts
+** !!! This bug correction breaks compatibility with previous XML format. If you want to import an XML file exported by PBS versions (0.0.1 - 0.0.3) that contain Shell Shortcuts (others are ok), please first uncomment (remove leading #) lines 141-155 in lib/Plugins/Types/Shell.rb file, restart PBS and import your XML files previously exported by PBS v <= 0.0.3. Once this migration has been done, please re-comment lines of Shell.rb in order to be able to read newly exported XML files.
+* Bug correction: Add new integration plugin generated an error message.
+* Bug correction: When options store a Wx::Bitmap object (when specifying an icon for Tray for example), saving options does not work.
+** !!! This bug correction breaks compatibility with previous saves/loads of .pbso and .pbss files
+* Bug correction: Notifying options changed for integration plugin generated an error message.
+
 == 0.0.3.20090716 (Alpha)
 
 === Tray Integration Plugin ===
