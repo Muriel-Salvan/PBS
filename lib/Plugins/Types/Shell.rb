@@ -112,21 +112,19 @@ module PBS
         end
       end
 
-      # Get the content as an XML text.
-      # Returned text can also contain XML tags, as it will be inserted directly as an XML text of an XML tag.
+      # Fill a given XML element with a content.
       #
       # Parameters:
       # * *iContent* (_Object_): Content created by this type
-      # Return:
-      # * _String_: The XML text
-      def getContentAsXMLText(iContent)
-        rText = "<cmd>#{iContent[0]}</cmd><dir>#{iContent[1]}</dir>"
-
+      # * *oXMLContentElement* (<em>REXML::Element</em>): The XML element to fill with the data
+      def getContentAsXMLText(iContent, oXMLContentElement)
+        lCmdXMLElement = oXMLContentElement.add_element('cmd')
+        lCmdXMLElement.text = iContent[0]
+        lDirXMLElement = oXMLContentElement.add_element('dir')
+        lDirXMLElement.text = iContent[1]
         if (iContent[2])
-          rText += '<terminal/>'
+          oXMLContentElement.add_element('terminal')
         end
-
-        return rText
       end
 
       # Create a content from an XML text.
@@ -137,6 +135,24 @@ module PBS
       # Return:
       # * _Object_: Content created based on this XML element
       def createContentFromXMLText(iXMLContentElement)
+        # TODO: Delete the following
+        # THIS SECTION IS NEEDED TO READ XML FILES STORING SHELL SHORTCUTS THAT WERE EXPORTED WITH PBS VERSION < 0.0.4
+        # REMOVE THIS COMMENT AND RESTART PBS TO LOAD XML FILES (< 0.0.4) CORRECTLY
+#        lMatch = iXMLContentElement.text.match(/^<cmd>(.*)<\/cmd><dir>(.*)<\/dir>(.*)$/)
+#        if (lMatch == nil)
+#          logBug "Unable to read #{iXMLContentElement.text}"
+#          return [
+#            iXMLContentElement.text,
+#            '',
+#            false
+#          ]
+#        else
+#          return [
+#            lMatch[1],
+#            lMatch[2],
+#            !lMatch[3].empty?
+#          ]
+#        end
         return [
           iXMLContentElement.elements['cmd'].text,
           iXMLContentElement.elements['dir'].text,

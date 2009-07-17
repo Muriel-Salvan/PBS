@@ -83,7 +83,7 @@ module PBS
         )
         # Here we set the content as simple text of content element.
         lContentElement = lShortcutElement.add_element('content')
-        lContentElement.text = iShortcut.Type.getContentAsXMLText(iShortcut.Content)
+        iShortcut.Type.getContentAsXMLText(iShortcut.Content, lContentElement)
         # Now we set the Tags
         lTagsElement = lShortcutElement.add_element('tags')
         iShortcut.Tags.each do |iTag, iNil|

@@ -56,5 +56,6 @@
 
 = People that helped a lot in developing PBS
 
-* Jeremy Hinegardner <jeremy@hinegardner.org>, for its wonderful project Crate that should be the next standard in shipping cross-platform ruby applications
-* Alex Fenton (http://rubyforge.org/users/brokentoy/) for its unvaluable help in better understanding WxRuby and WxWidgets
+* ACM, for her testing during difficult Alpha releases
+* Jeremy Hinegardner <jeremy@hinegardner.org>, for his wonderful project Crate that should be the next standard in shipping cross-platform ruby applications
+* Alex Fenton (http://rubyforge.org/users/brokentoy/) for his unvaluable help in better understanding WxRuby and WxWidgets

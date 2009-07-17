@@ -27,8 +27,8 @@ module PBS
         ) do |iModalResult, iDialog|
           case iModalResult
           when Wx::ID_OK
-            if (ioController.checkSavedWorkAndScratch(lWindow))
-              ioController.undoableOperation("Open file #{File.basename(iDialog.path)[0..-6]}") do
+            ioController.undoableOperation("Open file #{File.basename(iDialog.path)[0..-6]}") do
+              if (ioController.checkSavedWorkAndScratch(lWindow))
                 # Really perform the open
                 openData(ioController, iDialog.path)
                 ioController.changeCurrentFileName(iDialog.path)

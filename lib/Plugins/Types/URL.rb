@@ -82,15 +82,13 @@ module PBS
         end
       end
 
-      # Get the content as an XML text.
-      # Returned text can also contain XML tags, as it will be inserted directly as an XML text of an XML tag.
+      # Fill a given XML element with a content.
       #
       # Parameters:
       # * *iContent* (_Object_): Content created by this type
-      # Return:
-      # * _String_: The XML text
-      def getContentAsXMLText(iContent)
-        return iContent
+      # * *oXMLContentElement* (<em>REXML::Element</em>): The XML element to fill with the data
+      def getContentAsXMLText(iContent, oXMLContentElement)
+        oXMLContentElement.text = iContent
       end
 
       # Create a content from an XML text.
