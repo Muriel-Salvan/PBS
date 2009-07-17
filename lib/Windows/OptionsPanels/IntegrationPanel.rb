@@ -318,10 +318,10 @@ module PBS
         evt_menu(lNewMenuItem) do |iEvent|
           @DisplayedList << [
             iPluginID,
-            @Controller.RootTag,
+            [],
             true,
             @Controller.IntegrationPlugins[iPluginID][:plugin].getDefaultOptions,
-            nil
+            [ nil, nil ]
           ]
           refreshList
         end

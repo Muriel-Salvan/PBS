@@ -410,7 +410,7 @@ module PBS
             end
           elsif (iOldOptions != iOptions)
             # It has changed: notify it
-            logDebug "Notify changing options for integration plugin #{iPluginID} for Tag #{lTag.Name}"
+            logDebug "Notify changing options for integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
             begin
               ioInstance.onPluginOptionsChanged(iOptions, iTag, iOldOptions, iOldTagID)
             rescue Exception
@@ -1478,7 +1478,7 @@ end
     # Return:
     # * _Boolean_: Does a Shortcut equal another serialized content ?
     def shortcutSameAsSerialized?(iShortcut, iOtherContent, iOtherMetadata)
-      return shortcutSameAs?(iShortcut, iOtherContent, unserializeMap(iOtherMetadata))
+      return shortcutSameAs?(iShortcut, iOtherContent, getFromMarshallableObject(iOtherMetadata))
     end
 
     # Ensure that we are in a current undoableOperation, and create a default one if not.

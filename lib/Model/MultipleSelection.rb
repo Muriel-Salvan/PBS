@@ -171,7 +171,7 @@ module PBS
         # * *iTagsSet* (<em>map<Tag,nil></em>): The Tags set to associate this Shortcut to
         def createShortcut(ioController, iTagsSet)
           # TODO (WxRuby): Once marshal_dump and marshal_load are set correctly for Wx::Bitmap, remove the Metadata conversion
-          ioController.createShortcut(@TypePluginName, @Content, unserializeMap(@Metadata), iTagsSet)
+          ioController.createShortcut(@TypePluginName, @Content, getFromMarshallableObject(@Metadata), iTagsSet)
         end
 
       end
@@ -595,7 +595,7 @@ module PBS
         ioSerializedShortcuts[lShortcutID] = MultipleSelection::Serialized::Shortcut.new(
           iShortcut.Type.pluginName,
           iShortcut.Content,
-          serializeMap(iShortcut.Metadata)
+          getMarshallableObject(iShortcut.Metadata)
         )
         # Fill the correspondance map between IDs and Shortcuts
         @SerializedShortcutsIDs[lShortcutID] = iShortcut

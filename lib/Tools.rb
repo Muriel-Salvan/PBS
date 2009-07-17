@@ -1229,60 +1229,92 @@ Stack:
       Marshal.load(lData).createSerializedTagsShortcuts(ioController, ioController.RootTag, nil)
     end
 
-    # Get a serialized version of a map.
-    # This returns a map containing objects that can be marshalled.
-    # It calls recursively in case of embedded maps.
-    #
-    # Parameters:
-    # * *iMap* (<em>map<Object,Object></em>): The map to serialize
-    # Return:
-    # * <em>map<Object,Object></em>: the serialized map
-    def serializeMap(iMap)
-      rSerializedMap = {}
+    # Class used to identify specifically marshallable objects that needed some transformation to become marshallable
+    class MarshallableContainer
 
-      iMap.each do |iKey, iValue|
-        if (iValue.is_a?(Wx::Bitmap))
-          # TODO (WxRuby): Remove this processing once marshal_dump and marshal_load have been implemented in Wx::Bitmap.
-          # We convert Bitmaps into Strings manually.
-          rSerializedMap[iKey] = [ Wx::Bitmap, iValue.getSerialized ]
-        elsif (iValue.is_a?(Hash))
-          rSerializedMap[iKey] = serializeMap(iValue)
-        else
-          rSerializedMap[iKey] = iValue
-        end
+      # Constants used to identify IDs
+      ID_WX_BITMAP = 0
+
+      # The marshallable object
+      #   Object
+      attr_reader :MarshallableObject
+
+      # The ID
+      #   Integer
+      attr_reader :ID
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iMarshallableObject* (_Object_): The marshallable object to store
+      # * *iID* (_Integer_): ID used to identify this marshallable object type
+      def initialize(iMarshallableObject, iID)
+        @MarshallableObject = iMarshallableObject
+        @ID = iID
       end
 
-      return rSerializedMap
     end
 
-    # Get an unserialized version of a map.
-    # This returns a map containing objects that were previously marshalled.
-    # It calls recursively in case of embedded maps.
+    # Get a marshallable version of an object.
+    # It calls recursively in case of embedded maps or arrays.
     #
     # Parameters:
-    # * *iMap* (<em>map<Object,Object></em>): The map to unserialize
+    # * *iObject* (_Object_): The source object
     # Return:
-    # * <em>map<Object,Object></em>: the unserialized map
-    def unserializeMap(iMap)
-      rUnserializedMap = {}
+    # * _Object_: The object ready to be marshalled
+    def getMarshallableObject(iObject)
+      rMarshallableObject = iObject
 
-      iMap.each do |iKey, iValue|
-        if ((iValue.is_a?(Array)) and
-            (iValue.size == 2) and
-            (iValue[0] == Wx::Bitmap))
-          # TODO (WxRuby): Remove this processing once marshal_dump and marshal_load have been implemented in Wx::Bitmap.
-          # We convert Bitmaps into Strings manually.
-          lBitmap = Wx::Bitmap.new
-          lBitmap.setSerialized(iValue[1])
-          rUnserializedMap[iKey] = lBitmap
-        elsif (iValue.is_a?(Hash))
-          rUnserializedMap[iKey] = unserializeMap(iValue)
-        else
-          rUnserializedMap[iKey] = iValue
+      if (iObject.is_a?(Wx::Bitmap))
+        # TODO (WxRuby): Remove this processing once marshal_dump and marshal_load have been implemented in Wx::Bitmap.
+        # We convert Bitmaps into Strings manually.
+        rMarshallableObject = MarshallableContainer.new(iObject.getSerialized, MarshallableContainer::ID_WX_BITMAP)
+      elsif (iObject.is_a?(Hash))
+        rMarshallableObject = {}
+        iObject.each do |iKey, iValue|
+          rMarshallableObject[getMarshallableObject(iKey)] = getMarshallableObject(iValue)
+        end
+      elsif (iObject.is_a?(Array))
+        rMarshallableObject = []
+        iObject.each do |iItem|
+          rMarshallableObject << getMarshallableObject(iItem)
         end
       end
 
-      return rUnserializedMap
+      return rMarshallableObject
+    end
+
+    # Get an object from its marshallable version.
+    # It calls recursively in case of embedded maps.
+    #
+    # Parameters:
+    # * *iMarshallableObject* (_Object_): The marshallable object
+    # Return:
+    # * _Object_: The original object
+    def getFromMarshallableObject(iMarshallableObject)
+      rObject = iMarshallableObject
+
+      if (iMarshallableObject.is_a?(MarshallableContainer))
+        case iMarshallableObject.ID
+        when MarshallableContainer::ID_WX_BITMAP
+          rObject = Wx::Bitmap.new
+          rObject.setSerialized(iMarshallableObject.MarshallableObject)
+        else
+          logBug "Unknown ID in marshallable object: #{iMarshallableObject.ID}. Returning marshallable object."
+        end
+      elsif (iMarshallableObject.is_a?(Hash))
+        rObject = {}
+        iMarshallableObject.each do |iKey, iValue|
+          rObject[getFromMarshallableObject(iKey)] = getFromMarshallableObject(iValue)
+        end
+      elsif (iMarshallableObject.is_a?(Array))
+        rObject = []
+        iMarshallableObject.each do |iItem|
+          rObject << getFromMarshallableObject(iItem)
+        end
+      end
+
+      return rObject
     end
 
     # Serialize options
@@ -1308,7 +1340,7 @@ Stack:
           lSerializableOptions[iKey] = iValue
         end
       end
-      return serializeMap(lSerializableOptions)
+      return getMarshallableObject(lSerializableOptions)
     end
 
     # Unserialize options
@@ -1318,23 +1350,25 @@ Stack:
     # Return:
     # * <em>map<Symbol,Object></em>: The unserialized options
     def unserializeOptions(iSerializedOptions)
-      lOptions = {}
-      iSerializedOptions.each do |iKey, iValue|
+      rOptions = {}
+
+      getFromMarshallableObject(iSerializedOptions).each do |iKey, iValue|
         if (iKey == :intPluginsOptions)
-          lOptions[:intPluginsOptions] = {}
+          rOptions[:intPluginsOptions] = {}
           # We have to add empty instances information
           iValue.each do |iPluginID, iPluginsList|
-            lOptions[:intPluginsOptions][iPluginID] = []
+            rOptions[:intPluginsOptions][iPluginID] = []
             iPluginsList.each do |ioInstantiatedPluginInfo|
               iTagID, iActive, iInstanceOptions = ioInstantiatedPluginInfo
-              lOptions[:intPluginsOptions][iPluginID] << [ iTagID, iActive, iInstanceOptions, [ nil, nil ] ]
+              rOptions[:intPluginsOptions][iPluginID] << [ iTagID, iActive, iInstanceOptions, [ nil, nil ] ]
             end
           end
         else
-          lOptions[iKey] = iValue
+          rOptions[iKey] = iValue
         end
       end
-      return unserializeMap(lOptions)
+      
+      return rOptions
     end
 
     # Save options data in a file
