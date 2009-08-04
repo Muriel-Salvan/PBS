@@ -80,3 +80,4 @@
 *** Implement command plugin that retrieves favicons for URL not having any icon
 *** Make a command that creates all relevant links to a SF.net project
 *** Tray: Adding option of size of icons in menu (different sizes for items in first menu than in consecutive ones)
+*** Tray: Set the Tray icon hint text to the integrated Tag
