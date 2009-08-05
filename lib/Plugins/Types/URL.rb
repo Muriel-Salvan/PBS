@@ -9,6 +9,8 @@ module PBS
 
     class URL
 
+      include Tools
+
       # The panel that edits contents from this Shortcut type
       class EditPanel < Wx::Panel
 
@@ -100,6 +102,33 @@ module PBS
       # * _Object_: Content created based on this XML element
       def createContentFromXMLText(iXMLContentElement)
         return iXMLContentElement.text
+      end
+
+      # Get the icon best reflecting the content.
+      #
+      # Parameters:
+      # * *iContent* (_Object_): The content to read from
+      # Return:
+      # * <em>Wx::Bitmap</em>: The corresponding icon (can be nil if none)
+      def getDefaultIconFromContent(iContent)
+        rIcon = nil
+
+        # Get the favicon from the URL
+        lURLMatch = iContent.match(/^(ftp|ftps|http|https):\/\/([^\/]*)$/)
+        if (lURLMatch == nil)
+          lURLMatch = iContent.match(/^(ftp|ftps|http|https):\/\/([^\/]*)\/(.*)$/)
+        end
+        if (lURLMatch == nil)
+          logErr "Unable to get favicon from URL #{iContent}"
+        else
+          lFaviconURL = "#{lURLMatch[1]}://#{lURLMatch[2]}/favicon.ico"
+          rIcon = getBitmapFromFile(lFaviconURL)
+          if (rIcon == nil)
+            logErr "Could not get favicon from #{lFaviconURL}"
+          end
+        end
+
+        return rIcon
       end
 
     end

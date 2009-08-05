@@ -50,7 +50,6 @@
 **** Create a dedicated Metadata object that handles also serialization of Wx::Bitmaps... and remove serializeMap and unserializeMap
 **** In options, provide a way to have automatic answers to dialogs asked during the delete command
 **** See what must be committed for dependencies (mandatory and plugins)
-**** ChooseIconDialog should propose an icon from the executable of a Shell Shortcut
 **** Icon of installer should have a little package bitmap to differentiate it
 **** Find a way for people to vote for their most important bugs to correct
 **** Replace all extensions removal made with [0..-6] with File.extname(...).size

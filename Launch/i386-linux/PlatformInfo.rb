@@ -94,6 +94,14 @@ module PBS
         return rError
       end
 
+      # Get file extensions specifics to executable files
+      #
+      # Return:
+      # * <em>list<String></em>: List of extensions (including . character). It can be empty.
+      def getExecutableExtensions
+        return []
+      end
+
     end
 
   end

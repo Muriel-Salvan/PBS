@@ -959,9 +959,15 @@ module PBS
     # Parameters:
     # * *iSC* (_Shortcut_): The added Shortcut
     def onShortcutCreate(iSC)
+      # If the Shortcut is the first one from root, expand root
+      lExpandRoot = ((iSC.Tags.empty?) and
+                     (children(@RootID).empty?))
       # We update the tree accordingly
       updateTree do
         addShortcutInfo(iSC)
+      end
+      if (lExpandRoot)
+        expand(@RootID)
       end
     end
 

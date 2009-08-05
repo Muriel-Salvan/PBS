@@ -891,7 +891,7 @@ Stack:
         when '.ICO', '.CUR', '.ANI', '.EXE', '.DLL'
           lBitmapType = Wx::BITMAP_TYPE_ICO
         else
-          logBug "Unable to determine the bitmap type corresponding to extension #{File.extname(iFileName).upcase}. Assuming ICO."
+          logErr "Unable to determine the bitmap type corresponding to extension #{File.extname(iFileName).upcase}. Assuming ICO."
           lBitmapType = Wx::BITMAP_TYPE_ICO
         end
       end
@@ -915,6 +915,11 @@ Stack:
         else
           rBitmap = Wx::Bitmap.new(iRealFileName, lBitmapType)
         end
+      end
+      # Check if it is ok
+      if (!rBitmap.is_ok)
+        rBitmap = nil
+        logErr "Unable to get bitmap from #{iFileName}"
       end
 
       return rBitmap

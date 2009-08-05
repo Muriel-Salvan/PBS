@@ -14,6 +14,10 @@ module PBS
       # The panel that edits contents from this Shortcut type
       class EditPanel < Wx::Panel
 
+        include Tools
+
+        ICON_OPEN = Tools::loadBitmap('Open.png')
+
         # Constructor
         #
         # Parameters:
@@ -23,6 +27,7 @@ module PBS
 
           # Create all components
           lSTCmd = Wx::StaticText.new(self, Wx::ID_ANY, 'Shell command')
+          lBBOpen = Wx::BitmapButton.new(self, Wx::ID_ANY, ICON_OPEN)
           @TCCmd = Wx::TextCtrl.new(self)
           @TCCmd.min_size = [300, @TCCmd.min_size.height]
           lSTDir = Wx::StaticText.new(self, Wx::ID_ANY, 'Working directory')
@@ -34,7 +39,13 @@ module PBS
           lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
           lMainSizer.add_item([0,0], :proportion => 1)
           lMainSizer.add_item(lSTCmd, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
-          lMainSizer.add_item(@TCCmd, :flag => Wx::GROW, :proportion => 0)
+
+          lCmdSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
+          lCmdSizer.add_item(@TCCmd, :flag => Wx::ALIGN_CENTRE, :proportion => 1)
+          lCmdSizer.add_item([8,0], :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+          lCmdSizer.add_item(lBBOpen, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+
+          lMainSizer.add_item(lCmdSizer, :flag => Wx::GROW, :proportion => 0)
           lMainSizer.add_item([0,8], :proportion => 0)
           lMainSizer.add_item(lSTDir, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
           lMainSizer.add_item(@TCDir, :flag => Wx::GROW, :proportion => 0)
@@ -42,6 +53,25 @@ module PBS
           lMainSizer.add_item(@CBTerminal, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
           lMainSizer.add_item([0,0], :proportion => 1)
           self.sizer = lMainSizer
+
+          # Events
+          evt_button(lBBOpen) do |iEvent|
+            # Open dialog
+            # Get the executables filters
+            lExtensions = "*#{$PBS_Platform.getExecutableExtensions.join(';*')}"
+            showModal(Wx::FileDialog, self,
+              :message => 'Open program',
+              :style => Wx::FD_OPEN|Wx::FD_FILE_MUST_EXIST,
+              :wildcard => "Executable files (#{lExtensions})|#{lExtensions}"
+            ) do |iModalResult, iDialog|
+              case iModalResult
+              when Wx::ID_OK
+                # TODO: Check if we don't need to escape space characters or add " "
+                @TCCmd.value = iDialog.path
+              end
+            end
+
+          end
         end
 
         # Get the content from the controls
@@ -158,6 +188,40 @@ module PBS
           iXMLContentElement.elements['dir'].text,
           (iXMLContentElement.elements['terminal'] != nil)
         ]
+      end
+
+      # Get the icon best reflecting the content.
+      #
+      # Parameters:
+      # * *iContent* (_Object_): The content to read from
+      # Return:
+      # * <em>Wx::Bitmap</em>: The corresponding icon (can be nil if none)
+      def getDefaultIconFromContent(iContent)
+        rIcon = nil
+
+        # Get the icon from the executable
+        # First get the executable name
+        lExeFileName = nil
+        if (iContent[0].include?(' '))
+          lMatch = iContent[0].match(/^([^ ]*) .*$/)
+          if (lMatch == nil)
+            logBug "Invalid command parsed: #{iContent[0]}"
+          else
+            lExeFileName = lMatch[1]
+          end
+        else
+          lExeFileName = iContent[0]
+        end
+        if (lExeFileName != nil)
+          if (File.exists?(lExeFileName))
+            # Get icon from it
+            rIcon = getBitmapFromFile(lExeFileName)
+          else
+            logErr "File #{lExeFileName} does not exist. Can't get icon from it."
+          end
+        end
+
+        return rIcon
       end
 
     end
