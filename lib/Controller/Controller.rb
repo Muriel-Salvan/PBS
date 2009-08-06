@@ -856,6 +856,9 @@ module PBS
 
     # Constructor
     def initialize
+      # Are we exiting ?
+      @Exiting = false
+
       # Opened file context
       @CurrentOpenedFileName = nil
       @CurrentOpenedFileModified = false

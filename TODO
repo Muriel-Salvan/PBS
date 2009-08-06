@@ -43,6 +43,7 @@
 **** ChooseIconDialog should look for web icons
 **** ChooseIconDialog should look for directory icons
 **** ChooseIconDialog should propose already used icons
+**** ChooseIconDialog should give the possiblity to open icons from a website's favicon
 **** Icons of Imports/Merge should have the same icons as Imports with a merge bitmap mask (do it for Open also)
 **** Locale & Internationalization
 **** Replace .Metadata['title'] with .getName

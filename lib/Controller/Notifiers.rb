@@ -134,30 +134,34 @@ module PBS
 
     # Notify the GUI that we are quitting
     def notifyExit
-      # Delete any integration plugin instance
-      @Options[:intPluginsOptions].each do |iPluginID, ioPluginsList|
-        ioPluginsList.each do |ioInstantiatedPluginInfo|
-          iTagID, iActive, iOptions, ioInstanceInfo = ioInstantiatedPluginInfo
-          ioInstance, iTag = ioInstanceInfo
-          if (ioInstance != nil)
-            # We have to delete the instance
-            logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
-            begin
-              @IntegrationPlugins[iPluginID][:plugin].deleteInstance(ioInstance)
-            rescue Exception
-              logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+      # Protect this method from concurrent executions (exiting Windows calls evt_close twice, user could click several times on close...)
+      if (!@Exiting)
+        @Exiting = true
+        # Delete any integration plugin instance
+        @Options[:intPluginsOptions].each do |iPluginID, ioPluginsList|
+          ioPluginsList.each do |ioInstantiatedPluginInfo|
+            iTagID, iActive, iOptions, ioInstanceInfo = ioInstantiatedPluginInfo
+            ioInstance, iTag = ioInstanceInfo
+            if (ioInstance != nil)
+              # We have to delete the instance
+              logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+              begin
+                @IntegrationPlugins[iPluginID][:plugin].deleteInstance(ioInstance)
+              rescue Exception
+                logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+              end
             end
           end
         end
+        # Write tips index in options first
+        if (@TipsProvider != nil)
+          @Options[:lastIdxTip] = @TipsProvider.current_tip
+        end
+        # Save options
+        saveOptionsData(@Options, $PBS_OptionsFile)
+        # Notify everybody
+        notifyRegisteredGUIs(:onExit)
       end
-      # Write tips index in options first
-      if (@TipsProvider != nil)
-        @Options[:lastIdxTip] = @TipsProvider.current_tip
-      end
-      # Save options
-      saveOptionsData(@Options, $PBS_OptionsFile)
-      # Notify everybody
-      notifyRegisteredGUIs(:onExit)
     end
 
     # Notify the GUI that options have changed
