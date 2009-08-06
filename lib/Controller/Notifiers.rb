@@ -83,6 +83,7 @@ module PBS
     # Notify the GUI that we are initializing the GUI.
     # This step performs just after having created and registered all windows.
     def notifyInit
+      registerGUI(Controller::OptionsListener.new(self))
       # Initialize appearance of many components
       notifyUndoUpdate
       notifyRedoUpdate

@@ -48,10 +48,6 @@ module PBS
       @Controller.registerGUI(lMainFrame)
       # Each integration plugin
       @Controller.registerIntegrationPluginsGUIs
-      # Begin
-      @Controller.notifyInit
-      # Notify everybody that options have been changed to initialize them
-      @Controller.notifyOptionsChanged({})
       # Load the startup file if needed
       if ($PBS_StartupFile != nil)
         if (File.exists?($PBS_StartupFile))
@@ -63,6 +59,10 @@ module PBS
           logErr "Unable to find file \"#{$PBS_StartupFile}\""
         end
       end
+      # Begin
+      @Controller.notifyInit
+      # Notify everybody that options have been changed to initialize them
+      @Controller.notifyOptionsChanged({})
 
       # If we ask for startup tips, go on !
       if (@Controller.Options[:displayStartupTips])

@@ -152,6 +152,22 @@ module PBS
 
       BITMAP_SELECTTAG = Tools::loadBitmap('Tree.png')
 
+      # Get the selected Tag to integrate
+      # This method by config panels to get the Tag's icon for example
+      #
+      # Return:
+      # * _Tag_: The corresponding Tag, or nil if it is not present
+      def getIntegratedTag
+        rTag = nil
+
+        lTagsList = @Controller.getTagsFromTagID(@DisplayedItem[1], @Controller.RootTag)
+        if (!lTagsList.empty?)
+          rTag = lTagsList[0]
+        end
+
+        return rTag
+      end
+
       # Constructor
       #
       # Parameters:
@@ -163,17 +179,20 @@ module PBS
       def initialize(iParent, iController, ioDisplayedItem, ioNotifier, iItemID)
         super(iParent)
 
+        @Controller = iController
+        @DisplayedItem = ioDisplayedItem
+
         # Components
-        @ConfigPanel = iController.IntegrationPlugins[ioDisplayedItem[0]][:plugin].getConfigPanel(self)
-        @ConfigPanel.setData(ioDisplayedItem[3])
+        @ConfigPanel = iController.IntegrationPlugins[@DisplayedItem[0]][:plugin].getConfigPanel(self, @Controller)
+        @ConfigPanel.setData(@DisplayedItem[3])
         lSTTag = Wx::StaticText.new(self, Wx::ID_ANY, 'Tag:')
-        lSTTagName = Wx::StaticText.new(self, Wx::ID_ANY, ioDisplayedItem[1].join('/'))
+        lSTTagName = Wx::StaticText.new(self, Wx::ID_ANY, @DisplayedItem[1].join('/'))
         if (lSTTagName.label.empty?)
           lSTTagName.label = 'Root'
         end
         lBBSelectTag = Wx::BitmapButton.new(self, Wx::ID_ANY, BITMAP_SELECTTAG)
         lCBActive = Wx::CheckBox.new(self, Wx::ID_ANY, 'Active')
-        lCBActive.value = ioDisplayedItem[2]
+        lCBActive.value = @DisplayedItem[2]
         lBDelete = Wx::Button.new(self, Wx::ID_ANY, 'Delete')
 
         # Sizers
@@ -203,7 +222,7 @@ module PBS
 
         # Events
         evt_checkbox(lCBActive) do |iEvent|
-          ioDisplayedItem[2] = lCBActive.value
+          @DisplayedItem[2] = lCBActive.value
           ioNotifier.refreshList
         end
         evt_button(lBBSelectTag) do |iEvent|
@@ -216,9 +235,9 @@ module PBS
                 self.fit
                 self.size = lOldSize
                 # Modify underlying data
-                ioDisplayedItem[1] = iController.getTagID(lTag)
+                @DisplayedItem[1] = iController.getTagID(lTag)
                 # Update display
-                lSTTagName.label = ioDisplayedItem[1].join('/')
+                lSTTagName.label = @DisplayedItem[1].join('/')
                 if (lSTTagName.label.empty?)
                   lSTTagName.label = 'Root'
                 end

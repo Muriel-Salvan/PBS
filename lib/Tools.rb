@@ -51,6 +51,8 @@ module PBS
     # The class that assign dynamically images to a given TreeCtrl items
     class ImageListManager
 
+      include Tools
+
       # Constructor
       #
       # Parameters:
@@ -78,11 +80,7 @@ module PBS
           # First create it.
           lBitmap = yield
           # Then check if we need to resize it
-          if ((lBitmap.width != @Width) or
-              (lBitmap.height != @Height))
-            # We have to resize the bitmap to @Width/@Height
-            lBitmap = Wx::Bitmap.from_image(lBitmap.convert_to_image.scale(@Width, @Height))
-          end
+          lBitmap = getResizedBitmap(lBitmap, @Width, @Height)
           # Then add it to the image list, and register it
           @Id2Idx[iID] = @ImageList.add(lBitmap)
         end
@@ -119,6 +117,25 @@ module PBS
       end
 
       return rBitmap
+    end
+
+    # Get a bitmap resized to a given size if it differs from it
+    #
+    # Parameters:
+    # * *iBitmap* (<em>Wx::Bitmap</em>): The original bitmap
+    # * *iWidth* (_Integer_): The width of the resized bitmap
+    # * *iHeight* (_Integer_): The height of the resized bitmap
+    # Return:
+    # * <em>Wx::Bitmap</em>: The resized bitmap (can be the same object as iBitmap)
+    def getResizedBitmap(iBitmap, iWidth, iHeight)
+      rResizedBitmap = iBitmap
+
+      if ((iBitmap.width != iWidth) or
+          (iBitmap.height != iHeight))
+        rResizedBitmap = Wx::Bitmap.new(iBitmap.convert_to_image.scale(iWidth, iHeight))
+      end
+
+      return rResizedBitmap
     end
 
     # Set recursively children of a window as readonly
@@ -1148,12 +1165,7 @@ Stack:
     # * *ioMaskDC* (<em>Wx::DC</em>): The device context on which the mask is merged
     # * *iBitmap* (<em>Wx::Bitmap</em>): The bitmap to merge
     def mergeBitmapOnDC(ioDC, ioMaskDC, iBitmap)
-      lBitmapToMerge = iBitmap
-      if ((iBitmap.width != ioDC.size.width) or
-          (iBitmap.height != ioDC.size.height))
-        # First we resize the bitmap
-        lBitmapToMerge = Wx::Bitmap.from_image(iBitmap.convert_to_image.scale(ioDC.size.width, ioDC.size.height))
-      end
+      lBitmapToMerge = getResizedBitmap(iBitmap, ioDC.size.width, ioDC.size.height)
       # Then we draw on the bitmap itself
       lBitmapToMerge.draw do |iMergeDC|
         ioDC.blit(0, 0, lBitmapToMerge.width, lBitmapToMerge.height, iMergeDC, 0, 0, Wx::COPY, false)

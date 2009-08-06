@@ -7,6 +7,17 @@ module PBS
 
   module Integration
 
+    # The list of sizes corresponding to each slider step
+    ICON_SIZES = [
+      8,
+      16,
+      24,
+      32,
+      48,
+      64,
+      72
+    ]
+
     class TrayIcon < Wx::TaskBarIcon
 
       include Tools
@@ -27,6 +38,10 @@ module PBS
         # The Root Tag to display in the menu
         # Tag
         @RootTag = nil
+        # The size of icons in the menu and sub-menus (in units of the slider, not pixels)
+        # Integer
+        @SizeMenu = nil
+        @SizeSubMenu = nil
       end
 
       # Method that adds sub-Tags of a given Tag to a menu
@@ -116,7 +131,14 @@ module PBS
             lMenuItems.each do |ioMenuItem, ioParentMenu|
               ioMenuItem.text = iShortcut.Metadata['title']
               ioMenuItem.help = iShortcut.getContentSummary
-              ioMenuItem.bitmap = @Controller.getShortcutIcon(iShortcut)
+              # If the parent menu is the root menu, we need to size differently than for sub-menus
+              lDesiredSize = nil
+              if (ioParentMenu == rMenu)
+                lDesiredSize = ICON_SIZES[@SizeMenu]
+              else
+                lDesiredSize = ICON_SIZES[@SizeSubMenu]
+              end
+              ioMenuItem.bitmap = getResizedBitmap(@Controller.getShortcutIcon(iShortcut), lDesiredSize, lDesiredSize)
               # Insert it
               ioParentMenu.append_item(ioMenuItem)
               # Set its event
@@ -144,17 +166,9 @@ module PBS
         end
         # Different platforms have different requirements for the taskbar icon size
         if Wx::PLATFORM == "WXMSW"
-          if ((lRealBitmap.width != 16) or
-              (lRealBitmap.height != 16))
-            # Need to rescale
-            lRealBitmap = Wx::Bitmap.new(lRealBitmap.convert_to_image.scale(16, 16))
-          end
+          lRealBitmap = getResizedBitmap(lRealBitmap, 16, 16)
         elsif Wx::PLATFORM == "WXGTK"
-          if ((lRealBitmap.width != 22) or
-              (lRealBitmap.height != 22))
-            # Need to rescale
-            lRealBitmap = Wx::Bitmap.new(lRealBitmap.convert_to_image.scale(22, 22))
-          end
+          lRealBitmap = getResizedBitmap(lRealBitmap, 22, 22)
         elsif Wx::PLATFORM == "WXMAC"
           # WXMAC can be any size up to 128x128
           lResize = false
@@ -184,12 +198,13 @@ module PBS
       #
       # Parameters:
       # * *iBitmap* (<em>Wx::Bitmap</em>): The bitmap of the icon (can be nil for the default one)
-      def setTrayIcon(iBitmap)
+      # * *iTitle* (_String_): Title to give to this icon (appears as the hint)
+      def setTrayIcon(iBitmap, iTitle)
         if (@CurrentIcon != nil)
           remove_icon
         end
         @CurrentIcon = makeTrayIcon(iBitmap)
-        set_icon(@CurrentIcon, 'PBS')
+        set_icon(@CurrentIcon, iTitle)
       end
 
       # Options specifics to this plugin have changed
@@ -200,8 +215,10 @@ module PBS
       # * *iOldOptions* (_Object_): The old options (can be nil during startup)
       # * *iOldTag* (_Tag_): The old Tag to integrate (can be nil during startup)
       def onPluginOptionsChanged(iNewOptions, iNewTag, iOldOptions, iOldTag)
-        setTrayIcon(iNewOptions[:icon])
+        setTrayIcon(iNewOptions[:icon], iNewTag.Name)
         @RootTag = iNewTag
+        @SizeMenu = iNewOptions[:sizeMenu]
+        @SizeSubMenu = iNewOptions[:sizeSubMenu]
       end
 
     end
@@ -217,24 +234,71 @@ module PBS
       # Constructor
       #
       # Parameters:
-      # * *iParent* (<em>Wx::Window</em>): The parent window
-      def initialize(iParent)
+      # * *iParent* (<em>Wx::Window</em>): The parent window (can be called to get the current Tag to integrate)
+      # * *iController* (_Controller_): The controller
+      def initialize(iParent, iController)
         super(iParent)
+
+        # TODO (WxRuby): Bug correction
+        # Register this Event as otherwise dragging thumbs of sliders generate tons of warnings. Bug ?
+        Wx::EvtHandler::EVENT_TYPE_CLASS_MAP[10105] = Wx::Event
 
         # @Icon will be changed only if the icon is changed.
         # It is used instead of the Wx::BitmapButton::bitmap_label because it can be nil, and in this case we don't want to replace it with the default icon internally.
         @Icon = nil
 
+        # Cache of the icons
+        # map< Integer, Wx::Bitmap >
+        @CacheExampleIcons = {}
+
         # Components
         lSTIcon = Wx::StaticText.new(self, Wx::ID_ANY, 'Icon')
         @BBIcon = Wx::BitmapButton.new(self, Wx::ID_ANY, Wx::Bitmap.new)
+        lBIconFromTag = Wx::Button.new(self, Wx::ID_ANY, '<- from Tag')
+        lSTSize1 = Wx::StaticText.new(self, Wx::ID_ANY, 'Menus icons sizes')
+        @SSize1 = Wx::Slider.new(self, Wx::ID_ANY, 0, 0, ICON_SIZES.size-1,
+          :style => Wx::SL_VERTICAL|Wx::SL_AUTOTICKS|Wx::SL_BOTTOM)
+        @SBExampleIcon1 = Wx::StaticBitmap.new(self, Wx::ID_ANY, Wx::Bitmap.new)
+        lSTSize2 = Wx::StaticText.new(self, Wx::ID_ANY, 'Sub-Menus icons sizes')
+        @SSize2 = Wx::Slider.new(self, Wx::ID_ANY, 0, 0, ICON_SIZES.size-1,
+          :style => Wx::SL_VERTICAL|Wx::SL_AUTOTICKS)
+        @SBExampleIcon2 = Wx::StaticBitmap.new(self, Wx::ID_ANY, Wx::Bitmap.new)
 
         # Sizers
-        lMainSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
+        lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
         lMainSizer.add_item([0,0], :proportion => 1)
-        lMainSizer.add_item(lSTIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
-        lMainSizer.add_item([8,0], :proportion => 0)
-        lMainSizer.add_item(@BBIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+
+        lIconsButtonsSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
+        lIconsButtonsSizer.add_item(lSTIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lIconsButtonsSizer.add_item([8,0], :proportion => 0)
+        lIconsButtonsSizer.add_item(@BBIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lIconsButtonsSizer.add_item(lBIconFromTag, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+
+        lMainSizer.add_item(lIconsButtonsSizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lMainSizer.add_item([0,8], :proportion => 0)
+
+        lSizesSizer =  Wx::BoxSizer.new(Wx::HORIZONTAL)
+
+        lSizes1Sizer = Wx::BoxSizer.new(Wx::VERTICAL)
+        lSizes1Sizer.add_item(lSTSize1, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lSizes1BottomSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
+        lSizes1BottomSizer.add_item(@SSize1, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lSizes1BottomSizer.add_item(@SBExampleIcon1, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lSizes1Sizer.add_item(lSizes1BottomSizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+
+        lSizesSizer.add_item(lSizes1Sizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lSizesSizer.add_item([8,0], :proportion => 0)
+
+        lSizes2Sizer = Wx::BoxSizer.new(Wx::VERTICAL)
+        lSizes2Sizer.add_item(lSTSize2, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lSizes2BottomSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
+        lSizes2BottomSizer.add_item(@SSize2, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lSizes2BottomSizer.add_item(@SBExampleIcon2, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lSizes2Sizer.add_item(lSizes2BottomSizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+
+        lSizesSizer.add_item(lSizes2Sizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+
+        lMainSizer.add_item(lSizesSizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
         lMainSizer.add_item([0,0], :proportion => 1)
         self.sizer = lMainSizer
 
@@ -247,16 +311,49 @@ module PBS
               lNewIcon = iDialog.getSelectedBitmap
               if (lNewIcon != nil)
                 @Icon = lNewIcon
-                setBBIcon
+                setBitmapIcons
               end
             end
           end
         end
+        @SSize1.evt_scroll_thumbtrack do |iEvent|
+          setBitmapIcons
+        end
+        @SSize1.evt_scroll_pagedown do |iEvent|
+          @SSize1.value += 1
+          setBitmapIcons
+        end
+        @SSize1.evt_scroll_pageup do |iEvent|
+          @SSize1.value -= 1
+          setBitmapIcons
+        end
+        @SSize2.evt_scroll_thumbtrack do |iEvent|
+          setBitmapIcons
+        end
+        @SSize2.evt_scroll_pagedown do |iEvent|
+          @SSize2.value += 1
+          setBitmapIcons
+        end
+        @SSize2.evt_scroll_pageup do |iEvent|
+          @SSize2.value -= 1
+          setBitmapIcons
+        end
+        evt_button(lBIconFromTag) do |iEvent|
+          # Take the Tag's icon for the icon
+          lTag = iParent.getIntegratedTag
+          if (lTag == nil)
+            @Icon = nil
+          else
+            @Icon = iController.getTagIcon(lTag)
+          end
+          setBitmapIcons
+        end
 
       end
 
-      # Set the BitmapButton icon, based on @Icon
-      def setBBIcon
+      # Set the Bitmap icons, based on @Icon and the sizes
+      def setBitmapIcons
+        # The BitmapButton
         lIconBitmap = @Icon
         if (lIconBitmap == nil)
           lIconBitmap = DEFAULT_ICON
@@ -267,6 +364,18 @@ module PBS
           @BBIcon.bitmap_label = INVALID_ICON
         end
         @BBIcon.size = [ @BBIcon.bitmap_label.width + 4, @BBIcon.bitmap_label.height + 4 ]
+        # The example icons
+        if (@CacheExampleIcons[@SSize1.value] == nil)
+          # Load the icon
+          @CacheExampleIcons[@SSize1.value] = getResizedBitmap(DEFAULT_ICON, ICON_SIZES[@SSize1.value], ICON_SIZES[@SSize1.value])
+        end
+        @SBExampleIcon1.bitmap = @CacheExampleIcons[@SSize1.value]
+        if (@CacheExampleIcons[@SSize2.value] == nil)
+          # Load the icon
+          @CacheExampleIcons[@SSize2.value] = getResizedBitmap(DEFAULT_ICON, ICON_SIZES[@SSize2.value], ICON_SIZES[@SSize2.value])
+        end
+        @SBExampleIcon2.bitmap = @CacheExampleIcons[@SSize2.value]
+        refresh
       end
 
       # Create the options corresponding to this panel
@@ -274,7 +383,11 @@ module PBS
       # Return:
       # * _Object_: The corresponding options
       def getData
-        return { :icon => @Icon }
+        return {
+          :icon => @Icon,
+          :sizeMenu => @SSize1.value,
+          :sizeSubMenu => @SSize2.value
+        }
       end
 
       # Set the panel's content from given options
@@ -283,7 +396,9 @@ module PBS
       # * *iOptions* (_Object_): The corresponding options
       def setData(iOptions)
         @Icon = iOptions[:icon]
-        setBBIcon
+        @SSize1.value = iOptions[:sizeMenu]
+        @SSize2.value = iOptions[:sizeSubMenu]
+        setBitmapIcons
       end
 
     end
@@ -296,7 +411,9 @@ module PBS
       # * _Object_: The default options (can be nil if none needed)
       def getDefaultOptions
         return {
-          :icon => nil
+          :icon => nil,
+          :sizeMenu => 2,
+          :sizeSubMenu => 1
         }
       end
 
@@ -304,10 +421,11 @@ module PBS
       #
       # Parameters:
       # * *iParent* (<em>Wx::Window</em>): The parent window
+      # * *iController* (_Controller_): The controller
       # Return:
       # * <em>Wx::Panel</em>: The configuration panel, or nil if none needed
-      def getConfigPanel(iParent)
-        return ConfigPanel.new(iParent)
+      def getConfigPanel(iParent, iController)
+        return ConfigPanel.new(iParent, iController)
       end
 
       # Constructor

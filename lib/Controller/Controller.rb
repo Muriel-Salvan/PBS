@@ -1154,8 +1154,6 @@ module PBS
         })
       end
 
-      registerGUI(OptionsListener.new(self))
-
       if (@DefaultOptionsLoaded)
         # Now we instantiate 1 instance per integration plugin on the Root Tag.
         @IntegrationPlugins.each do |iPluginID, iPluginInfo|
