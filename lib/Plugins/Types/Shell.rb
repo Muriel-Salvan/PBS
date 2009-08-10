@@ -165,24 +165,6 @@ module PBS
       # Return:
       # * _Object_: Content created based on this XML element
       def createContentFromXMLText(iXMLContentElement)
-        # TODO: Delete the following
-        # THIS SECTION IS NEEDED TO READ XML FILES STORING SHELL SHORTCUTS THAT WERE EXPORTED WITH PBS VERSION < 0.0.4
-        # REMOVE THIS COMMENT AND RESTART PBS TO LOAD XML FILES (< 0.0.4) CORRECTLY
-#        lMatch = iXMLContentElement.text.match(/^<cmd>(.*)<\/cmd><dir>(.*)<\/dir>(.*)$/)
-#        if (lMatch == nil)
-#          logBug "Unable to read #{iXMLContentElement.text}"
-#          return [
-#            iXMLContentElement.text,
-#            '',
-#            false
-#          ]
-#        else
-#          return [
-#            lMatch[1],
-#            lMatch[2],
-#            !lMatch[3].empty?
-#          ]
-#        end
         return [
           iXMLContentElement.elements['cmd'].text,
           iXMLContentElement.elements['dir'].text,
@@ -200,24 +182,33 @@ module PBS
         rIcon = nil
 
         # Get the icon from the executable
-        # First get the executable name
-        lExeFileName = nil
-        if (iContent[0].include?(' '))
-          lMatch = iContent[0].match(/^([^ ]*) .*$/)
-          if (lMatch == nil)
-            logBug "Invalid command parsed: #{iContent[0]}"
-          else
-            lExeFileName = lMatch[1]
-          end
-        else
-          lExeFileName = iContent[0]
+        # Test the format '"ExeName" Parameters'
+        lMatch = iContent[0].match(/^\"([^\"]*)\".*$/)
+        if (lMatch == nil)
+          lMatch = iContent[0].match(/^([^ ]*).*$/)
         end
-        if (lExeFileName != nil)
+        if (lMatch == nil)
+          logErr "Unable to get executable file name from #{iContent[0]}"
+        else
+          lExeFileName = lMatch[1]
           if (File.exists?(lExeFileName))
             # Get icon from it
-            rIcon = getBitmapFromFile(lExeFileName)
+            rIcon, lError = getBitmapFromFile(lExeFileName)
+            if (rIcon == nil)
+              logErr "Error while getting icon from #{lExeFileName}: #{lError}"
+            end
           else
-            logErr "File #{lExeFileName} does not exist. Can't get icon from it."
+            # Find lExeFileName among the path
+            lNewExeFileName = findExeInPath(lExeFileName)
+            if (lNewExeFileName == nil)
+              logErr "File #{lExeFileName} does not exist. Can't get icon from it."
+            else
+              # Get icon from it
+              rIcon, lError = getBitmapFromFile(lNewExeFileName)
+              if (rIcon == nil)
+                logErr "Error while getting icon from #{lNewExeFileName}: #{lError}"
+              end
+            end
           end
         end
 

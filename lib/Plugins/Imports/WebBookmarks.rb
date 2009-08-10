@@ -84,7 +84,10 @@ module PBS
           # Get the icon
           lIconBitmap = nil
           if (lIconFile != nil)
-            lIconBitmap = getBitmapFromFile(lIconFile, lIconIndex)
+            lIconBitmap, lError = getBitmapFromFile(lIconFile, lIconIndex)
+            if (lIconBitmap == nil)
+              logErr "Error while reading icon from #{lIconFile},#{lIconIndex}: #{lError}"
+            end
           end
           # Tags
           lNewTags = {}

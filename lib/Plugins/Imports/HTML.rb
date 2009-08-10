@@ -18,7 +18,8 @@ module PBS
       NO_INDENT_HTML_TAGS = [
         'dt', 'p', 'body', 'li', 'head', 'text', 'hr', 'meta', 'title', 'dd',
         'link', 'script', 'small', 'center', 'b', 'br', 'table', 'font', 'tr',
-        'td', 'i', 'comment'
+        'td', 'i', 'comment', 'span', '#cdata-section', 'img', 'tbody', 'code',
+        'abbr', 'select', 'option'
       ]
       # Here we list the HTML tags that add some indentation.
       # This means that when encountering such an HTML tag, we will consider the last HTML header to be the parent Tag of following items (Shortcuts/Tags), unless this HTML tag is closed.
@@ -40,7 +41,7 @@ module PBS
         showModal(Wx::FileDialog, iParentWindow,
           :message => 'Open HTML file',
           :style => Wx::FD_OPEN|Wx::FD_FILE_MUST_EXIST,
-          :wildcard => 'HTML files (*.html)|*.html'
+          :wildcard => 'HTML files (*.html;*.htm)|*.html;*.htm'
         ) do |iModalResult, iDialog|
           case iModalResult
           when Wx::ID_OK
@@ -211,8 +212,10 @@ module PBS
       # * *ioController* (_Controller_): The data model controller
       # * *iFileName* (_String_): File name
       def importHTMLData(ioController, iFileName)
-        lHTMLDoc = Nokogiri::HTML(File.open(iFileName))
-        importHTMLDataFromElement(ioController, lHTMLDoc.root, [ [ 'h0', ioController.RootTag ] ], [], false)
+        File.open(iFileName, 'r') do |iFile|
+          lHTMLDoc = Nokogiri::HTML(iFile)
+          importHTMLDataFromElement(ioController, lHTMLDoc.root, [ [ 'h0', ioController.RootTag ] ], [], false)
+        end
       end
 
     end

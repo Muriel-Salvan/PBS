@@ -5,11 +5,11 @@
 
 module PBS
 
-  module Types
+  module ShortcutCommands
 
     module Description
 
-      class URL
+      class FindIcon
 
         # Give the description of this plugin
         #
@@ -21,14 +21,14 @@ module PBS
         # ** :gemsDependencies (<em>map<String,String></em>): List of require names to satisfy, with their corresponding gem install command
         # ** :libsDependencies (<em>map<String,String></em>): List of library names to satisfy, with their corresponding URL to download from
         # ** :enabled (_Boolean_): Is this plugin enabled ?
+        # # Specific parameters to Shortcut Command plugins:
+        # ** :shortcutTypes (<em>list<String></em>): A list of Shortcuts types that this command is applicable to. Can be nil to target all types.
         def pluginInfo
           return {
-            :title => 'URL',
-            :description => 'Universal Resource Locator',
-            :bitmapName => 'Bookmark.png',
-            :gemsDependencies => {
-              'nokogiri' => 'nokogiri'
-            }
+            :title => 'Find icon',
+            :description => 'Find an appropriate icon for a Shortcut',
+            :bitmapName => 'FindIcon.png',
+            :shortcutTypes => nil
           }
         end
 

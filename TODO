@@ -60,7 +60,6 @@
 **** Command line option loading options file
 **** Find a way to not depend on a PBS locally installed Options file: USB keys can be read-only !
 **** Command line options should load .pbss files by default, without -f flag. This way it works with Explorer.
-**** Generic mechanism to gather all errors (logErr) that occur during an operation, and display them at the end.
 **** Add an option in OptionsDialog to enable/disable startup tips
 
 ** Plugins
@@ -75,7 +74,5 @@
 *** Give the possibility to remove the main window (consider the main window as a plugin and give Tray the possibility to call it back ?)
 *** XML export plugin: format output to be easily editable by hand
 *** Should run non-executable commands with the associated program (use start)
-*** The Shell Type GUI should propose an open dialog to select file to execute
-*** Some plugin commands should be applicable to only some shortcut types
-*** Implement command plugin that retrieves favicons for URL not having any icon
 *** Make a command that creates all relevant links to a SF.net project
+*** Create a plugin that scans Shortcuts for redirections and update them (see the accessFile code for handling redirections, and also handle <meta http-equiv="Refresh"> Tag if the user wants it)

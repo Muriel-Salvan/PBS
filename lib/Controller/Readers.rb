@@ -45,6 +45,10 @@ module PBS
     #   map< String, map< Symbol, Object > >
     attr_reader :IntegrationPlugins
 
+    # Shortcuts Commands plugins
+    #   map< String, map< Symbol, Object > >
+    attr_reader :ShortcutCommandsPlugins
+
     # The current type of copy (Wx::ID_COPY or Wx::ID_CUT)
     #   Integer
     attr_reader :CopiedMode

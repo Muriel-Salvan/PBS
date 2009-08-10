@@ -3,11 +3,20 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
+require 'nokogiri'
+
 module PBS
 
   module Types
 
     class URL
+
+      # Cache of Favicons per URL
+      # map< String, Wx::Bitmap >
+      @@FaviconsCache = {}
+      # Cache of servers that are down. No need to retry them
+      # map< String, nil >
+      @@ServersDownCache = {}
 
       include Tools
 
@@ -104,6 +113,90 @@ module PBS
         return iXMLContentElement.text
       end
 
+      # Get the favicon associated to a URL
+      #
+      # Parameters:
+      # * *iURL* (_String_): The URL
+      # Return:
+      # * <em>Wx::Bitmap</em>: The favicon, or nil if none
+      # * _Exception_: Exception, or nil if success
+      def getFavicon(iURL)
+        rIcon = nil
+        rError = nil
+
+        # Check if the URL is not part of a server marked as down
+        lURLMatch = iURL.match(/^(ftp|ftps|http|https):\/\/([^\/]*)\/(.*)$/)
+        if (lURLMatch == nil)
+          lURLMatch = iURL.match(/^(ftp|ftps|http|https):\/\/(.*)$/)
+        end
+        if (lURLMatch == nil)
+          logErr "Could not identify a valid URL: #{iURL}"
+        else
+          lURLProtocol, lURLServer, lURLPath = lURLMatch[1..3]
+          lURLRoot = "#{lURLProtocol}://#{lURLServer}"
+          # Check if the root URL is down
+          if (!@@ServersDownCache.has_key?(lURLRoot))
+            # Read the Shortcut itself to check if there is a link to the favicon
+            lAccessError = accessFile(iURL) do |iFileName|
+              File.open(iFileName, 'r') do |iFile|
+                lHTMLDoc = Nokogiri::HTML(iFile)
+                # Try the rel="icon" and rel="shortcut icon" attributes
+                (lHTMLDoc.xpath('//head/link[@rel="icon"]') +
+                 lHTMLDoc.xpath('//head/link[@rel="shortcut icon"]') +
+                 lHTMLDoc.xpath('//head/link[@rel="ICON"]') +
+                 lHTMLDoc.xpath('//head/link[@rel="SHORTCUT ICON"]')).each do |iLinkElement|
+                  # Found the Favicon from the web page
+                  lFaviconURL = iLinkElement.attributes['href'].to_s
+                  # Check if the URL is not a relative path to the current root
+                  lFaviconURLMatch = lFaviconURL.match(/^(ftp|ftps|http|https):\/\/(.*)$/)
+                  if (lFaviconURLMatch == nil)
+                    # It is a relative path
+                    if (lFaviconURL[0..0] == '/')
+                      lFaviconURL = "#{lURLRoot}#{lFaviconURL}"
+                    else
+                      lFaviconURL = "#{lURLRoot}/#{File.dirname(lURLPath)}/#{lFaviconURL}"
+                    end
+                  end
+                  logDebug "Found Favicon from website in URL #{lFaviconURL}"
+                  # Some websites store GIF, PNG or JPG files under extension .ico (http://xmlsoft.org/favicon.ico or http://www.gnu.org/favicon.ico)
+                  if (File.extname(lFaviconURL).upcase == '.ICO')
+                    rIcon, rError = getBitmapFromFile(lFaviconURL, nil, [ Wx::BITMAP_TYPE_ICO, Wx::BITMAP_TYPE_GIF, Wx::BITMAP_TYPE_PNG, Wx::BITMAP_TYPE_JPEG ])
+                  else
+                    rIcon, rError = getBitmapFromFile(lFaviconURL)
+                  end
+                  if (rIcon == nil)
+                    logErr "Unable to get Favicon referenced in URL #{iURL} (#{lFaviconURL}): #{rError}"
+                  else
+                    break
+                  end
+                end
+              end
+            end
+            if (lAccessError.is_a?(SocketError))
+              # This server is down.
+              @@ServersDownCache[lURLRoot] = nil
+            elsif (rIcon == nil)
+              # Now we try a worse attempt: try at the root, files named favicon.ico/png/gif
+              lExtList = [ 'ico', 'png', 'gif' ]
+              lExtList.each do |iExt|
+                lFaviconURL = "#{lURLRoot}/favicon.#{iExt}"
+                # Some websites store GIF, PNG or JPG files under extension .ico (http://xmlsoft.org/favicon.ico or http://www.gnu.org/favicon.ico)
+                if (iExt == 'ico')
+                  rIcon, rError = getBitmapFromFile(lFaviconURL, nil, [ Wx::BITMAP_TYPE_ICO, Wx::BITMAP_TYPE_GIF, Wx::BITMAP_TYPE_PNG, Wx::BITMAP_TYPE_JPEG ])
+                else
+                  rIcon, rError = getBitmapFromFile(lFaviconURL)
+                end
+                if (rIcon != nil)
+                  break
+                end
+              end
+            end
+          end
+        end
+
+        return rIcon, rError
+      end
+
       # Get the icon best reflecting the content.
       #
       # Parameters:
@@ -114,18 +207,20 @@ module PBS
         rIcon = nil
 
         # Get the favicon from the URL
-        lURLMatch = iContent.match(/^(ftp|ftps|http|https):\/\/([^\/]*)$/)
+        lURLMatch = iContent.match(/^(ftp|ftps|http|https):\/\/(.*)$/)
         if (lURLMatch == nil)
-          lURLMatch = iContent.match(/^(ftp|ftps|http|https):\/\/([^\/]*)\/(.*)$/)
-        end
-        if (lURLMatch == nil)
-          logErr "Unable to get favicon from URL #{iContent}"
+          logErr "Could not identify a valid URL: #{iContent}"
         else
-          lFaviconURL = "#{lURLMatch[1]}://#{lURLMatch[2]}/favicon.ico"
-          rIcon = getBitmapFromFile(lFaviconURL)
-          if (rIcon == nil)
-            logErr "Could not get favicon from #{lFaviconURL}"
+          # Check the cache first
+          if (!@@FaviconsCache.has_key?(iContent))
+            # Fill the cache
+            lIcon, lError = getFavicon(iContent)
+            if (lIcon == nil)
+              logErr "Could not get favicon from #{iContent}: #{lError}."
+            end
+            @@FaviconsCache[iContent] = lIcon
           end
+          rIcon = @@FaviconsCache[iContent]
         end
 
         return rIcon

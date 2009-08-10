@@ -28,22 +28,22 @@ module PBS
         lObject = iParams[:object]
         case lObjectID
         when ID_TAG
-          ioController.undoableOperation("Edit Tag #{lObject.Name}") do
-            # Now we edit lObject
-            showModal(EditTagDialog, lWindow, lObject) do |iModalResult, iDialog|
-              case iModalResult
-              when Wx::ID_OK
+          # Now we edit lObject
+          showModal(EditTagDialog, lWindow, lObject) do |iModalResult, iDialog|
+            case iModalResult
+            when Wx::ID_OK
+              ioController.undoableOperation("Edit Tag #{lObject.Name}") do
                 lNewName, lNewIcon = iDialog.getData
                 ioController.updateTag(lObject, lNewName, lNewIcon, lObject.Children)
               end
             end
           end
         when ID_SHORTCUT
-          ioController.undoableOperation("Edit Shortcut #{lObject.Metadata['title']}") do
-            # Now we edit lObject
-            showModal(EditShortcutDialog, lWindow, lObject, ioController.RootTag, ioController) do |iModalResult, iDialog|
-              case iModalResult
-              when Wx::ID_OK
+          # Now we edit lObject
+          showModal(EditShortcutDialog, lWindow, lObject, ioController.RootTag, ioController) do |iModalResult, iDialog|
+            case iModalResult
+            when Wx::ID_OK
+              ioController.undoableOperation("Edit Shortcut #{lObject.Metadata['title']}") do
                 lNewContent, lNewMetadata, lNewTags = iDialog.getData
                 ioController.updateShortcut(lObject, lNewContent, lNewMetadata, lNewTags)
               end

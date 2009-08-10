@@ -18,6 +18,23 @@ module PBS
         return OS_WINDOWS
       end
 
+      # Return the list of directories where we look for executables
+      #
+      # Return:
+      # * <em>list<String></em>: List of directories
+      def getSystemExePath
+        return ENV['PATH'].split(';')
+      end
+
+      # Return the list of file extensions that might be discretely happened to executable files.
+      # This is the optional extensions that can be happened when invoked from a terminal.
+      #
+      # Return:
+      # * <em>list<String></em>: List of extensions (including .)
+      def getDiscreteExeExtensions
+        return [ '.exe', '.com', '.bat' ]
+      end
+
       # Return the list of directories where we look for libraries
       #
       # Return:
@@ -99,6 +116,14 @@ module PBS
       # * <em>list<String></em>: List of extensions (including . character). It can be empty.
       def getExecutableExtensions
         return [ '.exe', '.com', '.bat' ]
+      end
+
+      # Get prohibited characters from file names
+      #
+      # Return:
+      # * _String_: String of prohibited characters in file names
+      def getProhibitedFileNamesCharacters
+        return '\\/:*?"<>|'
       end
 
     end

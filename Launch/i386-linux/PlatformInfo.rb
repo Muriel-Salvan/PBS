@@ -18,6 +18,23 @@ module PBS
         return OS_LINUX
       end
 
+      # Return the list of directories where we look for executables
+      #
+      # Return:
+      # * <em>list<String></em>: List of directories
+      def getSystemExePath
+        return ENV['PATH'].split(':')
+      end
+
+      # Return the list of file extensions that might be discretely happened to executable files.
+      # This is the optional extensions that can be happened when invoked from a terminal.
+      #
+      # Return:
+      # * <em>list<String></em>: List of extensions (including .)
+      def getDiscreteExeExtensions
+        return []
+      end
+
       # Return the list of directories where we look for libraries
       #
       # Return:
@@ -28,7 +45,7 @@ module PBS
         if (ENV['LD_LIBRARY_PATH'] != nil)
           rList += ENV['LD_LIBRARY_PATH'].split(':')
         end
-        
+
         return rList
       end
 
@@ -100,6 +117,15 @@ module PBS
       # * <em>list<String></em>: List of extensions (including . character). It can be empty.
       def getExecutableExtensions
         return []
+      end
+
+      # Get prohibited characters from file names
+      #
+      # Return:
+      # * _String_: String of prohibited characters in file names
+      def getProhibitedFileNamesCharacters
+        # TODO
+        return ''
       end
 
     end

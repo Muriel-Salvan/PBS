@@ -156,9 +156,11 @@ module PBS
     # Return:
     # * <em>Wx::Bitmap</em>: The Bitmap, or nil if error
     def createBitmapFromFile(iFileName)
-      rBitmap = getBitmapFromFile(iFileName)
+      rBitmap, lError = getBitmapFromFile(iFileName)
 
-      if (rBitmap != nil)
+      if (rBitmap == nil)
+        logErr "Error while getting bitmap from #{iFileName}: #{lError}"
+      else
         lNewWidth = rBitmap.width
         if (rBitmap.width > MAX_ICON_WIDTH)
           lNewWidth = MAX_ICON_WIDTH

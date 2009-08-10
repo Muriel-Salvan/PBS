@@ -31,6 +31,7 @@ module PBS
   ID_IMPORT_MERGE_BASE = 7000
   ID_EXPORT_BASE = 8000
   ID_NEW_SHORTCUT_BASE = 9000
+  ID_SHORTCUT_COMMAND_BASE = 10000
 
   # Following constants are used in options
   TAGSUNICITY_NONE = 0
@@ -173,13 +174,49 @@ module PBS
           if (lTag != nil)
             lLocationName = " in #{lTag.Name}"
           end
-          ioController.undoableOperation("Create new Shortcut#{lLocationName}") do
-            showModal(EditShortcutDialog, lWindow, nil, ioController.RootTag, ioController, lShortcutTypeInfo[:plugin], lTag) do |iModalResult, iDialog|
-              case iModalResult
-              when Wx::ID_OK
+          showModal(EditShortcutDialog, lWindow, nil, ioController.RootTag, ioController, lShortcutTypeInfo[:plugin], lTag) do |iModalResult, iDialog|
+            case iModalResult
+            when Wx::ID_OK
+              ioController.undoableOperation("Create new Shortcut#{lLocationName}") do
                 lNewContent, lNewMetadata, lNewTags = iDialog.getData
                 ioController.createShortcut(@TypePluginName, lNewContent, lNewMetadata, lNewTags)
               end
+            end
+          end
+        end
+      end
+
+    end
+
+    # Class used to factorize new Shortcut commands
+    class ShortcutPluginCommand
+
+      include Tools
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iPluginName* (_String_): The plugin ID
+      def initialize(iPluginName)
+        @PluginName = iPluginName
+      end
+
+      # Command that creates a new Shortcut via the corresponding Type plugin
+      #
+      # Parameters:
+      # * *ioController* (_Controller_): The data model controller
+      # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
+      # ** *shortcutsList* (<em>list<Shortcut></em>): List of Shortcuts for which this command was called
+      def execute(ioController, iParams)
+        lShortcutsList = iParams[:shortcutsList]
+        lShortcutCommandInfo = ioController.ShortcutCommandsPlugins[@PluginName]
+        if (lShortcutCommandInfo == nil)
+          logBug "Shortcut Command Type #{@PluginName} should have been registered, but unable to retrieve it."
+        else
+          ioController.undoableOperation("#{lShortcutCommandInfo[:title]} on #{lShortcutsList.size} Shortcuts") do
+            lShortcutsList.each do |ioShortcut|
+              # Call the plugin
+              lShortcutCommandInfo[:plugin].execute(ioController, ioShortcut)
             end
           end
         end
@@ -509,10 +546,10 @@ module PBS
               rAction = ID_MERGE_CONFLICTING
             elsif ((@Options[:tagsConflict] == TAGSCONFLICT_CANCEL) or
                    (@CurrentOperationTagsConflicts == Wx::ID_CANCEL))
-              @CurrentTransactionErrors << "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
+              logErr "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
               rAction = Wx::ID_CANCEL
             elsif (@Options[:tagsConflict] == TAGSCONFLICT_CANCEL_ALL)
-              @CurrentTransactionErrors << "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
+              logErr "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
               @CurrentTransactionToBeCancelled = true
               rAction = Wx::ID_CANCEL
             else
@@ -584,10 +621,10 @@ module PBS
               rAction = ID_MERGE_CONFLICTING
             elsif ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_CANCEL) or
                    (@CurrentOperationShortcutsConflicts == Wx::ID_CANCEL))
-              @CurrentTransactionErrors << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
+              logErr << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
               rAction = Wx::ID_CANCEL
             elsif (@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_CANCEL_ALL)
-              @CurrentTransactionErrors << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
+              logErr << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
               @CurrentTransactionToBeCancelled = true
               rAction = Wx::ID_CANCEL
             else
@@ -878,7 +915,7 @@ module PBS
       # list< Controller::UndoableOperation >
       @RedoStack = []
       # list< String >
-      @CurrentTransactionErrors = []
+      $CurrentTransactionErrors = nil
       # Boolean
       @CurrentTransactionToBeCancelled = false
       # Integer
@@ -940,6 +977,7 @@ module PBS
       @ExportPlugins = {}
       @IntegrationPlugins = {}
       @CommandPlugins = {}
+      @ShortcutCommandsPlugins = {}
 
       # Create the base of the data model:
       # * The root Tag
@@ -1009,6 +1047,7 @@ module PBS
       readPlugins(@ExportPlugins, 'Exports', lMissingDeps)
       readPlugins(@IntegrationPlugins, 'Integration', lMissingDeps, self)
       readPlugins(@CommandPlugins, 'Commands', lMissingDeps)
+      readPlugins(@ShortcutCommandsPlugins, 'ShortcutCommands', lMissingDeps)
 
       # Check missing deps
       if (!lMissingDeps.empty?)
@@ -1121,6 +1160,19 @@ module PBS
           :parameters => [
             :tag,
             :parentWindow
+          ]
+        }
+      end
+      # Create commands for each Shortcut command plugin
+      @ShortcutCommandsPlugins.each do |iPluginID, iPluginInfo|
+        @Commands[ID_SHORTCUT_COMMAND_BASE + iPluginInfo[:index]] = {
+          :title => iPluginInfo[:title],
+          :description => iPluginInfo[:description],
+          :bitmap => iPluginInfo[:bitmap],
+          :plugin => ShortcutPluginCommand.new(iPluginID),
+          :accelerator => iPluginInfo[:accelerator],
+          :parameters => [
+            :shortcutsList
           ]
         }
       end

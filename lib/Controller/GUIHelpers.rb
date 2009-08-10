@@ -94,7 +94,7 @@ module PBS
     # Parameters:
     # * *iMenu* (<em>Wx::Menu</em>): Menu to which the menu item belongs.
     # * *iCommandID* (_Integer_): The command ID of the menu item
-    # * *iGUITitle* (_String_): The title
+    # * *iGUITitle* (_String_): The title (can be nil to remove overiding the normal title)
     def setMenuItemGUITitle(iMenu, iCommandID, iGUITitle)
       findRegisteredMenuItemParams(iMenu, iCommandID) do |ioParams|
         ioParams[:GUITitle] = iGUITitle

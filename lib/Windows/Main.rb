@@ -256,6 +256,54 @@ module PBS
         else
           refreshPaste(lSelection)
         end
+        # Shortcut Command Plugins
+        @Controller.ShortcutCommandsPlugins.each do |iPluginID, iPluginInfo|
+          lCommandID = ID_SHORTCUT_COMMAND_BASE + iPluginInfo[:index]
+          if ((!lSelection.SelectedPrimaryShortcuts.empty?) or
+              (!lSelection.SelectedSecondaryShortcuts.empty?))
+            # Is the plugin available ?
+            lAvailable = false
+            if (iPluginInfo[:shortcutTypes] == nil)
+              # This command is available
+              lAvailable = true
+            else
+              (lSelection.SelectedPrimaryShortcuts + lSelection.SelectedSecondaryShortcuts).each do |iSelectedShortcutInfo|
+                iSelectedShortcut, iParentTag = iSelectedShortcutInfo
+                if (iPluginInfo[:shortcutTypes].include?(iSelectedShortcut.Type.pluginName))
+                  # there is at least 1 Shortcut that is eligible.
+                  lAvailable = true
+                  break
+                end
+              end
+            end
+            if (lAvailable)
+              @Controller.setMenuItemGUIEnabled(@ShortcutCommandsMenu, lCommandID, true)
+              @Controller.setMenuItemGUITitle(@ShortcutCommandsMenu, lCommandID, nil)
+              lButton = @ToolBar.find_by_id(ID_NEW_TAG)
+              if (lButton != nil)
+                @Controller.setToolbarButtonGUIEnabled(lButton, lCommandID, true)
+                @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_EDIT, nil)
+              end
+            else
+              @Controller.setMenuItemGUIEnabled(@ShortcutCommandsMenu, lCommandID, false)
+              @Controller.setMenuItemGUITitle(@ShortcutCommandsMenu, lCommandID, "#{iPluginInfo[:title]}: No applicable Shortcut")
+              lButton = @ToolBar.find_by_id(ID_NEW_TAG)
+              if (lButton != nil)
+                @Controller.setToolbarButtonGUIEnabled(lButton, lCommandID, false)
+                @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_EDIT, "#{iPluginInfo[:title]}: No applicable Shortcut")
+              end
+            end
+          else
+            # No Shortcut selected
+            @Controller.setMenuItemGUIEnabled(@ShortcutCommandsMenu, lCommandID, false)
+            @Controller.setMenuItemGUITitle(@ShortcutCommandsMenu, lCommandID, "#{iPluginInfo[:title]}: No Shortcut selected")
+            lButton = @ToolBar.find_by_id(ID_NEW_TAG)
+            if (lButton != nil)
+              @Controller.setToolbarButtonGUIEnabled(lButton, lCommandID, false)
+              @Controller.setToolbarButtonGUITitle(lButton, Wx::ID_EDIT, "#{iPluginInfo[:title]}: No Shortcut selected")
+            end
+          end
+        end
       end
     end
 
@@ -483,6 +531,34 @@ module PBS
         end
       end
       @EditMenu.append_sub_menu(@NewShortcutMenu, 'New Shortcut')
+      @EditMenu.append_separator
+      @ShortcutCommandsMenu = Wx::Menu.new
+      @Controller.ShortcutCommandsPlugins.each do |iPluginID, iPluginInfo|
+        addMenuCommand(@ShortcutCommandsMenu, ID_SHORTCUT_COMMAND_BASE + iPluginInfo[:index]) do |iEvent, oValidator|
+          # Here, we are sure the selection accepts this command
+          lSelection = @TCMainTree.getCurrentSelection
+          # Set of selected Shortcuts
+          # map< Shortcut, nil >
+          lSelectedShortcuts = {}
+          (lSelection.SelectedPrimaryShortcuts + lSelection.SelectedSecondaryShortcuts).each do |iSelectedShortcutInfo|
+            iSelectedShortcut, iParentTag = iSelectedShortcutInfo
+            lSelectedShortcuts[iSelectedShortcut] = nil
+          end
+          # And now call the command for each Shortcut that is filtered by the :shortcutTypes attribute of the plugin
+          lShortcutsList = []
+          lSelectedShortcuts.each do |iShortcut, iNil|
+            if ((iPluginInfo[:shortcutTypes] == nil) or
+                (iPluginInfo[:shortcutTypes].include?(iShortcut.Type.pluginName)))
+              lShortcutsList << iShortcut
+            end
+          end
+          oValidator.authorizeCmd(
+            :shortcutsList => lShortcutsList
+          )
+        end
+      end
+      @EditMenu.append_sub_menu(@ShortcutCommandsMenu, 'Shortcuts operations')
+
       # Tools menu
       lToolsMenu = Wx::Menu.new
       addMenuCommand(lToolsMenu, Wx::ID_SETUP) do |iEvent, oValidator|

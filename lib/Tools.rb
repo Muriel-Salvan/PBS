@@ -119,6 +119,39 @@ module PBS
       return rBitmap
     end
 
+    # Find an executable file in the system path directories.
+    # It uses discrete extensions also, platform specific (for example optional .exe suffix for Windows)
+    #
+    # Parameters:
+    # * *iExeName* (_String_): Name of file to search for
+    # Return:
+    # * _String_: The real complete file name, or nil if none found.
+    def findExeInPath(iExeName)
+      rFileName = nil
+
+      $PBS_Platform.getSystemExePath.each do |iDir|
+        # First, check the file itself
+        if (File.exists?("#{iDir}/#{iExeName}"))
+          # Found
+          rFileName = "#{iDir}/#{iExeName}"
+        else
+          # Check possible extensions
+          $PBS_Platform.getDiscreteExeExtensions.each do |iDiscreteExt|
+            if (File.exists?("#{iDir}/#{iExeName}#{iDiscreteExt}"))
+              # Found
+              rFileName = "#{iDir}/#{iExeName}#{iDiscreteExt}"
+              break
+            end
+          end
+        end
+        if (rFileName != nil)
+          break
+        end
+      end
+
+      return rFileName
+    end
+
     # Get a bitmap resized to a given size if it differs from it
     #
     # Parameters:
@@ -536,13 +569,17 @@ Stack:
       if ($PBS_LogFile != nil)
         Tools::logFile(iMsg)
       end
-      # Display dialog
-      showModal(Wx::MessageDialog, nil,
-        iMsg,
-        :caption => 'Error',
-        :style => Wx::OK|Wx::ICON_ERROR
-      ) do |iModalResult, iDialog|
-        # Nothing to do
+      # Display dialog only if we are not in a transaction
+      if ($CurrentTransactionErrors == nil)
+        showModal(Wx::MessageDialog, nil,
+          iMsg,
+          :caption => 'Error',
+          :style => Wx::OK|Wx::ICON_ERROR
+        ) do |iModalResult, iDialog|
+          # Nothing to do
+        end
+      else
+        $CurrentTransactionErrors << iMsg
       end
     end
 
@@ -698,16 +735,6 @@ Stack:
       lDialog.destroy
     end
 
-    # Return a valid file name based on a String
-    #
-    # Parameters:
-    # * *iName* (_String_): The initial string
-    # Return:
-    # * _String_: The valid file name
-    def getValidFileName(iName)
-      return iName.gsub(/[\\\/:\*?"<>|]/,'_')
-    end
-
     # Create a standard URI for a given bitmap
     # If the bitmap is nil, return an empty URI with header.
     #
@@ -767,6 +794,16 @@ Stack:
       return rIconBitmap
     end
 
+    # Get a valid file name, taking into account platform specifically prohibited characters in file names.
+    #
+    # Parameters:
+    # * *iFileName* (_String_): The original file name wanted
+    # Return:
+    # * _String_: The correct file name
+    def getValidFileName(iFileName)
+      return iFileName.gsub(/[#{Regexp.escape($PBS_Platform.getProhibitedFileNamesCharacters)}]/, '_')
+    end
+
     # Access a file: it calls a code block with a local file name corresponding to the file we want to read.
     # For local files, this is obvious.
     # For URLs, download first file from a URL into a temporary file, and execute a code on it.
@@ -774,49 +811,88 @@ Stack:
     #
     # Parameters:
     # * *iFileURL* (_String_): The file URL to download
+    # * *iNbrAttempts* (_Integer_): Number of recursive times accessFile is called [optional = 0]
     # * *CodeBlock*: The code invoked if the temporary file exists:
     # ** *iFileName* (_String_): Name of the local temporary file
     # Return:
-    # * _Boolean_: Success ?
-    def accessFile(iFileURL)
-      rSuccess = false
+    # * _Exception_: Exception that contains details about the error, or nil if success
+    def accessFile(iFileURL, iNbrAttempts = 0)
+      rError = nil
 
+      logDebug "Accessing file #{iFileURL}"
       lFileName = nil
       lTemporary = false
+      lSkip = false
       lHTTPMatch = iFileURL.match(/^(http|https):\/\/([^\/]*)\/(.*)$/)
+      if (lHTTPMatch == nil)
+        lHTTPMatch = iFileURL.match(/^(http|https):\/\/([^\/]*)$/)
+      end
       if (lHTTPMatch != nil)
-        lHTTPServer, lHTTPPath = lHTTPMatch[2..3]
-        # Keep the extension in the temporary file
-        lFileName = "#{Dir.tmpdir}/PBS_#{self.object_id}#{File.extname(iFileURL)}"
+        lHTTPProtocol, lHTTPServer, lHTTPPath = lHTTPMatch[1..3]
         # Download iFileURL to lFileName
         begin
           Net::HTTP.start(lHTTPServer) do |iHTTPConnection|
             lResponse = iHTTPConnection.get("/#{lHTTPPath}")
-            File.open(lFileName, 'wb') do |oFile|
-              oFile.write(lResponse.body)
+            if (lResponse.is_a?(Net::HTTPRedirection))
+              # We access the file through a new URL
+              lNewURL = lResponse['location']
+              lNewURLMatch = lNewURL.match(/^(ftp|ftps|http|https):\/\/(.*)$/)
+              if (lNewURLMatch == nil)
+                if (lNewURL[0..0] == '/')
+                  lNewURL = "#{lHTTPProtocol}://#{lHTTPServer}#{lNewURL}"
+                else
+                  lNewURL = "#{lHTTPProtocol}://#{lHTTPServer}/#{File.dirname(lHTTPPath)}/#{lNewURL}"
+                end
+              end
+              # Handle too much redirections (cycles)
+              if (lNewURL.upcase == iFileURL.upcase)
+                raise RuntimeError, "Redirecting to the same URL: #{iFileURL}"
+              elsif (iNbrAttempts > 10)
+                raise RuntimeError, "Too much URL redirections for #{iFileURL}"
+              else
+                rError = accessFile(lNewURL, iNbrAttempts + 1) do |iFileName|
+                  yield(iFileName)
+                end
+              end
+              # We don't need to process here anymore
+              lSkip = true
+            else
+              # We have the web page: write it in a temporary file
+              # Keep the extension for the temporary file
+              lFileName = getValidFileName("#{Dir.tmpdir}/PBS_#{self.object_id}#{File.extname(iFileURL).gsub(/^([^#\?]*).*$/,'\1')}")
+              logDebug "URL #{iFileURL} => Temporary file #{lFileName}"
+              File.open(lFileName, 'wb') do |oFile|
+                oFile.write(lResponse.body)
+              end
+              lTemporary = true
             end
           end
-          lTemporary = true
         rescue Exception
-          logErr "Exception while downloading file #{iFileURL}: #{$!}"
+          rError = $!
           lFileName = nil
+          logDebug "Error accessing #{iFileURL}: #{rError}"
         end
       else
         lFTPMatch = iFileURL.match(/^(ftp|ftps):\/\/([^\/]*)\/(.*)$/)
+        if (lFTPMatch == nil)
+          lFTPMatch = iFileURL.match(/^(ftp|ftps):\/\/([^\/]*)$/)
+        end
         if (lFTPMatch != nil)
           lFTPServer, lFTPPath = lFTPMatch[2..3]
-          lFileName = "#{Dir.tmpdir}/PBS_#{self.object_id}#{File.extname(iFileURL)}"
           # Download iFileURL to lFileName
           begin
             lFTPConnection = Net::FTP.new(lFTPServer)
             lFTPConnection.login
             lFTPConnection.chdir(File.dirname(lFTPPath))
+            lFileName = getValidFileName("#{Dir.tmpdir}/PBS_#{self.object_id}#{File.extname(iFileURL).gsub(/^([^#\?]*).*$/,'\1')}")
+            logDebug "URL #{iFileURL} => Temporary file #{lFileName}"
             lFTPConnection.getbinaryfile(File.basename(lFTPPath), lFileName)
             lFTPConnection.close
             lTemporary = true
           rescue Exception
-            logerr "Exception while retrieving icon from #{iFileName}: #{$!}. Ignoring this icon."
+            rError = $!
             lFileName = nil
+            logDebug "Error accessing #{iFileURL}: #{rError}"
           end
         else
           lLocalFileMatch = iFileURL.match(/^file:\/\/\/(.*)$/)
@@ -824,20 +900,25 @@ Stack:
             lFileName = lLocalFileMatch[1]
           else
             # Assume it is a local file
-            lFileName = iFileURL
+            # Test its existence
+            if (File.exists?(iFileURL))
+              lFileName = iFileURL
+            else
+              rError = Errno::ENOENT.new(iFileURL)
+            end
           end
         end
       end
-      if (lFileName != nil)
+      if ((!lSkip) and
+          (lFileName != nil))
         yield(lFileName)
-        rSuccess = true
         # Delete the temporary file
         if (lTemporary)
           File.unlink(lFileName)
         end
       end
 
-      return rSuccess
+      return rError
     end
 
     # Extract a Zip archive in a given system dependent lib sub-directory
@@ -879,67 +960,79 @@ Stack:
     # Parameters:
     # * *iFileName* (_String_): The file name
     # * *iIconIndex* (_Integer_): Specify the icon index (used by Windows for EXE/DLL/ICO...) [optional = nil]
-    # * *iBitmapType* (_Integer_): Bitmap/Icon type. Can be nil for autodetection. [optional = nil]
+    # * *iBitmapTypes* (_Integer_ or <em>list<Integer></em>): Bitmap/Icon type. Can be nil for autodetection. Can be the list of types to try. [optional = nil]
     # Return:
     # * <em>Wx::Bitmap</em>: The bitmap, or nil in case of failure
-    def getBitmapFromFile(iFileName, iIconIndex = nil, iBitmapType = nil)
+    # * _Exception_: The exception containing details about the error, or nil in case of success
+    def getBitmapFromFile(iFileName, iIconIndex = nil, iBitmapTypes = nil)
       rBitmap = nil
+      rError = nil
 
-      lBitmapType = iBitmapType
-      if (iBitmapType == nil)
+      lBitmapTypesToTry = iBitmapTypes
+      if (iBitmapTypes == nil)
         # Autodetect
         case File.extname(iFileName).upcase
         when '.PNG'
-          lBitmapType = Wx::BITMAP_TYPE_PNG
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_PNG ]
         when '.GIF'
-          lBitmapType = Wx::BITMAP_TYPE_GIF
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_GIF ]
         when '.JPG', '.JPEG'
-          lBitmapType = Wx::BITMAP_TYPE_JPEG
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_JPEG ]
         when '.PCX'
-          lBitmapType = Wx::BITMAP_TYPE_PCX
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_PCX ]
         when '.PNM'
-          lBitmapType = Wx::BITMAP_TYPE_PNM
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_PNM ]
         when '.XBM'
-          lBitmapType = Wx::BITMAP_TYPE_XBM
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_XBM ]
         when '.XPM'
-          lBitmapType = Wx::BITMAP_TYPE_XPM
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_XPM ]
         when '.BMP'
-          lBitmapType = Wx::BITMAP_TYPE_BMP
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_BMP ]
         when '.ICO', '.CUR', '.ANI', '.EXE', '.DLL'
-          lBitmapType = Wx::BITMAP_TYPE_ICO
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_ICO ]
         else
           logErr "Unable to determine the bitmap type corresponding to extension #{File.extname(iFileName).upcase}. Assuming ICO."
-          lBitmapType = Wx::BITMAP_TYPE_ICO
+          lBitmapTypesToTry = [ Wx::BITMAP_TYPE_ICO ]
         end
+      elsif (!iBitmapTypes.is_a?(Array))
+        lBitmapTypesToTry = [ iBitmapTypes ]
       end
       # iFileName can be a URL or whatever
       accessFile(iFileName) do |iRealFileName|
-        # Special case for the ICO type
-        if (lBitmapType == Wx::BITMAP_TYPE_ICO)
-          lIconID = iRealFileName
-          if ((iIconIndex != nil) and
-              (iIconIndex != 0))
-            # TODO: Currently this implementation does not work. Uncomment when ok.
-            #lIconID += ";#{iIconIndex}"
+        lBitmapTypesToTry.each do |iBitmapType|
+          # Special case for the ICO type
+          if (iBitmapType == Wx::BITMAP_TYPE_ICO)
+            lIconID = iRealFileName
+            if ((iIconIndex != nil) and
+                (iIconIndex != 0))
+              # TODO: Currently this implementation does not work. Uncomment when ok.
+              #lIconID += ";#{iIconIndex}"
+            end
+            rBitmap = Wx::Bitmap.new
+            begin
+              rBitmap.copy_from_icon(Wx::Icon.new(lIconID, Wx::BITMAP_TYPE_ICO))
+            rescue Exception
+              rError = $!
+              rBitmap = nil
+            end
+          else
+            rBitmap = Wx::Bitmap.new(iRealFileName, iBitmapType)
           end
-          rBitmap = Wx::Bitmap.new
-          begin
-            rBitmap.copy_from_icon(Wx::Icon.new(lIconID, Wx::BITMAP_TYPE_ICO))
-          rescue Exception
-            logBug "Error while loading icon from #{lIconID}: #{$!}. Ignoring it."
+          if ((rBitmap != nil) and
+              (rBitmap.is_ok))
+            break
+          else
             rBitmap = nil
           end
-        else
-          rBitmap = Wx::Bitmap.new(iRealFileName, lBitmapType)
         end
       end
-      # Check if it is ok
-      if (!rBitmap.is_ok)
-        rBitmap = nil
-        logErr "Unable to get bitmap from #{iFileName}"
+      # Check if it is ok and the error set correctly
+      if ((rBitmap == nil) and
+          (rError == nil))
+        rError = RuntimeError.new("Unable to get bitmap from #{iFileName}")
       end
 
-      return rBitmap
+      return rBitmap, rError
     end
 
     # Check if we can import a serialized selection (from local or external source) in a given Tag.
