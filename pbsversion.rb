@@ -8,7 +8,7 @@
 module PBS
 
   # Program version
-  $PBS_VERSION = '0.0.4.20090717'
+  $PBS_VERSION = '0.0.5.20090810'
 
   # Tags linked to this version
   $PBS_VERSION_TAGS = [

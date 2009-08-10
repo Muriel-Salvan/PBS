@@ -61,6 +61,8 @@
 **** Find a way to not depend on a PBS locally installed Options file: USB keys can be read-only !
 **** Command line options should load .pbss files by default, without -f flag. This way it works with Explorer.
 **** Add an option in OptionsDialog to enable/disable startup tips
+**** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + implement visual progressions + hierarchical transactions.
+**** Get a way to use smooth scaling for bitmaps.
 
 ** Plugins
 *** Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
@@ -76,3 +78,6 @@
 *** Should run non-executable commands with the associated program (use start)
 *** Make a command that creates all relevant links to a SF.net project
 *** Create a plugin that scans Shortcuts for redirections and update them (see the accessFile code for handling redirections, and also handle <meta http-equiv="Refresh"> Tag if the user wants it)
+*** Create a type plugin that executes some program differently depending on the platform it is run on.
+*** Create a type plugin that executes given files on different ways depending on the platform it is run on.
+*** Add options to the FindIcon shortcut command plugin: Replace already set icons ?

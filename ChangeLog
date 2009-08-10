@@ -1,5 +1,47 @@
 = PBS Release History
 
+== 0.0.5.20090810 (Alpha)
+
+=== Important notice ===
+
+This release breaks some compatibility with previous ones:
+* Options files (*.pbso) are not compatible anymore with previous versions. If you have already installed and used a previous version of PBS, please delete the Options.pbso file at your PBS directory before running PBS 0.0.5.
+
+=== Shortcut commands ===
+
+* Implemented plugin mechanism for shortcuts commands.
+* Some plugin commands should be applicable to only some shortcut types.
+
+=== Plugins ===
+
+* Implemented shortcut command plugin that finds icons based on files, favicons...
+* Relative paths of favicons are from the URL current directory, not from the root
+* Find along PATH to get commands that are not specified with their path for icons research of type Shell
+* HTML import plugin: added some missing HTML tags
+* Tray: Set the Tray icon hint text to the integrated Tag name
+* Tray: Adding option of size of icons in menu (different sizes for items in first menu than in consecutive ones)
+
+=== Linux ===
+
+* Changed big Ruby cases (more than 490 'when' clauses) that prevented Ruby on Linux to parse source code (yacc stack overflow error).
+* Failed attempt to run PBS on Linux Fedora 11 (Couldn't make wxRuby work on Linux, and couldn't compile wxGTK-gl either). Will retry later.
+
+=== Other ===
+
+* Generic mechanism to gather all errors (logErr) that occur during an operation, and display them at the end of each operation.
+* Valid file names are now platform specifics
+* Transactions can be cascaded without errors.
+* accessFile can handle URL redirections and cycles.
+* Added some more log debugs that can be useful when dealing with URLs.
+* Changed logBug error while loading an icon into logErr as user can select invalid files.
+* Added a way to get the default icon from a given content (favicon, program icon...)
+
+=== Bug corrections ===
+
+* Bug correction (#2818896): Error message when Windows exits
+* Bug correction (#2829715): Startup integration plugins instances fail on given Tags
+* Bug correction (#2832720): First new Shortcut element does not appear
+
 == 0.0.4.20090717 (Alpha)
 
 === Important notice ===
