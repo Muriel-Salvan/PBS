@@ -363,17 +363,27 @@ module PBS
       super(iParent)
       @Controller = iController
 
+      # Are we closing the main window ?
+      lClosingMain = false
+
       # The close event
       evt_close do |iEvent|
-        # Reset this variable
-        $PBS_Exiting = nil
-        @Controller.executeCommand(Wx::ID_EXIT, {
-          :parentWindow => self
-        })
-        if ($PBS_Exiting == nil)
-          # There was a problem. Log it and close.
-          logBug "An error occurred while closing. Forcing close."
-          self.destroy
+        # Make sure we don't fall twice in this peace of code
+        if (!lClosingMain)
+          lClosingMain = true
+          # Reset this variable
+          $PBS_Exiting = nil
+          @Controller.executeCommand(Wx::ID_EXIT, {
+            :parentWindow => self
+          })
+          if ($PBS_Exiting == nil)
+            # There was a problem. Log it and close.
+            logBug "An error occurred while closing. Forcing close."
+            self.destroy
+          elsif (!$PBS_Exiting)
+            # We canceled deliberately the closure
+            lClosingMain = false
+          end
         end
       end
 

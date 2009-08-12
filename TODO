@@ -2,9 +2,7 @@
 ** Write a complete User Guide.
 ** Write a complete Developer Guide.
 ** Change donations message
-** Inform users about memory footprint and tell them how to work around it
 ** Create FAQ
-** Create forum items for my private list
 
 * Testing
 ** REGRESSION
@@ -61,8 +59,9 @@
 **** Find a way to not depend on a PBS locally installed Options file: USB keys can be read-only !
 **** Command line options should load .pbss files by default, without -f flag. This way it works with Explorer.
 **** Add an option in OptionsDialog to enable/disable startup tips
-**** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + implement visual progressions + hierarchical transactions.
+**** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + implement visual progressions + hierarchical transactions + Use it for a splash screen, as startup might be slow..
 **** Get a way to use smooth scaling for bitmaps.
+**** Get a Shortcut's title from its content (the same way we get the icon). Maybe more generally, fill its whole metadata from its content.
 
 ** Plugins
 *** Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
