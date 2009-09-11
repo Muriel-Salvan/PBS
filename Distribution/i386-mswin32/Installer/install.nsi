@@ -15,7 +15,7 @@
 Name "PBS"
 Caption "PBS: Portable Bookmarks and Shortcuts"
 Icon "Icon.ico"
-OutFile "PBS_${VERSION}_Setup.exe"
+OutFile "setup.exe"
 
 ;--------------------------------
 ; Compiler tuner

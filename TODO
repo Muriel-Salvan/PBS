@@ -11,14 +11,6 @@
 
 ** Core
 
-*** DependenciesLoader
-**** In the dependenciesloader dialog, test internet connection before proposing installing Gems and Dlls.
-**** Externalize the dependencies loader in a separate package
-**** Use the dependencies loader to get main dependencies (rubyzip...)
-**** DependenciesLoaderDialog: The tree should have a little context menu for setting the decisions to ignore/specify directory/install-><Different locations>
-**** Implement a better looking ProgessDialog for DependenciesLoaderDialog
-**** Optionally remember plugins that we want to ignore always (if not installed), and set a way in options to remove them from the forget list.
-
 *** Main window
 **** Find has to be integrated in the toolbar also.
 **** Drop files on the main tree for URL shortcuts, files shortcuts
@@ -29,11 +21,9 @@
 **** Accept Drop of Windows Shortcuts
 **** Set recently opened files in the File menu
 **** In the main tree, F2 should edit the label
-**** Put in the main window Edit menu the ability to run a Shortcut
 **** Sort Tags tree in the EditShortcut dialog
 
 *** Other
-**** Gather all errors during startup, and display them all once startup is finished.
 **** ProgressBar during open/import/paste (in the common method)
 **** External library directories have to be customizable in the options
 **** Types config
@@ -53,15 +43,12 @@
 **** Find a way for people to vote for their most important bugs to correct
 **** Replace all extensions removal made with [0..-6] with File.extname(...).size
 **** Replace TODOs in README file
-**** Implement Send bug reports in BugReportDialog
-**** Give ability to load several files on startup (Open & Merge behaviour)
 **** Command line option loading options file
 **** Find a way to not depend on a PBS locally installed Options file: USB keys can be read-only !
-**** Command line options should load .pbss files by default, without -f flag. This way it works with Explorer.
 **** Add an option in OptionsDialog to enable/disable startup tips
-**** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + implement visual progressions + hierarchical transactions + Use it for a splash screen, as startup might be slow..
 **** Get a way to use smooth scaling for bitmaps.
-**** Get a Shortcut's title from its content (the same way we get the icon). Maybe more generally, fill its whole metadata from its content.
+**** Optionally remember plugins that we want to ignore always (if not installed), and set a way in options to remove them from the forget list.
+**** Register/unregister instances of Integration plugins to the Controller's GUIs.
 
 ** Plugins
 *** Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
@@ -72,11 +59,20 @@
 *** Export plugins should log success or failure
 *** When never saved, command Save should trigger SaveAs.
 *** Give plugins mechanism for additional tools (commands)
-*** Give the possibility to remove the main window (consider the main window as a plugin and give Tray the possibility to call it back ?)
 *** XML export plugin: format output to be easily editable by hand
 *** Should run non-executable commands with the associated program (use start)
 *** Make a command that creates all relevant links to a SF.net project
 *** Create a plugin that scans Shortcuts for redirections and update them (see the accessFile code for handling redirections, and also handle <meta http-equiv="Refresh"> Tag if the user wants it)
-*** Create a type plugin that executes some program differently depending on the platform it is run on.
 *** Create a type plugin that executes given files on different ways depending on the platform it is run on.
 *** Add options to the FindIcon shortcut command plugin: Replace already set icons ?
+
+
+
+
+* TODO quickly
+**** Get a Shortcut's title from its content (the same way we get the icon). Maybe more generally, fill its whole metadata from its content.
+**** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + implement visual progressions + hierarchical transactions + Use it for a splash screen, as startup might be slow..
+*** Give the possibility to remove the main window (consider the main window as a plugin and give Tray the possibility to call it back ?)
+*** Create a type plugin that executes some program differently depending on the platform it is run on.
+**** Put in the main window Edit menu the ability to run a Shortcut
++ STTODO
