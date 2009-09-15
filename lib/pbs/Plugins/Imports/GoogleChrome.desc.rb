@@ -13,8 +13,6 @@ require 'pbs/Plugins/Deps_SQLite3'
   :Title => 'Google Chrome',
   :Description => 'Import Shortcuts from current Google Chrome profile',
   :BitmapName => 'GoogleChrome.png',
-  :Dependencies => [
-    PBS.getSQLite3DepDesc
-  ],
+  :Dependencies => PBS.getSQLite3Dependencies,
   :Enabled => ($rUtilAnts_Platform_Info.os == OS_WINDOWS)
 }

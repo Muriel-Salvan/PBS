@@ -8,8 +8,8 @@ module PBS
   # Get the dependency description of SQLite3
   #
   # Return:
-  # * <em>RDI::Model::DependencyDescription</em>: The dependency description
-  def self.getSQLite3DepDesc
+  # * <em>list<RDI::Model::DependencyDescription></em>: The dependencies descriptions
+  def self.getSQLite3Dependencies
     lLibDepDesc = nil
     case $rUtilAnts_Platform_Info.os
     when OS_WINDOWS
@@ -35,7 +35,8 @@ module PBS
       }
     # TODO: Specify for other OS
     end
-    return RDI::Model::DependencyDescription.new('SQLite 3').addDescription( {
+    return [
+      RDI::Model::DependencyDescription.new('Ruby-SQLite3').addDescription( {
       :Testers => [
         {
           :Type => 'RubyRequires',
@@ -54,7 +55,9 @@ module PBS
           ]
         }
       ]
-    } ).addDescription(lLibDepDesc)
+    } ),
+      RDI::Model::DependencyDescription.new('SQLite 3 Library').addDescription(lLibDepDesc)
+    ]
   end
 
 end

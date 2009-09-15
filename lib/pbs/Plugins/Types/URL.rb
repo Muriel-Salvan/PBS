@@ -161,7 +161,7 @@ module PBS
           lURLRoot = "#{lURLProtocol}://#{lURLServer}"
           # Get the HTML content
           lHTMLContent, rError = getURLContent(iURL) do |iContent|
-            return iContent, nil
+            next iContent, nil
           end
           lHTMLDoc = Nokogiri::HTML(lHTMLContent)
           # Try the rel="icon" and rel="shortcut icon" attributes

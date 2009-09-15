@@ -145,12 +145,8 @@ module PBS
             if (ioInstance != nil)
               # We have to delete the instance
               logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
-              begin
-                accessIntegrationPlugin(iPluginID) do |iPlugin|
-                  iPlugin.deleteInstance(self, ioInstance)
-                end
-              rescue Exception
-                logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+              accessIntegrationPlugin(iPluginID) do |iPlugin|
+                iPlugin.deleteInstance(self, ioInstance)
               end
             end
           end

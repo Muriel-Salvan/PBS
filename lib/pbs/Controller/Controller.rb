@@ -97,13 +97,8 @@ module PBS
         if (@Merge)
           ioController.Merging = true
         end
-        # Protect with exception
-        begin
-          ioController.accessImportPlugin(@ImportPluginName) do |iPlugin|
-            iPlugin.execute(ioController, iParams[:parentWindow])
-          end
-        rescue Exception
-          logExc $!, "Plugin Imports/#{@ImportPluginName} threw an exception during execution."
+        ioController.accessImportPlugin(@ImportPluginName) do |iPlugin|
+          iPlugin.execute(ioController, iParams[:parentWindow])
         end
         if (@Merge)
           ioController.Merging = false
@@ -130,12 +125,8 @@ module PBS
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
       # ** *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
       def execute(iController, iParams)
-        begin
-          iController.accessExportPlugin(@ExportPluginName) do |iPlugin|
-            iPlugin.execute(iController, iParams[:parentWindow])
-          end
-        rescue Exception
-          logExc $!, "Plugin Exports/#{@ImportPluginName} threw an exception"
+        iController.accessExportPlugin(@ExportPluginName) do |iPlugin|
+          iPlugin.execute(iController, iParams[:parentWindow])
         end
       end
 
@@ -162,31 +153,20 @@ module PBS
       def execute(ioController, iParams)
         lWindow = iParams[:parentWindow]
         lTag = iParams[:tag]
-        begin
-          ioController.accessTypesPlugin(@TypePluginName) do |iTypePlugin|
-            lLocationName = ''
-            if (lTag != nil)
-              lLocationName = " in #{lTag.Name}"
-            end
-            showModal(EditShortcutDialog, lWindow, nil, ioController.RootTag, ioController, iTypePlugin, lTag) do |iModalResult, iDialog|
-              case iModalResult
-              when Wx::ID_OK
-                ioController.undoableOperation("Create new Shortcut#{lLocationName}") do
-                  lNewContent, lNewMetadata, lNewTags = iDialog.getData
-                  ioController.createShortcut(@TypePluginName, lNewContent, lNewMetadata, lNewTags)
-                end
+        ioController.accessTypesPlugin(@TypePluginName) do |iTypePlugin|
+          lLocationName = ''
+          if (lTag != nil)
+            lLocationName = " in #{lTag.Name}"
+          end
+          showModal(EditShortcutDialog, lWindow, nil, ioController.RootTag, ioController, iTypePlugin, lTag) do |iModalResult, iDialog|
+            case iModalResult
+            when Wx::ID_OK
+              ioController.undoableOperation("Create new Shortcut#{lLocationName}") do
+                lNewContent, lNewMetadata, lNewTags = iDialog.getData
+                ioController.createShortcut(@TypePluginName, lNewContent, lNewMetadata, lNewTags)
               end
             end
           end
-        rescue PluginDependenciesIgnoredError
-          # That was cancelled on purpose by the user (ignoring dependencies)
-          logErr $!
-        rescue PluginDependenciesUnresolvedError
-          # The user is aware if those unresolved dependencies
-          logErr $!
-        rescue Exception
-          # This is not normal
-          logExc $!, "Error while loading plugin #{@TypePluginName}: #{$!}"
         end
       end
 
@@ -360,6 +340,34 @@ module PBS
     # Do we merge the next command launched ?
     #   Boolean
     attr_accessor :Merging
+
+    # Give access to a plugin.
+    # Handle exceptions with logErr, logBug and logExc
+    #
+    # Parameters:
+    # * *iCategoryName* (_String_): Category of the plugin to access
+    # * *iPluginName* (_String_): Name of the plugin to access
+    # * *iParameters* (<em>map<Symbol,Object></em>): Additional parameters:
+    # ** *OnlyIfExtDepsResolved* (_Boolean_): Do we return the plugin only if there is no need to install external dependencies ? [optional = false]
+    # ** *RDIInstaller* (<em>RDI::Installer</em>): The RDI installer if available, or nil otherwise [optional = nil]
+    # * *CodeBlock*: The code called when the plugin is found:
+    # ** *ioPlugin* (_Object_): The corresponding plugin
+    def accessPlugin_Protected(iCategoryName, iPluginName)
+      begin
+        accessPlugin(iCategoryName, iPluginName) do |ioPlugin|
+          yield(ioPlugin)
+        end
+      rescue PluginDependenciesIgnoredError
+        # That was cancelled on purpose by the user (ignoring dependencies)
+        logErr $!
+      rescue PluginDependenciesUnresolvedError
+        # The user is aware if those unresolved dependencies
+        logErr $!
+      rescue Exception
+        # This is not normal
+        logExc $!, "Error while loading plugin #{iPluginName} from category #{iCategoryName}: #{$!}"
+      end
+    end
 
     # Update the instantiated plugins instance
     #

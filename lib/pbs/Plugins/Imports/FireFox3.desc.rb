@@ -13,8 +13,6 @@ require 'pbs/Plugins/Deps_SQLite3'
   :Title => 'FireFox 3',
   :Description => 'Import Shortcuts from current FireFox 3 profile',
   :BitmapName => 'FireFox3.png',
-  :Dependencies => [
-    PBS.getSQLite3DepDesc
-  ],
+  :Dependencies => PBS.getSQLite3Dependencies,
   :Enabled => ($rUtilAnts_Platform_Info.os == OS_WINDOWS)
 }

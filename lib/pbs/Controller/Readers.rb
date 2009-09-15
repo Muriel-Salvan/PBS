@@ -180,7 +180,7 @@ module PBS
     # * _CodeBlock_: The code called with the instantiated plugin:
     # ** *ioPlugin* (_Object_): The instantiated plugin
     def accessTypesPlugin(iPluginName)
-      accessPlugin('Type', iPluginName) do |ioPlugin|
+      accessPlugin_Protected('Type', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end
@@ -192,7 +192,7 @@ module PBS
     # * _CodeBlock_: The code called with the instantiated plugin:
     # ** *ioPlugin* (_Object_): The instantiated plugin
     def accessIntegrationPlugin(iPluginName)
-      accessPlugin('Integration', iPluginName) do |ioPlugin|
+      accessPlugin_Protected('Integration', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end
@@ -204,7 +204,7 @@ module PBS
     # * _CodeBlock_: The code called with the instantiated plugin:
     # ** *ioPlugin* (_Object_): The instantiated plugin
     def accessImportPlugin(iPluginName)
-      accessPlugin('Import', iPluginName) do |ioPlugin|
+      accessPlugin_Protected('Import', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end
@@ -216,7 +216,7 @@ module PBS
     # * _CodeBlock_: The code called with the instantiated plugin:
     # ** *ioPlugin* (_Object_): The instantiated plugin
     def accessExportPlugin(iPluginName)
-      accessPlugin('Export', iPluginName) do |ioPlugin|
+      accessPlugin_Protected('Export', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end
@@ -228,7 +228,7 @@ module PBS
     # * _CodeBlock_: The code called with the instantiated plugin:
     # ** *ioPlugin* (_Object_): The instantiated plugin
     def accessShortcutCommandsPlugin(iPluginName)
-      accessPlugin('ShortcutCommand', iPluginName) do |ioPlugin|
+      accessPlugin_Protected('ShortcutCommand', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end
