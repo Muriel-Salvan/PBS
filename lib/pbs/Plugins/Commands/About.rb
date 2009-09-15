@@ -3,7 +3,7 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/AboutDialog.rb'
+require 'pbs/Windows/AboutDialog'
 
 module PBS
 

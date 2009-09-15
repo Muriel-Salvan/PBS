@@ -323,8 +323,12 @@ module PBS
       else
         if (lCommand[:Plugin] == nil)
           # Get the plugin name to access
-          accessPlugin('Command', lCommand[:PluginName]) do |iPlugin|
-            lCommand[:Plugin] = iPlugin
+          begin
+            accessPlugin('Command', lCommand[:PluginName]) do |iPlugin|
+              lCommand[:Plugin] = iPlugin
+            end
+          rescue Exception
+            # Nothing to do, we'll display the error message later.
           end
           if (lCommand[:Plugin] == nil)
             showModal(Wx::MessageDialog, nil,

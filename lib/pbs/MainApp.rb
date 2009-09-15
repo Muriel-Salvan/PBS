@@ -26,22 +26,22 @@ RUtilAnts::URLCache.initializeURLCache
 require 'rUtilAnts/Plugins'
 RUtilAnts::Plugins.initializePlugins
 
-require 'pbsversion.rb'
+require 'pbsversion'
 # Common utilities
-require 'pbs/Common/Tools.rb'
+require 'pbs/Common/Tools'
 # Do this to avoid having to "include Tools" in every class.
 Object.module_eval('include PBS::Tools')
-require 'pbs/DataObject.rb'
+require 'pbs/DataObject'
 # The model
-require 'pbs/Model/Common.rb'
-require 'pbs/Model/Tag.rb'
-require 'pbs/Model/Shortcut.rb'
-require 'pbs/Model/MultipleSelection.rb'
-require 'pbs/Model/MissingDependencies.rb'
+require 'pbs/Model/Common'
+require 'pbs/Model/Tag'
+require 'pbs/Model/Shortcut'
+require 'pbs/Model/MultipleSelection'
+require 'pbs/Model/MissingDependencies'
 # The controller
-require 'pbs/Controller/Controller.rb'
+require 'pbs/Controller/Controller'
 # The main view
-require 'pbs/Windows/Main.rb'
+require 'pbs/Windows/Main'
 
 module PBS
 

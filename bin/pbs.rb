@@ -54,7 +54,7 @@ module PBS
           "#{iPBSRootDir}/ext/RDI/lib"
         ] )
         # The installer that will be used for dependencies
-        require 'rdi/rdi.rb'
+        require 'rdi/rdi'
         # Ensure wxRuby is installed, and propose it to be in a local repository if needed
         lInstaller = RDI::Installer.new(iPBSRootDir)
         lInstaller.setDefaultOptions( {
@@ -98,6 +98,7 @@ module PBS
             (lUnresolved.empty?))
           # Launch everything
           require 'wx'
+          setGUIForDialogs(RUtilAnts::Logging::Logger::GUI_WX)
           require 'pbs/MainApp'
           MainApp.new(iPBSRootDir, @DebugOption, lOpenFileNames).main_loop
           logInfo 'PBS closed correctly.'

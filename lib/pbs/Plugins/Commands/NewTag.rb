@@ -3,7 +3,7 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/EditTagDialog.rb'
+require 'pbs/Windows/EditTagDialog'
 
 module PBS
 

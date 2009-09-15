@@ -3,8 +3,8 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/OptionsPanels/ConflictsPanel.rb'
-require 'pbs/Windows/OptionsPanels/IntegrationPanel.rb'
+require 'pbs/Windows/OptionsPanels/ConflictsPanel'
+require 'pbs/Windows/OptionsPanels/IntegrationPanel'
 
 module PBS
 

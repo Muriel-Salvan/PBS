@@ -6,7 +6,7 @@
 require 'iconv'
 # SQLite is required to read the favicons database of Google Chrome.
 require 'sqlite3'
-require 'pbs/Plugins/Tools_SQLite3.rb'
+require 'pbs/Plugins/Tools_SQLite3'
 # Temp directories are used to store the favicon files on disk to read them
 require 'tmpdir'
 

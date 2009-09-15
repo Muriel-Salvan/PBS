@@ -5,7 +5,7 @@
 
 # SQLite is required to read the complete bookmarks database of Firefox 3.
 require 'sqlite3'
-require 'pbs/Plugins/Tools_SQLite3.rb'
+require 'pbs/Plugins/Tools_SQLite3'
 # Temp directory is used to store the favicon files on disk to read them
 require 'tmpdir'
 # Neeed to copy files

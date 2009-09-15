@@ -3,8 +3,8 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/EditShortcutDialog.rb'
-require 'pbs/Windows/EditTagDialog.rb'
+require 'pbs/Windows/EditShortcutDialog'
+require 'pbs/Windows/EditTagDialog'
 
 module PBS
 

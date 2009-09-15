@@ -3,13 +3,14 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Controller/Actions.rb'
-require 'pbs/Controller/Notifiers.rb'
-require 'pbs/Controller/GUIHelpers.rb'
-require 'pbs/Controller/Readers.rb'
-require 'pbs/Controller/UndoableAtomicOperations.rb'
-require 'pbs/Windows/ResolveTagConflictDialog.rb'
-require 'pbs/Windows/ResolveShortcutConflictDialog.rb'
+require 'pbs/Controller/Actions'
+require 'pbs/Controller/Notifiers'
+require 'pbs/Controller/GUIHelpers'
+require 'pbs/Controller/Readers'
+require 'pbs/Controller/UndoableAtomicOperations'
+require 'pbs/Windows/ResolveTagConflictDialog'
+require 'pbs/Windows/ResolveShortcutConflictDialog'
+require 'pbs/Windows/EditShortcutDialog'
 
 module PBS
 
@@ -161,20 +162,31 @@ module PBS
       def execute(ioController, iParams)
         lWindow = iParams[:parentWindow]
         lTag = iParams[:tag]
-        ioController.accessTypesPlugin(@TypePluginName) do |iTypePlugin|
-          lLocationName = ''
-          if (lTag != nil)
-            lLocationName = " in #{lTag.Name}"
-          end
-          showModal(EditShortcutDialog, lWindow, nil, ioController.RootTag, ioController, iTypePlugin, lTag) do |iModalResult, iDialog|
-            case iModalResult
-            when Wx::ID_OK
-              ioController.undoableOperation("Create new Shortcut#{lLocationName}") do
-                lNewContent, lNewMetadata, lNewTags = iDialog.getData
-                ioController.createShortcut(@TypePluginName, lNewContent, lNewMetadata, lNewTags)
+        begin
+          ioController.accessTypesPlugin(@TypePluginName) do |iTypePlugin|
+            lLocationName = ''
+            if (lTag != nil)
+              lLocationName = " in #{lTag.Name}"
+            end
+            showModal(EditShortcutDialog, lWindow, nil, ioController.RootTag, ioController, iTypePlugin, lTag) do |iModalResult, iDialog|
+              case iModalResult
+              when Wx::ID_OK
+                ioController.undoableOperation("Create new Shortcut#{lLocationName}") do
+                  lNewContent, lNewMetadata, lNewTags = iDialog.getData
+                  ioController.createShortcut(@TypePluginName, lNewContent, lNewMetadata, lNewTags)
+                end
               end
             end
           end
+        rescue PluginDependenciesIgnoredError
+          # That was cancelled on purpose by the user (ignoring dependencies)
+          logErr $!
+        rescue PluginDependenciesUnresolvedError
+          # The user is aware if those unresolved dependencies
+          logErr $!
+        rescue Exception
+          # This is not normal
+          logExc $!, "Error while loading plugin #{@TypePluginName}: #{$!}"
         end
       end
 

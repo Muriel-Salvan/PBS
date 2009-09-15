@@ -3,7 +3,7 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/ContentMetadataPanel.rb'
+require 'pbs/Windows/ContentMetadataPanel'
 
 module PBS
 
@@ -18,15 +18,19 @@ module PBS
     # * _Integer_: The image index
     def getIdxImage(iStatus)
       return @ImageListManager.getImageIndex(iStatus) do
+        rBitmap = nil
+
         if (iStatus)
-          next getURLContent("#{$PBS_GraphicsDir}/Checkbox_Checked.png", :LocalFileAccess => true) do |iFileName|
+          rBitmap, lError = getURLContent("#{$PBS_GraphicsDir}/Checkbox_Checked.png", :LocalFileAccess => true) do |iFileName|
             next Wx::Bitmap.new(iFileName)
           end
         else
-          next getURLContent("#{$PBS_GraphicsDir}/Checkbox_UnChecked.png", :LocalFileAccess => true) do |iFileName|
+          rBitmap , lError = getURLContent("#{$PBS_GraphicsDir}/Checkbox_UnChecked.png", :LocalFileAccess => true) do |iFileName|
             next Wx::Bitmap.new(iFileName)
           end
         end
+
+        next rBitmap
       end
     end
 

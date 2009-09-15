@@ -3,8 +3,8 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/ResolveConflictDialog.rb'
-require 'pbs/Windows/TagMetadataPanel.rb'
+require 'pbs/Windows/ResolveConflictDialog'
+require 'pbs/Windows/TagMetadataPanel'
 
 module PBS
 

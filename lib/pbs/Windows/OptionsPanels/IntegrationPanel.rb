@@ -3,7 +3,7 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/SelectTagDialog.rb'
+require 'pbs/Windows/SelectTagDialog'
 
 module PBS
 
@@ -116,7 +116,7 @@ module PBS
             Wx::Bitmap,
             @Controller.getIntegrationPlugins[@DisplayedList[iIdxItem][0]][:BitmapName]
           ] ) do
-            next @Controller.getPluginBitmap(@Controller.getIntegrationPlugins(@DisplayedList[iIdxItem][0]))
+            next @Controller.getPluginBitmap(@Controller.getIntegrationPlugins[@DisplayedList[iIdxItem][0]])
           end
         when 2
           rIdxImage = @ImageListManager.getImageIndex( [
