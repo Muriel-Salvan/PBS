@@ -11,5 +11,9 @@
   :Title => 'Internet Explorer',
   :Description => 'Import Shortcuts from current Internet Explorer profile',
   :BitmapName => 'InternetExplorer.png',
-  :Enabled => ($rUtilAnts_Platform_Info.os == OS_WINDOWS)
+  :Enabled => ($rUtilAnts_Platform_Info.os == OS_WINDOWS),
+  :PluginsDependencies => [
+    # We depend on the WebBookmarks plugin
+    [ 'Import', 'WebBookmarks' ]
+  ]
 }

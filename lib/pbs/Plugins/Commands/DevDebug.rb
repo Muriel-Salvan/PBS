@@ -14,10 +14,18 @@ module PBS
       # Parameters:
       # * *ioController* (_Controller_): The data model controller
       def execute(ioController)
-        logDebug "=== Tags:"
+        logDebug '=== Tags:'
         logDebug dumpTag(ioController.RootTag)
-        logDebug "=== Shortcuts:"
+        logDebug '=== Shortcuts:'
         logDebug dumpShortcutsList(ioController.ShortcutsList)
+        logDebug '=== $LOAD_PATH:'
+        logDebug $LOAD_PATH.join("\n")
+        if (defined?(Gem) != nil)
+          logDebug '=== Gem.path:'
+          logDebug Gem.path.join("\n")
+        else
+          logDebug 'Gem not defined.'
+        end
         ioController.notifyRegisteredGUIs(:onDevDebug)
       end
 

@@ -32,14 +32,10 @@ module PBS
           logErr 'Unable to read the favorites path from Windows registry.'
         else
           # Use the WebBookmarks import plugin
-          if (PBS::Imports.const_defined?(:WebBookmarks))
-            ioController.undoableOperation('Import bookmarks from Internet Explorer') do
-              if (ioController.checkSavedWorkAndScratch(iParentWindow))
-                PBS::Imports::WebBookmarks.new.importWebBookmarks(ioController, lFavoritesPath, ioController.RootTag)
-              end
+          ioController.undoableOperation('Import bookmarks from Internet Explorer') do
+            if (ioController.checkSavedWorkAndScratch(iParentWindow))
+              PBS::Imports::WebBookmarks.new.importWebBookmarks(ioController, lFavoritesPath, ioController.RootTag)
             end
-          else
-            logBug "Import plugin WebBookmarks not found. InternetExplorer import depends on it."
           end
         end
       end

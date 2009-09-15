@@ -17,7 +17,7 @@ module PBS
         'dt', 'p', 'body', 'li', 'head', 'text', 'hr', 'meta', 'title', 'dd',
         'link', 'script', 'small', 'center', 'b', 'br', 'table', 'font', 'tr',
         'td', 'i', 'comment', 'span', '#cdata-section', 'img', 'tbody', 'code',
-        'abbr', 'select', 'option'
+        'abbr', 'select', 'option', 'style', 'th'
       ]
       # Here we list the HTML tags that add some indentation.
       # This means that when encountering such an HTML tag, we will consider the last HTML header to be the parent Tag of following items (Shortcuts/Tags), unless this HTML tag is closed.
