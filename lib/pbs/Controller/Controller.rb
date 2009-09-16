@@ -354,8 +354,21 @@ module PBS
     # ** *ioPlugin* (_Object_): The corresponding plugin
     def accessPlugin_Protected(iCategoryName, iPluginName)
       begin
-        accessPlugin(iCategoryName, iPluginName) do |ioPlugin|
+        lContextModifiers = {}
+        accessPlugin(iCategoryName, iPluginName,
+          :RDIContextModifiers => lContextModifiers
+        ) do |ioPlugin|
           yield(ioPlugin)
+        end
+        # Add the eventual context modifiers to the current ones
+        if (!lContextModifiers.empty?)
+          logDebug "Add context modifiers applied: #{lContextModifiers.inspect}"
+          lContextModifiers.each do |iDepID, iCMList|
+            if (@Options[:RDIContextModifiers][RUBY_PLATFORM][iDepID] == nil)
+              @Options[:RDIContextModifiers][RUBY_PLATFORM][iDepID] = []
+            end
+            @Options[:RDIContextModifiers][RUBY_PLATFORM][iDepID] << iCMList
+          end
         end
       rescue PluginDependenciesIgnoredError
         # That was cancelled on purpose by the user (ignoring dependencies)
@@ -902,6 +915,8 @@ module PBS
     # Parameters:
     # * *iPBSRootDir* (_String_): PBS Root dir
     def initialize(iPBSRootDir)
+      @PBSRootDir = iPBSRootDir
+      
       # Name of the default options file
       @DefaultOptionsFile = "#{iPBSRootDir}/Options.pbso"
       # Name of the tips file
@@ -956,12 +971,10 @@ module PBS
         :shortcutsUnicity => SHORTCUTSUNICITY_ALL,
         :tagsConflict => TAGSCONFLICT_ASK,
         :shortcutsConflict => SHORTCUTSCONFLICT_ASK,
-        # The list of directories storing some libraries, per architecture
-        # map< String, list< String > >
-        :externalLibDirs => {},
-        # The list of directories storing some system libraries, per architecture
-        # map< String, list< String > >
-        :externalDLLDirs => {},
+        # The list of possible context modifiers to try, per platform and per dependency ID
+        # map< String, map< String, list< list< [ String, Object ] > > > >
+        # map< PlatformID, map< DepID, list< list< [ ContextModifierName, Location ] > > > >
+        :RDIContextModifiers => {},
         # The options linked to each instance of Integration plugins:
         # For each Plugin ID, there is a list of [ Tag ID to represent in this plugin, Is it active ?, Options, [ Instantiated plugin, Tag ] ]
         # The instantiated plugin and Tag objects are in a separate list as it is needed to have a single object for cloned options (this object will be used to retrieve correspondances between old and new options).
@@ -979,6 +992,14 @@ module PBS
       else
         @DefaultOptionsLoaded = true
       end
+
+      # Set the context modifiers to try
+      if (@Options[:RDIContextModifiers][RUBY_PLATFORM] == nil)
+        @Options[:RDIContextModifiers][RUBY_PLATFORM] = {}
+      end
+      RDI::Installer.getMainInstance.setDefaultOptions(
+        :PossibleContextModifiers => @Options[:RDIContextModifiers][RUBY_PLATFORM]
+      )
       
       # The GUIS registered
       # list< Object >

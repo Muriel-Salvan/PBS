@@ -60,7 +60,8 @@ module PBS
         lInstaller.setDefaultOptions( {
           :PreferredViews => [ 'SimpleWxGUI', 'Text' ]
         } )
-        lExtGemsDir = "#{iPBSRootDir}/ext/gems"
+        # Get the local installation directory for Gems
+        lLocalGemsDir = lInstaller.getDefaultInstallLocation('Gem', RDI::DEST_LOCAL)
         lError, lCMApplied, lIgnored, lUnresolved = lInstaller.ensureDependencies(
           [
             RDI::Model::DependencyDescription.new('WxRuby').addDescription( {
@@ -87,12 +88,12 @@ module PBS
           :PossibleContextModifiers => {
             'WxRuby' => [
               [
-                [ 'GemPath', lExtGemsDir ]
+                [ 'GemPath', lLocalGemsDir ]
               ]
             ]
           },
           :AutoInstall => RDI::DEST_OTHER,
-          :AutoInstallLocation => lExtGemsDir
+          :AutoInstallLocation => lLocalGemsDir
         )
         if ((lError == nil) and
             (lUnresolved.empty?))
