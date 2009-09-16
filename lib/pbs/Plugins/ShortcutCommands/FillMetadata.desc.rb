@@ -10,8 +10,8 @@
 # # Specific parameters to Shortcut Command plugins:
 # ** :ShortcutTypes (<em>list<String></em>): A list of Shortcuts types that this command is applicable to. Can be nil to target all types.
 {
-  :Title => 'Find icon',
-  :Description => 'Find an appropriate icon for a Shortcut',
-  :BitmapName => 'FindIcon.png',
+  :Title => 'Fill default metadata',
+  :Description => 'Find appropriate metadata for a Shortcut from its content',
+  :BitmapName => 'FindMetadata.png',
   :ShortcutTypes => nil
 }

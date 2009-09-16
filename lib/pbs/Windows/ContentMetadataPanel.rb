@@ -49,7 +49,7 @@ module PBS
         @TCTitle.min_size = [300, @TCTitle.min_size.height]
         lSTIcon = Wx::StaticText.new(self, Wx::ID_ANY, 'Icon')
         @BBIcon = Wx::BitmapButton.new(self, Wx::ID_ANY, Wx::Bitmap.new)
-        lBIconFromContent = Wx::Button.new(self, Wx::ID_ANY, '<- from Shortcut content')
+        lBFromContent = Wx::Button.new(self, Wx::ID_ANY, 'Fill values from Shortcut content')
 
         # Events
         evt_button(@BBIcon) do |iEvent|
@@ -65,27 +65,23 @@ module PBS
             end
           end
         end
-        evt_button(lBIconFromContent) do |iEvent|
-          # Ask the content to give the icon
-          @Icon = @Type.getDefaultIconFromContent(iContentPanel.getData)
-          setBBIcon
+        evt_button(lBFromContent) do |iEvent|
+          # Ask the content to give a metadata
+          setData(@Type.getMetadataFromContent(iContentPanel.getData))
         end
 
         # Put them in sizers
         lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
         lMainSizer.add_item([0,0], :proportion => 1)
+        lMainSizer.add_item(lBFromContent, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lMainSizer.add_item([0,8], :proportion => 0)
         lMainSizer.add_item(lSTTitle, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
         lMainSizer.add_item(@TCTitle, :flag => Wx::GROW, :proportion => 0)
 
         lIconSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
         lIconSizer.add_item(lSTIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
         lIconSizer.add_item([8,0], :proportion => 0)
-
-        lIconButtonsSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
-        lIconButtonsSizer.add_item(@BBIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
-        lIconButtonsSizer.add_item(lBIconFromContent, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
-
-        lIconSizer.add_item(lIconButtonsSizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
+        lIconSizer.add_item(@BBIcon, :flag => Wx::ALIGN_CENTRE, :proportion => 0)
         
         lMainSizer.add_item([0,8], :proportion => 0)
         lMainSizer.add_item(lIconSizer, :flag => Wx::ALIGN_CENTRE, :proportion => 0)

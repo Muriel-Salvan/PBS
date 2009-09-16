@@ -71,7 +71,6 @@
 
 
 * TODO quickly
-**** Get a Shortcut's title from its content (the same way we get the icon). Maybe more generally, fill its whole metadata from its content.
 **** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + implement visual progressions + hierarchical transactions + Use it for a splash screen, as startup might be slow..
 *** Give the possibility to remove the main window (consider the main window as a plugin and give Tray the possibility to call it back ?)
 *** Create a type plugin that executes some program differently depending on the platform it is run on.

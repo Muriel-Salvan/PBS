@@ -166,14 +166,14 @@ module PBS
         ]
       end
 
-      # Get the icon best reflecting the content.
+      # Get the metadata best reflecting the content.
       #
       # Parameters:
       # * *iContent* (_Object_): The content to read from
       # Return:
-      # * <em>Wx::Bitmap</em>: The corresponding icon (can be nil if none)
-      def getDefaultIconFromContent(iContent)
-        rIcon = nil
+      # * <em>map<String,Object></em>: The corresponding metadata
+      def getMetadataFromContent(iContent)
+        rMetadata = {}
 
         # Get the icon from the executable
         # Test the format '"ExeName" Parameters'
@@ -185,28 +185,37 @@ module PBS
           logErr "Unable to get executable file name from #{iContent[0]}"
         else
           lExeFileName = lMatch[1]
+          lIcon = nil
+          lTitle = 'Shell program'
           if (File.exists?(lExeFileName))
+            lTitle = File.basename(lExeFileName)[0..-1-File.extname(lExeFileName).size]
             # Get icon from it
-            rIcon, lError = getBitmapFromURL(lExeFileName)
-            if (rIcon == nil)
+            lIcon, lError = getBitmapFromURL(lExeFileName)
+            if (lIcon == nil)
               logErr "Error while getting icon from #{lExeFileName}: #{lError}"
             end
           else
             # Find lExeFileName among the path
             lNewExeFileName = findExeInPath(lExeFileName)
             if (lNewExeFileName == nil)
-              logErr "File #{lExeFileName} does not exist. Can't get icon from it."
+              logErr "File #{lExeFileName} does not exist in the PATH."
             else
+              lTitle = File.basename(lNewExeFileName)[0..-1-File.extname(lNewExeFileName).size]
               # Get icon from it
-              rIcon, lError = getBitmapFromURL(lNewExeFileName)
-              if (rIcon == nil)
+              lIcon, lError = getBitmapFromURL(lNewExeFileName)
+              if (lIcon == nil)
                 logErr "Error while getting icon from #{lNewExeFileName}: #{lError}"
               end
             end
           end
+          rMetadata['icon'] = lIcon
+          rMetadata['title'] = lTitle
+        end
+        if (rMetadata['title'] == nil)
+          rMetadata['title'] = '--- No title ---'
         end
 
-        return rIcon
+        return rMetadata
       end
 
     end

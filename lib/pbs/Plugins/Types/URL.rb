@@ -108,14 +108,14 @@ module PBS
         return iXMLContentElement.text
       end
 
-      # Get the icon best reflecting the content.
+      # Get the metadata best reflecting the content.
       #
       # Parameters:
       # * *iContent* (_Object_): The content to read from
       # Return:
-      # * <em>Wx::Bitmap</em>: The corresponding icon (can be nil if none)
-      def getDefaultIconFromContent(iContent)
-        rIcon = nil
+      # * <em>map<String,Object></em>: The corresponding metadata
+      def getMetadataFromContent(iContent)
+        rMetadata = {}
 
         # Get the favicon from the URL
         lURLMatch = iContent.match(/^(ftp|ftps|http|https):\/\/(.*)$/)
@@ -131,13 +131,48 @@ module PBS
             end
             @@FaviconsCache[iContent] = lIcon
           end
-          rIcon = @@FaviconsCache[iContent]
+          rMetadata['icon'] = @@FaviconsCache[iContent]
+        end
+        lHTMLDoc, lError = getNokogiriContent(iContent)
+        if (lHTMLDoc == nil)
+          logErr "Unable to read #{iContent}:\n#{lError}"
+        else
+          lHTMLDoc.xpath('//head/title').each do |iTitleElement|
+            # Found the Title from the web page
+            rMetadata['title'] = iTitleElement.content
+            break
+          end
+        end
+        if (rMetadata['title'] == nil)
+          rMetadata['title'] = '--- No title ---'
         end
 
-        return rIcon
+        return rMetadata
       end
 
       private
+
+      # Get the Nokogiri object corresponding to a given URL, or nil if none
+      #
+      # Parameters:
+      # * *iURL* (_String_): The URL
+      # Return:
+      # * <em>Nokogiri::Document</em>: The corresponding document, or nil in case of failure
+      # * _Exception_: The error, or nil in case of success
+      def getNokogiriContent(iURL)
+        rHTMLDoc = nil
+        rError = nil
+
+        # Get the title from the HTML header
+        lHTMLContent, rError = getURLContent(iURL) do |iHTMLContent|
+          next iHTMLContent, nil
+        end
+        if (lHTMLContent != nil)
+          rHTMLDoc = Nokogiri::HTML(lHTMLContent)
+        end
+
+        return rHTMLDoc, rError
+      end
 
       # Get the favicon associated to a URL
       #
@@ -160,38 +195,39 @@ module PBS
           lURLProtocol, lURLServer, lURLPath = lURLMatch[1..3]
           lURLRoot = "#{lURLProtocol}://#{lURLServer}"
           # Get the HTML content
-          lHTMLContent, rError = getURLContent(iURL) do |iContent|
-            next iContent, nil
-          end
-          lHTMLDoc = Nokogiri::HTML(lHTMLContent)
-          # Try the rel="icon" and rel="shortcut icon" attributes
-          (lHTMLDoc.xpath('//head/link[@rel="icon"]') +
-           lHTMLDoc.xpath('//head/link[@rel="shortcut icon"]') +
-           lHTMLDoc.xpath('//head/link[@rel="ICON"]') +
-           lHTMLDoc.xpath('//head/link[@rel="SHORTCUT ICON"]')).each do |iLinkElement|
-            # Found the Favicon from the web page
-            lFaviconURL = iLinkElement.attributes['href'].to_s
-            # Check if the URL is not a relative path to the current root
-            lFaviconURLMatch = lFaviconURL.match(/^(ftp|ftps|http|https):\/\/(.*)$/)
-            if (lFaviconURLMatch == nil)
-              # It is a relative path
-              if (lFaviconURL[0..0] == '/')
-                lFaviconURL = "#{lURLRoot}#{lFaviconURL}"
-              else
-                lFaviconURL = "#{lURLRoot}/#{File.dirname(lURLPath)}/#{lFaviconURL}"
+          lHTMLDoc, rError = getNokogiriContent(iURL)
+          if (lHTMLDoc == nil)
+            logErr "Unable to read #{iURL}:\n#{rError}"
+          else
+            # Try the rel="icon" and rel="shortcut icon" attributes
+            ( lHTMLDoc.xpath('//head/link[@rel="icon"]') +
+              lHTMLDoc.xpath('//head/link[@rel="shortcut icon"]') +
+              lHTMLDoc.xpath('//head/link[@rel="ICON"]') +
+              lHTMLDoc.xpath('//head/link[@rel="SHORTCUT ICON"]') ).each do |iLinkElement|
+              # Found the Favicon from the web page
+              lFaviconURL = iLinkElement.attributes['href'].to_s
+              # Check if the URL is not a relative path to the current root
+              lFaviconURLMatch = lFaviconURL.match(/^(ftp|ftps|http|https):\/\/(.*)$/)
+              if (lFaviconURLMatch == nil)
+                # It is a relative path
+                if (lFaviconURL[0..0] == '/')
+                  lFaviconURL = "#{lURLRoot}#{lFaviconURL}"
+                else
+                  lFaviconURL = "#{lURLRoot}/#{File.dirname(lURLPath)}/#{lFaviconURL}"
+                end
               end
-            end
-            logDebug "Found Favicon from website in URL #{lFaviconURL}"
-            # Some websites store GIF, PNG or JPG files under extension .ico (http://xmlsoft.org/favicon.ico or http://www.gnu.org/favicon.ico)
-            if (File.extname(lFaviconURL).upcase == '.ICO')
-              rIcon, rError = getBitmapFromURL(lFaviconURL, nil, [ Wx::BITMAP_TYPE_ICO, Wx::BITMAP_TYPE_GIF, Wx::BITMAP_TYPE_PNG, Wx::BITMAP_TYPE_JPEG ])
-            else
-              rIcon, rError = getBitmapFromURL(lFaviconURL)
-            end
-            if (rIcon == nil)
-              logErr "Unable to get Favicon referenced in URL #{iURL} (#{lFaviconURL}): #{rError}"
-            else
-              break
+              logDebug "Found Favicon from website in URL #{lFaviconURL}"
+              # Some websites store GIF, PNG or JPG files under extension .ico (http://xmlsoft.org/favicon.ico or http://www.gnu.org/favicon.ico)
+              if (File.extname(lFaviconURL).upcase == '.ICO')
+                rIcon, rError = getBitmapFromURL(lFaviconURL, nil, [ Wx::BITMAP_TYPE_ICO, Wx::BITMAP_TYPE_GIF, Wx::BITMAP_TYPE_PNG, Wx::BITMAP_TYPE_JPEG ])
+              else
+                rIcon, rError = getBitmapFromURL(lFaviconURL)
+              end
+              if (rIcon == nil)
+                logErr "Unable to get Favicon referenced in URL #{iURL} (#{lFaviconURL}): #{rError}"
+              else
+                break
+              end
             end
           end
           if (rIcon == nil)

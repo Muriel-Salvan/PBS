@@ -7,7 +7,7 @@ module PBS
 
   module ShortcutCommands
 
-    class FindIcon
+    class FillMetadata
 
       # Command that gives a default icon to a Shortcut
       #
@@ -15,10 +15,13 @@ module PBS
       # * *ioController* (_Controller_): The data model controller
       # * *ioShortcut* (_Shortcut_): The Shortcut for which we called this command
       def execute(ioController, ioShortcut)
-        ioController.undoableOperation("Find icon for #{ioShortcut.Metadata['title']}") do
-          lNewMetadata = ioShortcut.Metadata.clone
-          lNewMetadata['icon'] = ioShortcut.Type.getDefaultIconFromContent(ioShortcut.Content)
-          ioController.updateShortcut(ioShortcut, ioShortcut.Content, lNewMetadata, ioShortcut.Tags)
+        ioController.undoableOperation("Fill metadata for #{ioShortcut.Metadata['title']}") do
+          ioController.updateShortcut(
+            ioShortcut,
+            ioShortcut.Content,
+            ioShortcut.Type.getMetadataFromContent(ioShortcut.Content),
+            ioShortcut.Tags
+          )
         end
       end
 
