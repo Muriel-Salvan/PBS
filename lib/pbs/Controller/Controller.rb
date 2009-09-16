@@ -943,8 +943,6 @@ module PBS
       @UndoStack = []
       # list< Controller::UndoableOperation >
       @RedoStack = []
-      # list< String >
-      $CurrentTransactionErrors = nil
       # Boolean
       @CurrentTransactionToBeCancelled = false
       # Integer

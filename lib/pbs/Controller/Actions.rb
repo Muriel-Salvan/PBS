@@ -22,28 +22,31 @@ module PBS
         # Create the current Undo context
         @CurrentUndoableOperation = Controller::UndoableOperation.new(iOperationTitle)
         # Reset the transaction context
-        $CurrentTransactionErrors = []
         @CurrentTransactionToBeCancelled = false
         @CurrentOperationTagsConflicts = nil
         @CurrentOperationShortcutsConflicts = nil
-        # Call the command code
+        # Don't display errors live, but store them temporarily instead
+        lCurrentTransactionErrors = []
+        setLogErrorsStack(lCurrentTransactionErrors)
         begin
+          # Call the command code
           yield
         rescue Exception
           logExc $!, "Exception encountered during execution of \"#{iOperationTitle}\""
         end
+        setLogErrorsStack(nil)
         # Check possible errors
-        if (!$CurrentTransactionErrors.empty?)
+        if (!lCurrentTransactionErrors.empty?)
           lErrorsText = nil
-          if ($CurrentTransactionErrors.size > MAX_ERRORS_PER_DIALOG)
-            lErrorsText = "Showing only #{MAX_ERRORS_PER_DIALOG} first errors:\n* #{$CurrentTransactionErrors[0..MAX_ERRORS_PER_DIALOG-1].join("\n* ")}"
+          if (lCurrentTransactionErrors.size > MAX_ERRORS_PER_DIALOG)
+            lErrorsText = "Showing only #{MAX_ERRORS_PER_DIALOG} first errors:\n* #{lCurrentTransactionErrors[0..MAX_ERRORS_PER_DIALOG-1].join("\n* ")}"
           else
-            lErrorsText = "* #{$CurrentTransactionErrors.join("\n* ")}"
+            lErrorsText = "* #{lCurrentTransactionErrors.join("\n* ")}"
           end
           # Display errors
           showModal(Wx::MessageDialog, nil,
             lErrorsText,
-            "#{$CurrentTransactionErrors.size} error(s) during #{iOperationTitle}",
+            "#{lCurrentTransactionErrors.size} error(s) during #{iOperationTitle}",
             :style => Wx::OK|Wx::ICON_HAND
           ) do |iModalResult, iDialog|
             # Nothing to do
@@ -66,7 +69,6 @@ module PBS
         end
         # Clear the current transaction
         @CurrentUndoableOperation = nil
-        $CurrentTransactionErrors = nil
         logInfo "= ... #{iOperationTitle}"
       else
         # No special transaction

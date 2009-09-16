@@ -65,6 +65,7 @@
 *** Create a plugin that scans Shortcuts for redirections and update them (see the accessFile code for handling redirections, and also handle <meta http-equiv="Refresh"> Tag if the user wants it)
 *** Create a type plugin that executes given files on different ways depending on the platform it is run on.
 *** Add options to the FindIcon shortcut command plugin: Replace already set icons ?
+*** Create an integration plugin that execute some Shortcuts at startup time
 
 
 
@@ -75,4 +76,3 @@
 *** Give the possibility to remove the main window (consider the main window as a plugin and give Tray the possibility to call it back ?)
 *** Create a type plugin that executes some program differently depending on the platform it is run on.
 **** Put in the main window Edit menu the ability to run a Shortcut
-+ STTODO
