@@ -64,8 +64,8 @@ module PBS
                 @TCCmd.value = iDialog.path
               end
             end
-
           end
+
         end
 
         # Get the content from the controls
