@@ -6,6 +6,7 @@
 
 * Testing
 ** REGRESSION
+** Test what happens if we delete a Tag that is the Root one of one of the instantiated plugins.
 
 * Development
 
@@ -22,6 +23,7 @@
 **** Set recently opened files in the File menu
 **** In the main tree, F2 should edit the label
 **** Sort Tags tree in the EditShortcut dialog
+**** Find a way to veto the collapse of the RootTag in PBSTreeCtrl
 
 *** Other
 **** ProgressBar during open/import/paste (in the common method)
@@ -48,7 +50,6 @@
 **** Add an option in OptionsDialog to enable/disable startup tips
 **** Get a way to use smooth scaling for bitmaps.
 **** Optionally remember plugins that we want to ignore always (if not installed), and set a way in options to remove them from the forget list.
-**** Register/unregister instances of Integration plugins to the Controller's GUIs.
 
 ** Plugins
 *** Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
@@ -63,7 +64,6 @@
 *** Should run non-executable commands with the associated program (use start)
 *** Make a command that creates all relevant links to a SF.net project
 *** Create a plugin that scans Shortcuts for redirections and update them (see the accessFile code for handling redirections, and also handle <meta http-equiv="Refresh"> Tag if the user wants it)
-*** Create a type plugin that executes given files on different ways depending on the platform it is run on.
 *** Add options to the FindIcon shortcut command plugin: Replace already set icons ?
 *** Create an integration plugin that execute some Shortcuts at startup time
 
@@ -72,4 +72,7 @@
 
 * TODO quickly
 **** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + implement visual progressions + hierarchical transactions + Use it for a splash screen, as startup might be slow..
-*** Give the possibility to remove the main window (consider the main window as a plugin and give Tray the possibility to call it back ?)
+* Try reenabling GC
+* Increase performances:
+** Startup speed
+** Memory consumption

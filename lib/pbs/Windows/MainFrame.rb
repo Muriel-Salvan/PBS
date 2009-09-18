@@ -40,6 +40,17 @@ module PBS
       end
     end
 
+    # Options specifics to this plugin have changed
+    #
+    # Parameters:
+    # * *iNewOptions* (_Object_): The new options
+    # * *iNewTag* (_Tag_): The new Tag to integrate
+    # * *iOldOptions* (_Object_): The old options (can be nil during startup)
+    # * *iOldTag* (_Tag_): The old Tag to integrate (can be nil during startup)
+    def onPluginOptionsChanged(iNewOptions, iNewTag, iOldOptions, iOldTag)
+      @TCMainTree.setRootTag(iNewTag)
+    end
+
     # Options have changed
     #
     # Parameters:
@@ -50,12 +61,6 @@ module PBS
       else
         refreshPaste(@TCMainTree.getCurrentSelection)
       end
-    end
-
-    # Notify that we are exiting
-    def onExit
-      $PBS_Exiting = true
-      self.destroy
     end
 
     # Method called when the selection of the main tree has changed
@@ -239,31 +244,12 @@ module PBS
 
       # The close event
       evt_close do |iEvent|
-        # Make sure we don't fall twice in this peace of code
-        if (!lClosingMain)
-          lClosingMain = true
-          # Reset this variable
-          $PBS_Exiting = nil
-          @Controller.executeCommand(Wx::ID_EXIT, {
-            :parentWindow => self
-          })
-          if ($PBS_Exiting == nil)
-            # There was a problem. Log it and close.
-            logBug "An error occurred while closing. Forcing close."
-            self.destroy
-          elsif (!$PBS_Exiting)
-            # We canceled deliberately the closure
-            lClosingMain = false
-          end
-        end
+        @Controller.executeCommand(Wx::ID_CLOSE, :instancesToClose => [ self ] )
       end
 
       # Create the main treeview
       @TCMainTree = PBSTreeCtrl.new(@Controller, self)
-    end
 
-    # Initialize everything, based on the controller
-    def init
       # We register the tree controller itself, as it contains plenty of onXxxx methods.
       @Controller.registerGUI(@TCMainTree)
 
@@ -314,6 +300,12 @@ module PBS
         end
       end
       lFileMenu.append_sub_menu(lExportMenu, 'Export')
+      lFileMenu.append_separator
+      addMenuCommand(lFileMenu, Wx::ID_CLOSE) do |iEvent, oValidator|
+        oValidator.authorizeCmd(
+          :instancesToClose => [ self ]
+        )
+      end
       lFileMenu.append_separator
       addMenuCommand(lFileMenu, Wx::ID_EXIT) do |iEvent, oValidator|
         oValidator.authorizeCmd(
@@ -442,6 +434,13 @@ module PBS
 
       # Tools menu
       lToolsMenu = Wx::Menu.new
+      lIntPluginsSubMenu = Wx::Menu.new
+      # For each integration plugin, add a menu item
+      @Controller.getIntegrationPlugins.each do |iPluginName, iPluginInfo|
+        addMenuCommand(lIntPluginsSubMenu, ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex])
+      end
+      lToolsMenu.append_sub_menu(lIntPluginsSubMenu, 'Instantiate a new view')
+      lToolsMenu.append_separator
       addMenuCommand(lToolsMenu, Wx::ID_SETUP) do |iEvent, oValidator|
         oValidator.authorizeCmd(
           :parentWindow => self
@@ -529,6 +528,7 @@ module PBS
 
       # Resize it as it will always be resized by users having more than 10 shortcuts
       self.size = [300, 400]
+      
     end
 
   end

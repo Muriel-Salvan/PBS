@@ -279,6 +279,20 @@ module PBS
 
     end
 
+    # Set the Root Tag to display. this can be any Tag, or the real root Tag
+    #
+    # Parameters:
+    # * *iRootTag* (_Tag_): The new Root Tag to consider in the display
+    def setRootTag(iRootTag)
+      # Don't reset everything if nothing changed
+      if (@RootTag != iRootTag)
+        @RootTag = iRootTag
+        # Know if we are dealing with the real Root Tag (behaviour changes on the real one)
+        @RealRootTag = (@Controller.RootTag == iRootTag)
+        fillTree
+      end
+    end
+
     # The last created tool tip, useful for timers of HintFrames that have to check if the window still exists before destroying.
     #   HintFrame
     attr_reader :LastToolTip
@@ -303,6 +317,9 @@ module PBS
       super(iWindow,
         :style => Wx::TR_EDIT_LABELS|Wx::TR_HAS_BUTTONS|Wx::TR_MULTIPLE|Wx::TR_EXTENDED
       )
+
+      # The Root Tag to be displayed
+      @RootTag = nil
 
       # TODO (WxRuby): Bug correction
       # Register this Event as otherwise moving the mouse over the TreeCtrl component generates tons of warnings. Bug ?
@@ -330,9 +347,6 @@ module PBS
       # The last hovered node ID
       # Integer
       @OldHoveredNodeID = nil
-      # The Root ID
-      # Integer
-      @RootID = nil
       # The Tags references to tree nodes
       # map< Tag, Integer >
       @TagsToMainTree = nil
@@ -358,9 +372,9 @@ module PBS
       # Accept incoming drops of things
       # Keep a reference to the DropTarget, as otherwise it results in a core dump when dragging over the tree (another way to avoid this reference is to use drop_target= instead of set_drop_target). Bug ?
       self.drop_target = SelectionDropTarget.new(@Controller, self)
-      # fill the tree view from scratch
-      fillTree
-      
+
+      # All events
+
       # Begin drag event
       evt_tree_begin_drag(self) do |iEvent|
         # We begin dragging with left mouse
@@ -402,7 +416,8 @@ module PBS
       # Editing a label of a Tag or Shortcut
       evt_tree_begin_label_edit(self) do |iEvent|
         # We can't edit the Root
-        if (iEvent.item == @RootID)
+        if ((iEvent.item == root_item) and
+            (@RealRootTag))
           iEvent.veto
         else
           iEvent.skip
@@ -571,74 +586,85 @@ module PBS
       lID, lObject = get_item_data(iItemID)
       case lID
       when ID_TAG
-        # Get the corresponding Tag
-        set_item_text(iItemID, lObject.Name)
-        # Compute the masks to put on the icon
-        # list< Wx::Bitmap >
-        lMasks = []
-        # Check the Copy/Cut markers
-        if (@CopySelection != nil)
-          if (@CopySelection.isTagPrimary?(lObject))
-            if (@CopyMode == Wx::ID_CUT)
-              lMasks << getGraphic('MiniCut.png')
-            else
-              lMasks << getGraphic('MiniCopy.png')
-            end
+        # If this is the real Root Tag, there is some special display
+        if (lObject == @Controller.RootTag)
+          # Set the text
+          set_item_text(iItemID, 'PBS')
+          # Now compute the image ID
+          lIdxImage = @ImageListManager.getImageIndex([ @Controller.RootTag, 0 ]) do
+            next getGraphic('Icon16.png')
           end
-          if (@CopySelection.isTagSecondary?(lObject))
-            if (@CopyMode == Wx::ID_CUT)
-              lMasks << getGraphic('MicroCut.png')
-            else
-              lMasks << getGraphic('MicroCopy.png')
-            end
-          end
-        end
-        if (@DragSelection != nil)
-          if (@DragSelection.isTagPrimary?(lObject))
-            if (@DragMode == Wx::DRAG_MOVE)
-              lMasks << getGraphic('MiniCut.png')
-              lMasks << getGraphic('DragNDrop.png')
-            elsif (@DragMode == Wx::DRAG_COPY)
-              lMasks << getGraphic('MiniCopy.png')
-              lMasks << getGraphic('DragNDrop.png')
-            else
-              lMasks << getGraphic('DragNDropCancel.png')
-            end
-          end
-          if (@DragSelection.isTagSecondary?(lObject))
-            if (@DragMode == Wx::DRAG_MOVE)
-              lMasks << getGraphic('MicroCut.png')
-              lMasks << getGraphic('DragNDrop.png')
-            elsif (@DragMode == Wx::DRAG_COPY)
-              lMasks << getGraphic('MicroCopy.png')
-              lMasks << getGraphic('DragNDrop.png')
-            else
-              lMasks << getGraphic('DragNDropCancel.png')
-            end
-          end
-        end
-        # Now compute the image ID
-        lImageID = nil
-        if (lObject.Icon != nil)
-          # This image is unique to this Shortcut
-          lImageID = [ lObject, lMasks ]
+          set_item_image(iItemID, lIdxImage)
         else
-          # This is the ID for Tags having no icon.
-          lImageID = [ nil, lMasks ]
-        end
-        # Now compute the image based on lFlags and the object ID
-        lIdxImage = @ImageListManager.getImageIndex(lImageID) do
-          if (lMasks.empty?)
-            # Just return the original icon, without modifications
-            next @Controller.getTagIcon(lObject)
-          else
-            # We will apply some layers, so clone the original bitmap
-            rBitmap = @Controller.getTagIcon(lObject).clone
-            applyBitmapLayers(rBitmap, lMasks)
-            next rBitmap
+          # Set the text
+          set_item_text(iItemID, lObject.Name)
+          # Compute the masks to put on the icon
+          # list< Wx::Bitmap >
+          lMasks = []
+          # Check the Copy/Cut markers
+          if (@CopySelection != nil)
+            if (@CopySelection.isTagPrimary?(lObject))
+              if (@CopyMode == Wx::ID_CUT)
+                lMasks << getGraphic('MiniCut.png')
+              else
+                lMasks << getGraphic('MiniCopy.png')
+              end
+            end
+            if (@CopySelection.isTagSecondary?(lObject))
+              if (@CopyMode == Wx::ID_CUT)
+                lMasks << getGraphic('MicroCut.png')
+              else
+                lMasks << getGraphic('MicroCopy.png')
+              end
+            end
           end
+          if (@DragSelection != nil)
+            if (@DragSelection.isTagPrimary?(lObject))
+              if (@DragMode == Wx::DRAG_MOVE)
+                lMasks << getGraphic('MiniCut.png')
+                lMasks << getGraphic('DragNDrop.png')
+              elsif (@DragMode == Wx::DRAG_COPY)
+                lMasks << getGraphic('MiniCopy.png')
+                lMasks << getGraphic('DragNDrop.png')
+              else
+                lMasks << getGraphic('DragNDropCancel.png')
+              end
+            end
+            if (@DragSelection.isTagSecondary?(lObject))
+              if (@DragMode == Wx::DRAG_MOVE)
+                lMasks << getGraphic('MicroCut.png')
+                lMasks << getGraphic('DragNDrop.png')
+              elsif (@DragMode == Wx::DRAG_COPY)
+                lMasks << getGraphic('MicroCopy.png')
+                lMasks << getGraphic('DragNDrop.png')
+              else
+                lMasks << getGraphic('DragNDropCancel.png')
+              end
+            end
+          end
+          # Now compute the image ID
+          lImageID = nil
+          if (lObject.Icon != nil)
+            # This image is unique to this Shortcut
+            lImageID = [ lObject, lMasks ]
+          else
+            # This is the ID for Tags having no icon.
+            lImageID = [ nil, lMasks ]
+          end
+          # Now compute the image based on lFlags and the object ID
+          lIdxImage = @ImageListManager.getImageIndex(lImageID) do
+            if (lMasks.empty?)
+              # Just return the original icon, without modifications
+              next @Controller.getTagIcon(lObject)
+            else
+              # We will apply some layers, so clone the original bitmap
+              rBitmap = @Controller.getTagIcon(lObject).clone
+              applyBitmapLayers(rBitmap, lMasks)
+              next rBitmap
+            end
+          end
+          set_item_image(iItemID, lIdxImage)
         end
-        set_item_image(iItemID, lIdxImage)
       when ID_SHORTCUT
         # Retrieve the Shortcut
         lTitle = lObject.Metadata['title']
@@ -760,11 +786,16 @@ module PBS
     # Insert a Tag in the main tree, and recursively all its children Tags and associated Shortcuts
     #
     # Parameters:
-    # * *iParentID* (_Integer_): The node ID where the Tag will be inserted
+    # * *iParentID* (_Integer_): The node ID where the Tag will be inserted (can be nil for the first node to insert)
     # * *iTag* (_Tag_): The Tag to insert
     def insertTreeBranch(iParentID, iTag)
       # Insert the new node
-      lTagNodeID = append_item(iParentID, '')
+      lTagNodeID = nil
+      if (iParentID == nil)
+        lTagNodeID = add_root('PBS')
+      else
+        lTagNodeID = append_item(iParentID, '')
+      end
       set_item_data(lTagNodeID, [ ID_TAG, iTag ])
       @TagsToMainTree[iTag] = lTagNodeID
       updateTreeNode(lTagNodeID)
@@ -773,12 +804,25 @@ module PBS
         insertTreeBranch(lTagNodeID, iChildTag)
       end
       # Insert its associated Shortcuts
-      @Controller.ShortcutsList.each do |iSC|
-        if (iSC.Tags.has_key?(iTag))
-          # Insert iSC as a child
-          lSCNodeID = append_item(lTagNodeID, '')
-          set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC ])
-          updateTreeNode(lSCNodeID)
+      if ((iParentID == nil) and
+          (@RealRootTag))
+        # We insert Shortcuts having no Tag
+        @Controller.ShortcutsList.each do |iSC|
+          if (iSC.Tags.empty?)
+            # Insert iSC as a child
+            lSCNodeID = append_item(lTagNodeID, '')
+            set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC ])
+            updateTreeNode(lSCNodeID)
+          end
+        end
+      else
+        @Controller.ShortcutsList.each do |iSC|
+          if (iSC.Tags.has_key?(iTag))
+            # Insert iSC as a child
+            lSCNodeID = append_item(lTagNodeID, '')
+            set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC ])
+            updateTreeNode(lSCNodeID)
+          end
         end
       end
     end
@@ -789,14 +833,18 @@ module PBS
     # * *iSC* (_Shortcut_): The Shortcut to add
     def addShortcutInfo(iSC)
       if (iSC.Tags.empty?)
-        # Put at the root
-        lNewNodeID = append_item(@RootID, '')
-        set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC ])
-        updateTreeNode(lNewNodeID)
+        # Put at the root if it is displayed
+        if (@RealRootTag)
+          lNewNodeID = append_item(root_item, '')
+          set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC ])
+          updateTreeNode(lNewNodeID)
+        end
       else
         iSC.Tags.each do |iTag, iNil|
           lTagID = @TagsToMainTree[iTag]
-          # It is possible that iTag is not present, in the case of pasting a Shortcut whose Tag was deleted in the meantime
+          # It is possible that iTag is not present, in the following cases:
+          # * Pasting a Shortcut whose Tag was deleted in the meantime, OR
+          # * The Tag is not displayed
           if (lTagID != nil)
             lNewNodeID = append_item(lTagID, '')
             set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC ])
@@ -859,33 +907,16 @@ module PBS
         # Update it
         # Erase everything
         delete_all_items
-        
-        # Create root
-        @RootID = add_root('PBS')
-        set_item_data(@RootID, [ ID_TAG, @Controller.RootTag ] )
-        lIdxImage = @ImageListManager.getImageIndex([ @Controller.RootTag, 0 ]) do
-          next getGraphic('Icon16.png')
-        end
-        set_item_image(@RootID, lIdxImage)
-
         # Keep a correspondance of each Tag and its corresponding Tree ID
         # map< Tag, Integer >
-        @TagsToMainTree = { @Controller.RootTag => @RootID }
-        # Insert each tag
-        @Controller.RootTag.Children.each do |iTag|
-          insertTreeBranch(@RootID, iTag)
-        end
-        # Insert each Shortcut that does not have any tag (the others were inserted by insertTreeBranch)
-        @Controller.ShortcutsList.each do |iSC|
-          if (iSC.Tags.empty?)
-            lSCNodeID = append_item(@RootID, '')
-            set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC ])
-            updateTreeNode(lSCNodeID)
-          end
-        end
-        expand(@RootID)
+        @TagsToMainTree = {}
+        # Insert everything
+        insertTreeBranch(nil, @RootTag)
+        # Expand
         if ($PBS_DevDebug)
           expand_all
+        else
+          expand(root_item)
         end
       end
     end
@@ -932,7 +963,7 @@ module PBS
       end
       # If it was the root Tag, expand it (otherwise it can looks like a bug as root Tag does not have the + button.
       if (iParentTag.Parent == nil)
-        expand(@RootID)
+        expand(root_item)
       end
     end
 
@@ -941,15 +972,9 @@ module PBS
     # Parameters:
     # * *iSC* (_Shortcut_): The added Shortcut
     def onShortcutCreate(iSC)
-      # If the Shortcut is the first one from root, expand root
-      lExpandRoot = ((iSC.Tags.empty?) and
-                     (children(@RootID).empty?))
       # We update the tree accordingly
       updateTree do
         addShortcutInfo(iSC)
-      end
-      if (lExpandRoot)
-        expand(@RootID)
       end
     end
 
@@ -961,15 +986,16 @@ module PBS
       # We update the tree accordingly
       updateTree do
         if (iSC.Tags.empty?)
-          # Delete it from root
-          deleteObjectFromTree(@RootID, iSC)
+          # Delete it from root if the Root is displayed
+          if (@RealRootTag)
+            deleteObjectFromTree(root_item, iSC)
+          end
         else
           # For each Tag this Shortcut was belonging to, we will delete its node
           iSC.Tags.each do |iTag, iNil|
             lTagNodeID = @TagsToMainTree[iTag]
-            if (lTagNodeID == nil)
-              logBug "Tag #{iTag.Name} should have been inserted in the main tree. However it is not registered."
-            else
+            # It is possible that this Tag is not displayed
+            if (lTagNodeID != nil)
               deleteObjectFromTree(lTagNodeID, iSC)
             end
           end
@@ -1205,8 +1231,9 @@ module PBS
     def isRootTagOnlySelected?
       lSelections = selections
       
-      return ((lSelections.size == 1) and
-              (lSelections[0] == @RootID))
+      return ((@RealRootTag) and
+              (lSelections.size == 1) and
+              (lSelections[0] == root_item))
     end
 
     # Get the currently selected object and its ID from the tree

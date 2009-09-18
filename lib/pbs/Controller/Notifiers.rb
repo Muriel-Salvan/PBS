@@ -134,32 +134,32 @@ module PBS
 
     # Notify the GUI that we are quitting
     def notifyExit
-      # Protect this method from concurrent executions (exiting Windows calls evt_close twice, user could click several times on close...)
-      if (!@Exiting)
-        @Exiting = true
-        # Delete any integration plugin instance
-        @Options[:intPluginsOptions].each do |iPluginID, ioPluginsList|
-          ioPluginsList.each do |ioInstantiatedPluginInfo|
-            iTagID, iActive, iOptions, ioInstanceInfo = ioInstantiatedPluginInfo
-            ioInstance, iTag = ioInstanceInfo
-            if (ioInstance != nil)
-              # We have to delete the instance
-              logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
-              accessIntegrationPlugin(iPluginID) do |iPlugin|
-                iPlugin.deleteInstance(self, ioInstance)
+      # Notify everybody
+      notifyRegisteredGUIs(:onExiting)
+      # Delete any integration plugin instance
+      @Options[:intPluginsOptions].each do |iPluginID, ioPluginsList|
+        ioPluginsList.each do |ioInstantiatedPluginInfo|
+          iTagID, iActive, iOptions, ioInstanceInfo = ioInstantiatedPluginInfo
+          ioInstance, iTag = ioInstanceInfo
+          if (ioInstance != nil)
+            # We have to delete the instance
+            logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+            accessIntegrationPlugin(iPluginID) do |iPlugin|
+              # Unregister it if it was registered
+              if (iActive)
+                unregisterGUI(ioInstance)
               end
+              iPlugin.deleteInstance(self, ioInstance)
             end
           end
         end
-        # Write tips index in options first
-        if (@TipsProvider != nil)
-          @Options[:lastIdxTip] = @TipsProvider.current_tip
-        end
-        # Save options
-        saveOptionsData(@Options, @DefaultOptionsFile)
-        # Notify everybody
-        notifyRegisteredGUIs(:onExit)
       end
+      # Write tips index in options first
+      if (@TipsProvider != nil)
+        @Options[:lastIdxTip] = @TipsProvider.current_tip
+      end
+      # Save options
+      saveOptionsData(@Options, @DefaultOptionsFile)
     end
 
     # Notify the GUI that options have changed
@@ -177,11 +177,11 @@ module PBS
           lOldOptions = nil
           if (iOldOptions[:intPluginsOptions] != nil)
             iOldOptions[:intPluginsOptions][iPluginID].each do |iOldInstantiatedPluginInfo|
-              iOldTagID, iOldActive, iOldOptions, iOldInstanceInfo = iOldInstantiatedPluginInfo
+              iOldTagID, iOldActive, iOldInstanceOptions, iOldInstanceInfo = iOldInstantiatedPluginInfo
               if (iOldInstanceInfo.object_id == ioInstanceInfo.object_id)
                 # We found the same instance
                 lOldTagID = iOldTagID
-                lOldOptions = iOldOptions
+                lOldOptions = iOldInstanceOptions
               end
             end
           end

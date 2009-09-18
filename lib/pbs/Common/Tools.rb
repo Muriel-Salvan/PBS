@@ -60,10 +60,10 @@ module PBS
         # Set the broken image if it exists
         lBrokenFileName = "#{$PBS_GraphicsDir}/Broken.png"
         if (File.exist?(lBrokenFileName))
-          logBug "Image #{iFileSubName} does not exist among #{$PBS_GraphicsDir}."
+          logBug "Image #{$PBS_GraphicsDir}/#{iFileSubName} could not be loaded:\n#{lError}"
           rBitmap = Wx::Bitmap.new(lBrokenFileName)
         else
-          logBug "Images #{iFileSubName} and Broken.png do not exist among #{$PBS_GraphicsDir}."
+          logBug "Image #{$PBS_GraphicsDir}/#{iFileSubName} could not be loaded and image #{$PBS_GraphicsDir}/Broken.png does not exist:\n#{lError}."
           rBitmap = Wx::Bitmap.new
         end
       end

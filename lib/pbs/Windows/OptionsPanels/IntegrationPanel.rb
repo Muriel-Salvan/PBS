@@ -176,7 +176,9 @@ module PBS
         iController.accessIntegrationPlugin(@DisplayedItem[0]) do |iPlugin|
           @ConfigPanel = iPlugin.getConfigPanel(self, @Controller)
         end
-        @ConfigPanel.setData(@DisplayedItem[3])
+        if (@ConfigPanel != nil)
+          @ConfigPanel.setData(@DisplayedItem[3])
+        end
         lSTTag = Wx::StaticText.new(self, Wx::ID_ANY, 'Tag:')
         lSTTagName = Wx::StaticText.new(self, Wx::ID_ANY, @DisplayedItem[1].join('/'))
         if (lSTTagName.label.empty?)
@@ -189,7 +191,11 @@ module PBS
 
         # Sizers
         lMainSizer = Wx::BoxSizer.new(Wx::VERTICAL)
-        lMainSizer.add_item(@ConfigPanel, :flag => Wx::GROW, :proportion => 1)
+        if (@ConfigPanel != nil)
+          lMainSizer.add_item(@ConfigPanel, :flag => Wx::GROW, :proportion => 1)
+        else
+          lMainSizer.add_item([0,0], :flag => Wx::GROW, :proportion => 1)
+        end
 
         lTagSizer = Wx::BoxSizer.new(Wx::HORIZONTAL)
         lTagSizer.add_item([8, 0], :proportion => 0)
@@ -251,7 +257,13 @@ module PBS
       # Return:
       # * _Object_: The options
       def getOptions
-        return @ConfigPanel.getData
+        rOptions = nil
+
+        if (@ConfigPanel != nil)
+          rOptions = @ConfigPanel.getData
+        end
+
+        return rOptions
       end
 
     end
@@ -329,7 +341,7 @@ module PBS
         # Clone variables to make them persistent in the Proc context
         lPluginIDCloned = iPluginID
         evt_menu(lNewMenuItem) do |iEvent|
-          @Controller.getIntegrationPlugins(lPluginIDCloned) do |iPlugin|
+          @Controller.accessIntegrationPlugin(lPluginIDCloned) do |iPlugin|
             @DisplayedList << [
               lPluginIDCloned,
               [],
@@ -388,8 +400,12 @@ module PBS
       iOptions[:intPluginsOptions].each do |iPluginID, iPluginsList|
         iPluginsList.each do |iInstantiatedPluginInfo|
           iTagID, iActive, iOptions, iInstanceInfo = iInstantiatedPluginInfo
+          lNewOptions = nil
+          if (iOptions != nil)
+            lNewOptions = iOptions.clone
+          end
           # We clone the options as we might modify them
-          @DisplayedList << [ iPluginID, iTagID, iActive, iOptions.clone, iInstanceInfo ]
+          @DisplayedList << [ iPluginID, iTagID, iActive, lNewOptions, iInstanceInfo ]
         end
       end
       # Reflect new data in sub components

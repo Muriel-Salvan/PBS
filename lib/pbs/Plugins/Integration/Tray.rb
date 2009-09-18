@@ -81,6 +81,34 @@ module PBS
         # If we try to reuse it, we'll get into some ObjectPreviouslyDeleted exceptions when invoking the menu a second time.
         rMenu = Wx::Menu.new
 
+        # First, add a PBS submenu
+        lPBSMenu = Wx::Menu.new
+        lIntPluginsSubMenu = Wx::Menu.new
+        # For each integration plugin, add a menu item
+        @Controller.getIntegrationPlugins.each do |iPluginName, iPluginInfo|
+          @Controller.addMenuCommand(self, lIntPluginsSubMenu, ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex])
+        end
+        lPBSMenu.append_sub_menu(lIntPluginsSubMenu, 'Instantiate a new view')
+        lPBSMenu.append_separator
+        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_SETUP) do |iEvent, oValidator|
+          oValidator.authorizeCmd(
+            :parentWindow => nil
+          )
+        end
+        lPBSMenu.append_separator
+        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_CLOSE) do |iEvent, oValidator|
+          oValidator.authorizeCmd(
+            :instancesToClose => [ self ]
+          )
+        end
+        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_EXIT) do |iEvent, oValidator|
+          oValidator.authorizeCmd(
+            :parentWindow => nil
+          )
+        end
+        rMenu.append_sub_menu(lPBSMenu, 'PBS')
+        rMenu.append_separator
+
         # Parse all Tags
         # Keep a correspondance between each Tag and the corresponding menu, to add Shortcuts after
         # map< Tag, Wx::Menu >

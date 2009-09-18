@@ -32,6 +32,7 @@ module PBS
   ID_EXPORT_BASE = 8000
   ID_NEW_SHORTCUT_BASE = 9000
   ID_SHORTCUT_COMMAND_BASE = 10000
+  ID_INTEGRATION_INSTANCE_BASE = 11000
 
   # Following constants are used in options
   TAGSUNICITY_NONE = 0
@@ -198,6 +199,69 @@ module PBS
               iPlugin.execute(ioController, ioShortcut)
             end
           end
+        end
+      end
+
+    end
+
+    # Class used to instantiate a default integration plugin
+    class InstantiateDefaultIntCommand
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iPluginName* (_String_): The plugin ID
+      def initialize(iPluginName)
+        @PluginName = iPluginName
+      end
+
+      # Command that creates a new Shortcut via the corresponding Type plugin
+      #
+      # Parameters:
+      # * *ioController* (_Controller_): The data model controller
+      def execute(ioController)
+        # First check if this plugin already has a declared instance for the Root Tag
+        lOldOptions = ioController.Options.clone
+        lFound = false
+        lRootTagID = ioController.getTagID(ioController.RootTag)
+        if (ioController.Options[:intPluginsOptions][@PluginName] != nil)
+          lIdx = 0
+          ioController.Options[:intPluginsOptions][@PluginName].each do |ioInstancePluginInfo|
+            iTagID, iActive, iOptions, iInstancesInfo = ioInstancePluginInfo
+            if (iTagID == lRootTagID)
+              # Found it
+              lFound = true
+              if (iActive)
+                logMsg "There is already an active view #{@PluginName}."
+                lOldOptions = nil
+              else
+                # Make sure the list we will modify is cloned
+                lOldOptions[:intPluginsOptions][@PluginName][lIdx] = ioInstancePluginInfo.clone
+                ioController.Options[:intPluginsOptions][@PluginName][lIdx][1] = true
+              end
+              break
+            end
+            lIdx += 1
+          end
+        end
+        if (!lFound)
+          if (ioController.Options[:intPluginsOptions][@PluginName] == nil)
+            ioController.Options[:intPluginsOptions][@PluginName] = []
+          end
+          # Make sure the list we will modify is cloned
+          lOldOptions[:intPluginsOptions][@PluginName] = ioController.Options[:intPluginsOptions][@PluginName].clone
+          # Create a new one
+          ioController.accessIntegrationPlugin(@PluginName) do |iPlugin|
+            ioController.Options[:intPluginsOptions][@PluginName] << [
+              lRootTagID,
+              true,
+              iPlugin.getDefaultOptions,
+              [ nil, nil ]
+            ]
+          end
+        end
+        if (lOldOptions != nil)
+          ioController.notifyOptionsChanged(lOldOptions)
         end
       end
 
@@ -426,6 +490,8 @@ module PBS
                 if (iNotifyChanges)
                   logMsg "Plugin #{iPlugin.pluginDescription[:Title]} has been instantiated for Tag #{lTag.Name}"
                 end
+                # Register it
+                registerGUI(ioInstanceInfo[0])
               end
             rescue Exception
               logExc $!, "Exception while instantiating plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
@@ -451,6 +517,8 @@ module PBS
             if (lTag == nil)
               # We have to remove the instance, as its Tag can't be found
               logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+              # Unregister the GUI
+              unregisterGUI(ioInstanceInfo[0])
               begin
                 accessIntegrationPlugin(iPluginID) do |iPlugin|
                   iPlugin.deleteInstance(self, ioInstance)
@@ -458,6 +526,7 @@ module PBS
               rescue Exception
                 logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
               end
+              # Delete from the internals
               ioInstanceInfo[0] = nil
               # Also reset the Tag, as we will want to recompute it when instantiating
               ioInstanceInfo[1] = nil
@@ -484,6 +553,8 @@ module PBS
         if (ioInstance != nil)
           # We have to delete the instance
           logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+          # Unregister the GUI
+          unregisterGUI(ioInstanceInfo[0])
           begin
             accessIntegrationPlugin(iPluginID) do |iPlugin|
               iPlugin.deleteInstance(self, ioInstance)
@@ -491,6 +562,7 @@ module PBS
           rescue Exception
             logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
           end
+          # Delete from the internals
           ioInstanceInfo[0] = nil
           # Also reset the Tag, as we will want to recompute it when instantiating
           ioInstanceInfo[1] = nil
@@ -687,6 +759,21 @@ module PBS
     # * *iGUI* (_Object_): The GUI to be notified.
     def registerGUI(iGUI)
       @RegisteredGUIs << iGUI
+    end
+
+    # Unregister a GUI that was notified upon events
+    #
+    # Parameters:
+    # * *iGUI* (_Object_): The GUI to be notified.
+    def unregisterGUI(iGUI)
+      lFound = false
+      @RegisteredGUIs.delete_if do |iExistingGUI|
+        lFound = true
+        next (iExistingGUI == iGUI)
+      end
+      if (!lFound)
+        logBug "Gui #{iGUI} should have been registered to handle events, but we can't retrieve it."
+      end
     end
 
     # Set the visible properties of a Menu Item.
@@ -922,16 +1009,13 @@ module PBS
       # Name of the tips file
       @TipsFile = "#{iPBSRootDir}/tips.txt"
 
-      # Are we exiting ?
-      @Exiting = false
-
       # Opened file context
       @CurrentOpenedFileName = nil
       @CurrentOpenedFileModified = false
       @Merging = false
 
       # Do we load the default options ?
-      @DefaultOptionsLoaded = false
+      lDefaultOptionsLoaded = false
 
       # The tips provider
       @TipsProvider = nil
@@ -976,7 +1060,8 @@ module PBS
         # The options linked to each instance of Integration plugins:
         # For each Plugin ID, there is a list of [ Tag ID to represent in this plugin, Is it active ?, Options, [ Instantiated plugin, Tag ] ]
         # The instantiated plugin and Tag objects are in a separate list as it is needed to have a single object for cloned options (this object will be used to retrieve correspondances between old and new options).
-        # map< String, list< [ TagID, Boolean, Object, [ Object, Object ] ] > >
+        # map< String, list< [ TagID, Boolean, Object, [ Object, Tag ] ] > >
+        # map< PluginName, list< [ TagID, Enabled?, Options, [ Instance, Tag ] ] > >
         :intPluginsOptions => {},
         # Last tip index shown
         # Integer
@@ -988,7 +1073,7 @@ module PBS
         # Load options from the file
         @Options.merge!(openOptionsData(@DefaultOptionsFile))
       else
-        @DefaultOptionsLoaded = true
+        lDefaultOptionsLoaded = true
       end
 
       # Set the context modifiers to try
@@ -1034,12 +1119,6 @@ module PBS
       # * The Shortcuts list
       #   list< Shortcut >
       @ShortcutsList = []
-
-    end
-
-    # Initialize the controller once the main_loop has been called
-    # This lets messages pop up.
-    def init
 
       # Create the commands info
       # This variable maps each command ID with its info, including:
@@ -1136,6 +1215,16 @@ module PBS
           ]
         }
       end
+      # Create commands that instantiate an instance on the Root Tag for each integration plugin
+      getIntegrationPlugins.each do |iPluginID, iPluginInfo|
+        @Commands[ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex]] = {
+          :Title => iPluginInfo[:Title],
+          :Description => iPluginInfo[:Description],
+          :Bitmap => getPluginBitmap(iPluginInfo),
+          :Plugin => InstantiateDefaultIntCommand.new(iPluginID),
+          :Accelerator => iPluginInfo[:Accelerator]
+        }
+      end
 
       # Create Commands not yet implemented
       # TODO: Implement them
@@ -1169,8 +1258,8 @@ module PBS
         })
       end
 
-      if (@DefaultOptionsLoaded)
-        # Now we instantiate 1 instance per integration plugin on the Root Tag.
+      if (lDefaultOptionsLoaded)
+        # Now we mark 1 instance per integration plugin to be instantiated on the Root Tag.
         getIntegrationPlugins.each do |iPluginID, iPluginInfo|
           accessIntegrationPlugin(iPluginID) do |iPlugin|
             @Options[:intPluginsOptions][iPluginID] = [
@@ -1197,6 +1286,29 @@ module PBS
 
     end
 
+    # Is there at least 1 active integration plugin ?
+    #
+    # Return:
+    # * _Boolean_: Is there at least 1 active integration plugin ?
+    def isIntPluginActive?
+      rActiveOK = false
+
+      @Options[:intPluginsOptions].each do |iPluginID, iPluginsListInfo|
+        iPluginsListInfo.each do |iPluginInfo|
+          iTagID, iActive, iOptions, iInstanceInfo = iPluginInfo
+          if (iActive)
+            rActiveOK = true
+            break
+          end
+        end
+        if (rActiveOK)
+          break
+        end
+      end
+
+      return rActiveOK
+    end
+    
     # Show tips
     #
     # Parameters:
