@@ -4,7 +4,6 @@
 #++
 
 require 'pbs/Windows/ResolveConflictDialog'
-require 'pbs/Windows/ContentMetadataPanel'
 
 module PBS
 
@@ -35,6 +34,7 @@ module PBS
     # Return:
     # * <em>Wx::Panel</em>: The panel containing existing data
     def getExistingPanel
+      require 'pbs/Windows/ContentMetadataPanel'
       rPanel = ContentMetadataPanel.new(self, @SC.Type, @Controller)
 
       rPanel.setData(@SC.Content, @SC.Metadata)
@@ -47,6 +47,7 @@ module PBS
     # Return:
     # * <em>Wx::Panel</em>: The panel containing conflicting data
     def getConflictingPanel
+      require 'pbs/Windows/ContentMetadataPanel'
       rPanel = ContentMetadataPanel.new(self, @SC.Type, @Controller)
       
       rPanel.setData(@Content, @Metadata)

@@ -3,9 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/OptionsPanels/ConflictsPanel'
-require 'pbs/Windows/OptionsPanels/IntegrationPanel'
-
 module PBS
 
   # Dialog that edits options
@@ -97,6 +94,8 @@ module PBS
       lImageListManager = RUtilAnts::GUI::ImageListManager.new(lNotebookImageList, 16, 16)
 
       # Create panels that will go in tabs
+      require 'pbs/Windows/OptionsPanels/ConflictsPanel'
+      require 'pbs/Windows/OptionsPanels/IntegrationPanel'
       @OptionsPanels = [
         [ 'Conflicts', 'Conflict.png', ConflictsPanel.new(lNBOptions) ],
 #        [ 'Shortcut Types', 'Image1.png', Wx::Panel.new(lNBOptions) ],

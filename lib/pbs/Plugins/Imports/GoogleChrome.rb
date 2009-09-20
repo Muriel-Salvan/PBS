@@ -4,19 +4,12 @@
 #++
 
 require 'iconv'
-# SQLite is required to read the favicons database of Google Chrome.
-require 'sqlite3'
-require 'pbs/Plugins/Tools_SQLite3'
-# Temp directories are used to store the favicon files on disk to read them
-require 'tmpdir'
 
 module PBS
 
   module Imports
 
     class GoogleChrome
-
-      include Tools_SQLite3
 
       # The Google Chrome names to UTF-8 converter
       UTF8_CONVERTER = Iconv.new('UTF-8', 'CP1252')
@@ -44,6 +37,7 @@ module PBS
           @FaviconsDB = nil
           if (File.exists?(iFileName))
             # First get the database storing favicons
+            require 'pbs/Plugins/Tools_SQLite3'
             @FaviconsDB = Tools_SQLite3::SQLite3DB.new(iFileName)
             # As we open a large file (often around 50Mb for Google Chrome favicons), we increase the cache size.
             @FaviconsDB.DB.execute("PRAGMA cache_size=50000")
@@ -73,6 +67,7 @@ module PBS
               @FaviconsDB.DB.execute("SELECT image_data FROM favicons WHERE url LIKE \"#{iServerURL}%/favicon.ico\"") do |iFaviconData|
                 if (iFaviconData[0] != nil)
                   # Write this data in a temporary file
+                  require 'tmpdir'
                   lFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}.png"
                   File.open(lFileName, 'wb') do |oFile|
                     oFile.write(iFaviconData[0])

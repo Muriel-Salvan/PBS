@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/AboutDialog'
-
 module PBS
 
   module Commands
@@ -19,6 +17,7 @@ module PBS
       # ** *parentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParams)
         lWindow = iParams[:parentWindow]
+        require 'pbs/Windows/AboutDialog'
         showModal(AboutDialog, lWindow, ioController.PBSRootDir) do |iModalResult, iDialog|
           # Nothing to do
         end

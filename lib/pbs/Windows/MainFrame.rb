@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/PBSTreeCtrl'
-
 module PBS
 
   # Main application frame
@@ -248,6 +246,7 @@ module PBS
       end
 
       # Create the main treeview
+      require 'pbs/Windows/PBSTreeCtrl'
       @TCMainTree = PBSTreeCtrl.new(@Controller, self)
 
       # We register the tree controller itself, as it contains plenty of onXxxx methods.

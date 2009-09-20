@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/EditTagDialog'
-
 module PBS
 
   module Commands
@@ -28,6 +26,7 @@ module PBS
           lParentTagName = lTag.Name
         end
         ioController.undoableOperation("Create new Tag in #{lParentTagName}") do
+          require 'pbs/Windows/EditTagDialog'
           showModal(EditTagDialog, lWindow, nil) do |iModalResult, iDialog|
             case iModalResult
             when Wx::ID_OK

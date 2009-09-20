@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'fileutils'
-
 module PBS
 
   module Exports
@@ -52,6 +50,7 @@ module PBS
         iTag.Children.each do |iChildTag|
           # Make sure the name only has valid characters
           lChildPath = "#{iPath}/#{getValidFileName(iChildTag.Name)}"
+          require 'fileutils'
           FileUtils.mkdir_p(lChildPath)
           oTagsToPath[iChildTag] = lChildPath
           createTagsInDir(iChildTag, lChildPath, oTagsToPath)

@@ -3,9 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-# To serialize a bitmap, we need a temporary file
-require 'tmpdir'
-
 # It is impossible to marshal_load a Wx::Bitmap using load_file, as the C-type is checked during load_file call and the Marshaller does not create exactly the same C-type between 2 executions.
 # Therefore we have 2 alternatives:
 # 1. give an external way (no more marshal_dump/marshal_load) to serialize a bitmap with load_file (the one we are doing here)
@@ -27,6 +24,7 @@ module Wx
       rData = ''
 
       # Require a temporary file
+      require 'tmpdir'
       lFileName = "#{Dir.tmpdir}/#{object_id}.png"
       if (save_file(lFileName, Wx::BITMAP_TYPE_PNG))
         File.open(lFileName, 'rb') do |iFile|
@@ -47,6 +45,7 @@ module Wx
     # * *iData* (_String_): The serialized content
     def setSerialized(iData)
       # Require a temporary file
+      require 'tmpdir'
       lFileName = "#{Dir.tmpdir}/#{object_id}.png"
       File.open(lFileName, 'wb') do |oFile|
         oFile.write(iData)

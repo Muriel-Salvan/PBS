@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/TagMetadataPanel'
-
 module PBS
 
   # Dialog that edits a Tag
@@ -45,6 +43,7 @@ module PBS
       )
 
       # First create all the panels that will fit in this dialog
+      require 'pbs/Windows/TagMetadataPanel'
       @MetadataPanel = TagMetadataPanel.new(self)
       if (iTag == nil)
         @MetadataPanel.setData('New Tag', nil)

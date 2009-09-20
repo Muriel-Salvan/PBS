@@ -3,9 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-# Temp directory is used to eventually copy the database file if it is in use.
-require 'tmpdir'
-
 module PBS
 
   # Module defining some handy methods for use with SQLite3
@@ -25,6 +22,7 @@ module PBS
       # * *iFileName* (_String_): File containing the db
       def initialize(iFileName)
         @TmpFileName = nil
+        require 'sqlite3'
         @DB = SQLite3::Database.new(iFileName)
         begin
           # Issue a single select to test if the database is in use
@@ -32,6 +30,7 @@ module PBS
         rescue SQLite3::BusyException
           # The database is in use.
           # Try copying the file in another place.
+          require 'tmpdir'
           @TmpFileName = "#{Dir.tmpdir}/DB_#{self.object_id}.sqlite"
           FileUtils::cp(iFileName, @TmpFileName)
           # Try again

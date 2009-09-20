@@ -3,11 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-# Those 3 requires are needed to download temporary favicons
-require 'tmpdir'
-require 'net/http'
-require 'net/ftp'
-
 module PBS
 
   # Define general constants

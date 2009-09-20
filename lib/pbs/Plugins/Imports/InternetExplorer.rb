@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'win32/registry'
-
 module PBS
 
   module Imports
@@ -20,6 +18,7 @@ module PBS
         # Get the profile bookmarks path from the registry
         lFavoritesPath = nil
         begin
+          require 'win32/registry'
           Win32::Registry::HKEY_CURRENT_USER.open('Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders') do |iReg|
             lRegType, lFavoritesPath = iReg.read('Favorites')
             lFavoritesPath.gsub!(/\\/,'/')

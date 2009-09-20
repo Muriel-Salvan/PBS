@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/MainFrame'
-
 module PBS
 
   module Integration
@@ -37,6 +35,7 @@ module PBS
       # Return:
       # * _Object_: The instance of this integration plugin
       def createNewInstance(iController)
+        require 'pbs/Windows/MainFrame'
         rMainFrame = MainFrame.new(nil, iController)
 
         rMainFrame.show

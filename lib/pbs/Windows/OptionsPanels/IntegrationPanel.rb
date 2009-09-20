@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/SelectTagDialog'
-
 module PBS
 
   # Panel displaying options about integration plugins
@@ -224,6 +222,7 @@ module PBS
           ioNotifier.refreshList
         end
         evt_button(lBBSelectTag) do |iEvent|
+          require 'pbs/Windows/SelectTagDialog'
           showModal(SelectTagDialog, self, iController.RootTag, iController) do |iModalResult, iDialog|
             if (iModalResult == Wx::ID_OK)
               lTag = iDialog.getSelectedTag

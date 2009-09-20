@@ -8,9 +8,6 @@ require 'pbs/Controller/Notifiers'
 require 'pbs/Controller/GUIHelpers'
 require 'pbs/Controller/Readers'
 require 'pbs/Controller/UndoableAtomicOperations'
-require 'pbs/Windows/ResolveTagConflictDialog'
-require 'pbs/Windows/ResolveShortcutConflictDialog'
-require 'pbs/Windows/EditShortcutDialog'
 
 module PBS
 
@@ -159,6 +156,7 @@ module PBS
           if (lTag != nil)
             lLocationName = " in #{lTag.Name}"
           end
+          require 'pbs/Windows/EditShortcutDialog'
           showModal(EditShortcutDialog, lWindow, nil, ioController.RootTag, ioController, iTypePlugin, lTag) do |iModalResult, iDialog|
             case iModalResult
             when Wx::ID_OK
@@ -308,7 +306,7 @@ module PBS
     # Basically it is a list of UndoableAtomicOperations, grouped with a title.
     class UndoableOperation
 
-      # Title of the Undoable opersation
+      # Title of the Undoable operation
       #   String
       attr_reader :Title
 
@@ -621,6 +619,7 @@ module PBS
             if ((@Options[:tagsConflict] == TAGSCONFLICT_ASK) and
                 (@CurrentOperationTagsConflicts == nil))
               # Ask for replacement or cancellation
+              require 'pbs/Windows/ResolveTagConflictDialog'
               showModal(ResolveTagConflictDialog, nil, ioChildTag, iTagName, iIcon) do |iModalResult, iDialog|
                 rAction = iModalResult
                 if (iDialog.applyToAll?)
@@ -689,6 +688,7 @@ module PBS
             # It already exists. Check options to know what to do.
             if ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_ASK) and
                 (@CurrentOperationShortcutsConflicts == nil))
+              require 'pbs/Windows/ResolveShortcutConflictDialog'
               showModal(ResolveShortcutConflictDialog, nil, ioSC, iContent, iMetadata, self) do |iModalResult, iDialog|
                 rAction = iModalResult
                 if (iDialog.applyToAll?)

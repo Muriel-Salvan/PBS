@@ -3,21 +3,11 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-# SQLite is required to read the complete bookmarks database of Firefox 3.
-require 'sqlite3'
-require 'pbs/Plugins/Tools_SQLite3'
-# Temp directory is used to store the favicon files on disk to read them
-require 'tmpdir'
-# Neeed to copy files
-require 'fileutils'
-
 module PBS
 
   module Imports
 
     class FireFox3
-
-      include Tools_SQLite3
 
       # Execute the import
       #
@@ -111,7 +101,8 @@ module PBS
       # * *ioParentTag* (_Tag_): The parent Tag where we want to import (can be the Root Tag).
       def importBookmarksFromFirefox(ioController, iFileName, ioParentTag)
         # Open the DB and import everything
-        openSQLite3DB(iFileName) do |ioDB|
+        require 'pbs/Plugins/Tools_SQLite3'
+        Tools_SQLite3::openSQLite3DB(iFileName) do |ioDB|
           # Here we have a working DB.
           # Types:
           # 1 = Bookmark
@@ -173,6 +164,7 @@ module PBS
             iParentID, iTitle, iURL, iIconData, iIconType = iRow
             # The icon
             # Write its data in a temporary file
+            require 'tmpdir'
             lIconFileName = "#{Dir.tmpdir}/Favicon_#{self.object_id}"
             File.open(lIconFileName, 'wb') do |oFile|
               oFile.write(iIconData)

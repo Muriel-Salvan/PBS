@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/ContentMetadataPanel'
-
 module PBS
 
   # Dialog that edits a Shortcut
@@ -146,6 +144,7 @@ module PBS
       )
 
       # First create all the panels that will fit in this dialog
+      require 'pbs/Windows/ContentMetadataPanel'
       @ContentMetadataPanel = ContentMetadataPanel.new(self, @Type, iController)
       if (iSC == nil)
         lTags = {}

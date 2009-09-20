@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/ChooseIconDialog'
-
 module PBS
 
   # Panel that displays content and metadata
@@ -54,6 +52,7 @@ module PBS
         # Events
         evt_button(@BBIcon) do |iEvent|
           # display the icon chooser dialog
+          require 'pbs/Windows/ChooseIconDialog'
           showModal(ChooseIconDialog, self, @BBIcon.bitmap_label) do |iModalResult, iDialog|
             case iModalResult
             when Wx::ID_OK

@@ -3,9 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/EditShortcutDialog'
-require 'pbs/Windows/EditTagDialog'
-
 module PBS
 
   module Commands
@@ -27,6 +24,7 @@ module PBS
         case lObjectID
         when ID_TAG
           # Now we edit lObject
+          require 'pbs/Windows/EditTagDialog'
           showModal(EditTagDialog, lWindow, lObject) do |iModalResult, iDialog|
             case iModalResult
             when Wx::ID_OK
@@ -38,6 +36,7 @@ module PBS
           end
         when ID_SHORTCUT
           # Now we edit lObject
+          require 'pbs/Windows/EditShortcutDialog'
           showModal(EditShortcutDialog, lWindow, lObject, ioController.RootTag, ioController) do |iModalResult, iDialog|
             case iModalResult
             when Wx::ID_OK

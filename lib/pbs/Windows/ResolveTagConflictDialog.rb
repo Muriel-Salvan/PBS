@@ -4,7 +4,6 @@
 #++
 
 require 'pbs/Windows/ResolveConflictDialog'
-require 'pbs/Windows/TagMetadataPanel'
 
 module PBS
 
@@ -33,6 +32,7 @@ module PBS
     # Return:
     # * <em>Wx::Panel</em>: The panel containing existing data
     def getExistingPanel
+      require 'pbs/Windows/TagMetadataPanel'
       rPanel = TagMetadataPanel.new(self)
 
       rPanel.setData(@Tag.Name, @Tag.Icon)
@@ -45,6 +45,7 @@ module PBS
     # Return:
     # * <em>Wx::Panel</em>: The panel containing conflicting data
     def getConflictingPanel
+      require 'pbs/Windows/TagMetadataPanel'
       rPanel = TagMetadataPanel.new(self)
       
       rPanel.setData(@Name, @Icon)

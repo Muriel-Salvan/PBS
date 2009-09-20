@@ -37,7 +37,6 @@ require 'pbs/Model/Common'
 require 'pbs/Model/Tag'
 require 'pbs/Model/Shortcut'
 require 'pbs/Model/MultipleSelection'
-require 'pbs/Model/MissingDependencies'
 # The controller
 require 'pbs/Controller/Controller'
 

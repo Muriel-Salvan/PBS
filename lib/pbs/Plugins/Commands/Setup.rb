@@ -3,8 +3,6 @@
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
-require 'pbs/Windows/OptionsDialog'
-
 module PBS
 
   module Commands
@@ -20,6 +18,7 @@ module PBS
       def execute(ioController, iParams)
         lWindow = iParams[:parentWindow]
         # Display Options dialog
+        require 'pbs/Windows/OptionsDialog'
         showModal(OptionsDialog, lWindow, ioController.Options, ioController) do |iModalResult, iDialog|
           case iModalResult
           when Wx::ID_OK
