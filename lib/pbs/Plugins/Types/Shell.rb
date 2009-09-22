@@ -123,6 +123,11 @@ module PBS
         if ((lDir != nil) and
             (!lDir.empty?))
           lOldDir = Dir.getwd
+          # Eventually remove quotes from lDir
+          if ((lDir[0..0] == '"') and
+              (lDir[-1..-1] == '"'))
+            lDir = lDir[1..-2]
+          end
           Dir.chdir(lDir)
         end
         # Execute command

@@ -275,6 +275,7 @@ module PBS
       # * *iParentTag* (_Tag_): The Tag in which we merge serialized data (can be the Root Tag)
       # * *iLocalSelection* (_MultipleSelection_): The local selection corresponding to this serialized one, or nil if it is from an external source. This is used in case of local selections (Copy/Cut/Paste or Drag/Drop in the same data source), to reuse the same Shortcuts.
       def createSerializedTagsShortcuts(ioController, iParentTag, iLocalSelection)
+        ioController.addProgressionRange(@SelectedTags.size)
         # The list of encountered Shortcuts IDs, with the set of Tags associated to them
         # This is computed first in a list, as after gathering Tags/Shortcuts relations, we will create each Shortcut once with its complete list of Tags.
         # map< Integer, map< Tag, nil > >
@@ -288,6 +289,7 @@ module PBS
             # Now we can create it
             lSerializedTag.createTag(ioController, iParentTag, @Tags, lShortcutsTags)
           end
+          ioController.incProgression
         end
         # Then complete the relations Shortcuts/Tags by considering the selected Shortcuts to be created under iParentTag directly.
         @SelectedShortcuts.each do |iShortcutID|
@@ -300,6 +302,7 @@ module PBS
           end
         end
         # And now create each Shortcut, knowing its set of Tags
+        ioController.addProgressionRange(lShortcutsTags.size)
         lShortcutsTags.each do |iShortcutID, iTagsSet|
           # If we are importing from a local source (no external application), we reuse the same Shortcut, and we just modify Tags
           if (iLocalSelection == nil)
@@ -322,6 +325,7 @@ module PBS
               ioController.updateShortcut(lShortcut, lShortcut.Content, lShortcut.Metadata, lNewTags)
             end
           end
+          ioController.incProgression
         end
       end
 

@@ -19,61 +19,88 @@ module PBS
       # This method can be called recursively. Be prepared for it.
       if (@CurrentUndoableOperation == nil)
         logInfo "= #{iOperationTitle} ..."
-        # Create the current Undo context
-        @CurrentUndoableOperation = Controller::UndoableOperation.new(iOperationTitle)
-        # Reset the transaction context
-        @CurrentTransactionToBeCancelled = false
-        @CurrentOperationTagsConflicts = nil
-        @CurrentOperationShortcutsConflicts = nil
-        # Don't display errors live, but store them temporarily instead
-        lCurrentTransactionErrors = []
-        setLogErrorsStack(lCurrentTransactionErrors)
-        begin
-          # Call the command code
-          yield
-        rescue Exception
-          logExc $!, "Exception encountered during execution of \"#{iOperationTitle}\""
-        end
-        setLogErrorsStack(nil)
-        # Check possible errors
-        if (!lCurrentTransactionErrors.empty?)
-          lErrorsText = nil
-          if (lCurrentTransactionErrors.size > MAX_ERRORS_PER_DIALOG)
-            lErrorsText = "Showing only #{MAX_ERRORS_PER_DIALOG} first errors:\n* #{lCurrentTransactionErrors[0..MAX_ERRORS_PER_DIALOG-1].join("\n* ")}"
-          else
-            lErrorsText = "* #{lCurrentTransactionErrors.join("\n* ")}"
+        # Create the corresponding ProgressBar
+        setupTextProgress(Wx::get_app.get_top_window, iOperationTitle,
+          :Cancellable => true,
+          :Title => iOperationTitle,
+          :Icon => getGraphic('IconProcess32.png')
+        ) do |ioProgressDlg|
+          @CurrentProgressDlg = ioProgressDlg
+          # Create the current Undo context: this is the object that will be saved in the Undo/Redo stacks
+          @CurrentUndoableOperation = Controller::UndoableOperation.new(iOperationTitle)
+          # Reset the transaction context
+          @CurrentTransactionToBeCancelled = false
+          @CurrentOperationTagsConflicts = nil
+          @CurrentOperationShortcutsConflicts = nil
+          # Don't display errors live, but store them temporarily instead
+          lCurrentTransactionErrors = []
+          setLogErrorsStack(lCurrentTransactionErrors)
+          begin
+            # Call the command code
+            yield
+          rescue Exception
+            logExc $!, "Exception encountered during execution of \"#{iOperationTitle}\""
           end
-          # Display errors
-          showModal(Wx::MessageDialog, nil,
-            lErrorsText,
-            "#{lCurrentTransactionErrors.size} error(s) during #{iOperationTitle}",
-            :style => Wx::OK|Wx::ICON_HAND
-          ) do |iModalResult, iDialog|
-            # Nothing to do
+          setLogErrorsStack(nil)
+          # Check possible errors
+          if (!lCurrentTransactionErrors.empty?)
+            lErrorsText = nil
+            if (lCurrentTransactionErrors.size > MAX_ERRORS_PER_DIALOG)
+              lErrorsText = "Showing only #{MAX_ERRORS_PER_DIALOG} first errors:\n* #{lCurrentTransactionErrors[0..MAX_ERRORS_PER_DIALOG-1].join("\n* ")}"
+            else
+              lErrorsText = "* #{lCurrentTransactionErrors.join("\n* ")}"
+            end
+            # Display errors
+            showModal(Wx::MessageDialog, nil,
+              lErrorsText,
+              "#{lCurrentTransactionErrors.size} error(s) during #{iOperationTitle}",
+              :style => Wx::OK|Wx::ICON_HAND
+            ) do |iModalResult, iDialog|
+              # Nothing to do
+            end
           end
-        end
-        # Check that the client code effectively modified something before creating an Undo
-        if (!@CurrentUndoableOperation.AtomicOperations.empty?)
-          # If we want to cancel the whole operation, do it now
-          if (@CurrentTransactionToBeCancelled)
-            # Rollback everything
-            @CurrentUndoableOperation.undo
-          else
-            # Add it to the Undo stack
-            @UndoStack.push(@CurrentUndoableOperation)
-            notifyUndoUpdate
-            # Clear the Redo stack
-            @RedoStack = []
-            notifyRedoUpdate
+          # Check that the client code effectively modified something before creating an Undo
+          if (!@CurrentUndoableOperation.AtomicOperations.empty?)
+            # If we want to cancel the whole operation, do it now
+            if ((@CurrentTransactionToBeCancelled) or
+                (@CurrentProgressDlg.Cancelled))
+              # Rollback everything
+              @CurrentUndoableOperation.undo
+            else
+              # Add it to the Undo stack
+              @UndoStack.push(@CurrentUndoableOperation)
+              notifyUndoUpdate
+              # Clear the Redo stack
+              @RedoStack = []
+              notifyRedoUpdate
+            end
           end
+          # Clear the current transaction
+          @CurrentUndoableOperation = nil
+          @CurrentProgressDlg = nil
         end
-        # Clear the current transaction
-        @CurrentUndoableOperation = nil
         logInfo "= ... #{iOperationTitle}"
       else
         # No special transaction
         yield
       end
+    end
+
+    # Add a given range to the current progression.
+    # This sets the progression to determined if it was not already.
+    #
+    # Parameters:
+    # * *iRange* (_Integer_): Range to add to the progression
+    def addProgressionRange(iRange)
+      @CurrentProgressDlg.incRange(iRange)
+    end
+
+    # Increment the current progression.
+    #
+    # Parameters:
+    # * *iIncrement* (_Integer_): Increment to apply [optional = 1]
+    def incProgression(iIncrement = 1)
+      @CurrentProgressDlg.incValue(iIncrement)
     end
 
     # Create a Tag if it does not exist already, and return it.

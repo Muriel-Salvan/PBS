@@ -58,7 +58,7 @@ module PBS
     # * *iFileName* (_String_): File containing the db
     # * *CodeBlock*: The code called with the db opened:
     # ** *ioDB* (<em>SQLite3::Database</em>): The DB object
-    def openSQLite3DB(iFileName)
+    def self.openSQLite3DB(iFileName)
       lDB = SQLite3DB.new(iFileName)
       yield(lDB.DB)
       lDB.final

@@ -73,7 +73,10 @@ module PBS
       # Protect it to display correct error messages
       begin
         # We can set a progress dialog, do it now: the user has already waited too long !!!
-        setupBitmapProgress(nil, false, getGraphic('Splash.png')) do |ioProgressDlg|
+        setupBitmapProgress(nil, getGraphic('Splash.png'),
+          :Title => "Launching PBS #{$PBS_VERSION}",
+          :Icon => getGraphic('Icon32.png')
+        ) do |ioProgressDlg|
           ioProgressDlg.setRange(6)
           # Create the Controller
           lController = PBS::Controller.new(@PBSRootDir)
