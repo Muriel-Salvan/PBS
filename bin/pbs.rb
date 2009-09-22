@@ -99,10 +99,14 @@ module PBS
             (lUnresolved.empty?))
           # Launch everything
           require 'wx'
-          setGUIForDialogs(RUtilAnts::Logging::Logger::GUI_WX)
           require 'pbs/MainApp'
-          MainApp.new(iPBSRootDir, @DebugOption, lOpenFileNames).main_loop
-          logInfo 'PBS closed correctly.'
+          # Protect against errors
+          begin
+            MainApp.new(iPBSRootDir, @DebugOption, lOpenFileNames).main_loop
+            logInfo 'PBS closed correctly.'
+          rescue Exception
+            logExc $!, 'Un exception occurred during PBS run.'
+          end
         else
           logErr "Error while installing wxRuby: #{lError}. #{lUnresolved.size} unresolved dependencies. Exiting."
         end

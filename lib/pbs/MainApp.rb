@@ -63,54 +63,77 @@ module PBS
     end
 
     # Initialize the application
+    #
+    # Return:
+    # * _Boolean_: Do we enter the event loop ?
     def on_init
-      # Create the Controller
-      lController = PBS::Controller.new(@PBSRootDir)
-      # Load the startup file if needed
-      if (!@StartupFileNames.empty?)
-        lFirstOne = true
-        @StartupFileNames.each do |iFileName|
-          if (File.exists?(iFileName))
-            lController.undoableOperation("Load startup file #{File.basename(iFileName)[0..-6]}") do
-              # Open and merge
-              openData(lController, iFileName)
-              if (lFirstOne)
-                lController.changeCurrentFileName(iFileName)
+      rEnterEventLoop = false
+
+      setGUIForDialogs(RUtilAnts::Logging::Logger::GUI_WX)
+      # Protect it to display correct error messages
+      begin
+        # We can set a progress dialog, do it now: the user has already waited too long !!!
+        setupBitmapProgress(nil, false, getGraphic('Splash.png')) do |ioProgressDlg|
+          ioProgressDlg.setRange(6)
+          # Create the Controller
+          lController = PBS::Controller.new(@PBSRootDir)
+          ioProgressDlg.incValue
+          # Load the startup file if needed
+          if (!@StartupFileNames.empty?)
+            lFirstOne = true
+            @StartupFileNames.each do |iFileName|
+              if (File.exists?(iFileName))
+                lController.undoableOperation("Load startup file #{File.basename(iFileName)[0..-6]}") do
+                  # Open and merge
+                  openData(lController, iFileName)
+                  if (lFirstOne)
+                    lController.changeCurrentFileName(iFileName)
+                  end
+                  lFirstOne = false
+                end
+              else
+                logErr "Unable to find file \"#{iFileName}\""
               end
-              lFirstOne = false
             end
-          else
-            logErr "Unable to find file \"#{iFileName}\""
           end
+          ioProgressDlg.incValue
+          # Begin
+          lController.notifyInit
+          ioProgressDlg.incValue
+          # Notify everybody that options have been changed to initialize them
+          # This step creates all integration plugin instances
+          lController.notifyOptionsChanged({})
+          ioProgressDlg.incValue
+
+          # If no integration plugin is to be instantiated, bring the Options dialog
+          lIntPluginActive = lController.isIntPluginActive?
+          if (!lIntPluginActive)
+            logMsg 'All views have been disabled or closed. Please activate some integration plugins to use to display PBS.'
+            # Bring the Options dialog
+            lController.executeCommand(Wx::ID_SETUP, :parentWindow => nil)
+            # Check again
+            lIntPluginActive = lController.isIntPluginActive?
+          end
+          ioProgressDlg.incValue
+
+          # If we ask for startup tips, go on !
+          if (lController.Options[:displayStartupTips])
+            lTopWindow = top_window
+            if (lTopWindow == nil)
+              logErr 'No window available for tips display. Please specify at least 1 integration plugin to be used, or delete the current Options file.'
+            else
+              lController.showTips(lTopWindow)
+            end
+          end
+          ioProgressDlg.incValue
+          rEnterEventLoop = lIntPluginActive
         end
-      end
-      # Begin
-      lController.notifyInit
-      # Notify everybody that options have been changed to initialize them
-      # This step creates all integration plugin instances
-      lController.notifyOptionsChanged({})
-
-      # If no integration plugin is to be instantiated, bring the Options dialog
-      lIntPluginActive = lController.isIntPluginActive?
-      if (!lIntPluginActive)
-        logMsg 'All views have been disabled or closed. Please activate some integration plugins to use to display PBS.'
-        # Bring the Options dialog
-        lController.executeCommand(Wx::ID_SETUP, :parentWindow => nil)
-        # Check again
-        lIntPluginActive = lController.isIntPluginActive?
+      rescue Exception
+        logExc $!, 'Exception occurred during startup. Quitting.'
+        rEnterEventLoop = false
       end
 
-      # If we ask for startup tips, go on !
-      if (lController.Options[:displayStartupTips])
-        lTopWindow = top_window
-        if (lTopWindow == nil)
-          logErr 'No window available for tips display. Please specify at least 1 integration plugin to be used, or delete the current Options file.'
-        else
-          lController.showTips(lTopWindow)
-        end
-      end
-
-      return lIntPluginActive
+      return rEnterEventLoop
     end
 
   end
