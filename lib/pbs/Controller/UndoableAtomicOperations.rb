@@ -47,13 +47,9 @@ module PBS
     # * _Object_: The return of the doOperation
     def atomicOperation(iUndoableAtomicOperation)
       @CurrentUndoableOperation.AtomicOperations << iUndoableAtomicOperation
-      # Pulse the progression
-      if (@CurrentProgressDlg.Determined)
-        @CurrentProgressDlg.refresh
-        @CurrentProgressDlg.update
-        # Process eventual user request to stop transaction
-        Wx.get_app.yield
-      else
+      # Pulse the progression if it is still undetermined.
+      # If the progression is determined, we consider that the process already calls incProgression, which gives hand to the user already.
+      if (!@CurrentProgressDlg.Determined)
         @CurrentProgressDlg.pulse
       end
       # Perform it right now

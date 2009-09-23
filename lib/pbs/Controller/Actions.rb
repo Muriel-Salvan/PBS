@@ -35,12 +35,14 @@ module PBS
           # Don't display errors live, but store them temporarily instead
           lCurrentTransactionErrors = []
           setLogErrorsStack(lCurrentTransactionErrors)
+          notifyTransactionBegin
           begin
             # Call the command code
             yield
           rescue Exception
             logExc $!, "Exception encountered during execution of \"#{iOperationTitle}\""
           end
+          notifyTransactionEnd
           setLogErrorsStack(nil)
           # Check possible errors
           if (!lCurrentTransactionErrors.empty?)

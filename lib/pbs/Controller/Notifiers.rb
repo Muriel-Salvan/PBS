@@ -8,6 +8,17 @@ module PBS
   # This module defines every method used by the Undoable Atomic Operations to broadcast notifications of data model changes.
   module Notifiers
 
+    # Called when a transaction begins.
+    # A transaction will then certainly call many notifiers that may affect the data.
+    def notifyTransactionBegin
+      notifyRegisteredGUIs(:onTransactionBegin)
+    end
+
+    # Called when a transaction ends.
+    def notifyTransactionEnd
+      notifyRegisteredGUIs(:onTransactionEnd)
+    end
+
     # Called when the clipboard's content has changed.
     # This method will the use the @Clipboard_* variables to adapt the Paste command aspect and the local Cut/Copy variables eventually.
     def notifyClipboardContentChanged

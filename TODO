@@ -74,7 +74,6 @@
 * Increase performances:
 ** Memory consumption (Try reenabling GC)
 * Timer.every(xxx) loops have to quit when quitting PBS
-* Make commands use the progress bars correctly
 * Bug correction: disable shortcuts while editing label in TreeCtrl.
 * MainWindow icon should be the Tag's one.
 * Make integration plugin that puts itself as a FireFox plugin.

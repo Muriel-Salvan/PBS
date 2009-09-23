@@ -289,7 +289,22 @@ module PBS
         @RootTag = iRootTag
         # Know if we are dealing with the real Root Tag (behaviour changes on the real one)
         @RealRootTag = (@Controller.RootTag == iRootTag)
-        fillTree
+        updateTree do
+          # Update it
+          # Erase everything
+          delete_all_items
+          # Keep a correspondance of each Tag and its corresponding Tree ID
+          # map< Tag, Integer >
+          @TagsToMainTree = {}
+          # Insert everything
+          insertTreeBranch(nil, @RootTag)
+          # Expand
+          if ($PBS_DevDebug)
+            expand_all
+          else
+            expand(root_item)
+          end
+        end
       end
     end
 
@@ -425,7 +440,7 @@ module PBS
       end
       evt_tree_end_label_edit(self) do |iEvent|
         # First, retrieve who we are editing (we are sure it can't be the root)
-        lID, lObject = get_item_data(iEvent.item)
+        lID, lObject, lKey = get_item_data(iEvent.item)
         lNewName = iEvent.label
         if (lNewName.strip != '')
           case lID
@@ -480,8 +495,8 @@ module PBS
     def on_compare_items(iItemID1, iItemID2)
       rCompare = 0
 
-      lID1, lObject1 = get_item_data(iItemID1)
-      lID2, lObject2 = get_item_data(iItemID2)
+      lID1, lObject1, lKey1 = get_item_data(iItemID1)
+      lID2, lObject2, lKey2 = get_item_data(iItemID2)
       if ((lID1 == ID_TAG) and
           (lID2 == ID_SHORTCUT))
         rCompare = -1
@@ -489,7 +504,7 @@ module PBS
              (lID2 == ID_TAG))
         rCompare = 1
       else
-        rCompare = (convertAccentsString(get_item_text(iItemID1).upcase) <=> convertAccentsString(get_item_text(iItemID2).upcase))
+        rCompare = (lKey1 <=> lKey2)
       end
 
       return rCompare
@@ -526,7 +541,7 @@ module PBS
     def displayHint(iItemID, iMousePosition)
       lToolTip = nil
       if (iItemID != 0)
-        lID, lObject = get_item_data(iItemID)
+        lID, lObject, lKey = get_item_data(iItemID)
         case lID
         when ID_TAG
           lToolTip = lObject.Name
@@ -583,13 +598,15 @@ module PBS
     # Parameters:
     # * *iItemID* (_Integer_): The item of the main tree that we want to update
     def updateTreeNode(iItemID)
-      lID, lObject = get_item_data(iItemID)
+      lItemData = get_item_data(iItemID)
+      lID, lObject, lKey = lItemData
+      lItemText = ''
       case lID
       when ID_TAG
         # If this is the real Root Tag, there is some special display
         if (lObject == @Controller.RootTag)
           # Set the text
-          set_item_text(iItemID, 'PBS')
+          lItemText = 'PBS'
           # Now compute the image ID
           lIdxImage = @ImageListManager.getImageIndex([ @Controller.RootTag, 0 ]) do
             next getGraphic('Icon16.png')
@@ -597,7 +614,7 @@ module PBS
           set_item_image(iItemID, lIdxImage)
         else
           # Set the text
-          set_item_text(iItemID, lObject.Name)
+          lItemText = lObject.Name
           # Compute the masks to put on the icon
           # list< Wx::Bitmap >
           lMasks = []
@@ -667,11 +684,10 @@ module PBS
         end
       when ID_SHORTCUT
         # Retrieve the Shortcut
-        lTitle = lObject.Metadata['title']
-        if (lTitle == nil)
-          lTitle = '-- Unknown title --'
+        lItemText = lObject.Metadata['title']
+        if (lItemText == nil)
+          lItemText = '-- Unknown title --'
         end
-        set_item_text(iItemID, lTitle)
         # Compute the masks to put on the icon
         # list< Wx::Bitmap >
         lMasks = []
@@ -742,16 +758,25 @@ module PBS
         set_item_image(iItemID, lIdxImage)
       else
         logBug "Tree node #{iItemID} has unknown ID (#{lID}). It will be marked in the tree."
-        set_item_text(iItemID, "!!! Unknown Data ID (Node ID: #{iItemID}, Data ID: #{lID}) !!!")
+        lItemText = "!!! Unknown Data ID (Node ID: #{iItemID}, Data ID: #{lID}) !!!"
       end
       if ($PBS_DevDebug)
         # Add some debugging info
-        set_item_text(iItemID, "#{get_item_text(iItemID)} (NodeID=#{iItemID}, ID=#{lID}, Object=#{lObject})")
+        lItemText = "#{lItemText} (NodeID=#{iItemID}, ID=#{lID}, Object=#{lObject})"
       end
-      # Now that this item has changed, sort its parent
-      lParentItemID = get_item_parent(iItemID)
-      if (lParentItemID != 0)
-        sort_children(lParentItemID)
+      if (get_item_text(iItemID) != lItemText)
+        set_item_text(iItemID, lItemText)
+        # Modify also the data associated
+        lItemData[2] = convertAccentsString(lItemText.upcase)
+        # Now that this item has changed, mark its parent to be sorted for the next end of transaction
+        lParentItemID = get_item_parent(iItemID)
+        if (lParentItemID != 0)
+          if (is_frozen)
+            @ItemsToSort[lParentItemID] = nil
+          else
+            sort_children(lParentItemID)
+          end
+        end
       end
     end
 
@@ -765,7 +790,7 @@ module PBS
         removeTreeBranch(iChildID)
       end
       # Then remove the root registered info
-      lID, lObject = get_item_data(iNodeID)
+      lID, lObject, lKey = get_item_data(iNodeID)
       case lID
       when ID_TAG
         # Remove a Tag reference
@@ -796,7 +821,7 @@ module PBS
       else
         lTagNodeID = append_item(iParentID, '')
       end
-      set_item_data(lTagNodeID, [ ID_TAG, iTag ])
+      set_item_data(lTagNodeID, [ ID_TAG, iTag, nil ])
       @TagsToMainTree[iTag] = lTagNodeID
       updateTreeNode(lTagNodeID)
       # Insert its children Tags also
@@ -811,7 +836,7 @@ module PBS
           if (iSC.Tags.empty?)
             # Insert iSC as a child
             lSCNodeID = append_item(lTagNodeID, '')
-            set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC ])
+            set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC, nil ])
             updateTreeNode(lSCNodeID)
           end
         end
@@ -820,7 +845,7 @@ module PBS
           if (iSC.Tags.has_key?(iTag))
             # Insert iSC as a child
             lSCNodeID = append_item(lTagNodeID, '')
-            set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC ])
+            set_item_data(lSCNodeID, [ ID_SHORTCUT, iSC, nil ])
             updateTreeNode(lSCNodeID)
           end
         end
@@ -836,7 +861,7 @@ module PBS
         # Put at the root if it is displayed
         if (@RealRootTag)
           lNewNodeID = append_item(root_item, '')
-          set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC ])
+          set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC, nil ])
           updateTreeNode(lNewNodeID)
         end
       else
@@ -847,7 +872,7 @@ module PBS
           # * The Tag is not displayed
           if (lTagID != nil)
             lNewNodeID = append_item(lTagID, '')
-            set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC ])
+            set_item_data(lNewNodeID, [ ID_SHORTCUT, iSC, nil ])
             updateTreeNode(lNewNodeID)
           end
         end
@@ -861,7 +886,7 @@ module PBS
     # * *CodeBlock*: Code to execute while the tree is frozen
     def updateTree
       # First, freeze it for better performance during update
-      freeze
+      onTransactionBegin
       begin
         yield
       rescue Exception
@@ -872,10 +897,7 @@ module PBS
         # Propagate the exception
         raise
       end
-      # Unfreeze it
-      thaw
-      # Redraw it
-      refresh
+      onTransactionEnd
     end
 
     # Delete an object (found in item_data) that is a direct child of a given Node ID
@@ -887,7 +909,7 @@ module PBS
       # Find the node to delete
       lFound = false
       children(iParentNodeID).each do |iChildNodeID|
-        lID, lObject = get_item_data(iChildNodeID)
+        lID, lObject, lKey = get_item_data(iChildNodeID)
         if (lObject == iObject)
           # Found it
           delete(iChildNodeID)
@@ -901,24 +923,21 @@ module PBS
       end
     end
 
-    # Fill the tree view by scratching it first.
-    def fillTree
-      updateTree do
-        # Update it
-        # Erase everything
-        delete_all_items
-        # Keep a correspondance of each Tag and its corresponding Tree ID
-        # map< Tag, Integer >
-        @TagsToMainTree = {}
-        # Insert everything
-        insertTreeBranch(nil, @RootTag)
-        # Expand
-        if ($PBS_DevDebug)
-          expand_all
-        else
-          expand(root_item)
-        end
+    # Notify that a transaction is beginning
+    def onTransactionBegin
+      freeze
+      # the set of items that will need to be sorted
+      # map< Integer, nil >
+      @ItemsToSort = {}
+    end
+
+    # Notify that a transaction is ending
+    def onTransactionEnd
+      @ItemsToSort.each do |iItemID, iNil|
+        sort_children(iItemID)
       end
+      thaw
+      refresh
     end
 
     # Notify that a given Tag's children list has changed
@@ -928,42 +947,36 @@ module PBS
     # * *iOldChildrenList* (<em>list<Tag></em>): The old children list
     def onTagChildrenUpdate(iParentTag, iOldChildrenList)
       # We update the tree accordingly
-      updateTree do
-        lTagNodeID = @TagsToMainTree[iParentTag]
-        if (lTagNodeID == nil)
-          logBug 'The updated Tag was not inserted in the main tree.'
-        else
-          # First remove Tags that are not part of the children anymore
-          children(lTagNodeID).each do |iChildNodeID|
-            lID, lObject = get_item_data(iChildNodeID)
-            if (lID == ID_TAG)
-              # Check if lObjectID is part of the children of iParentTag
-              lFound = false
-              iParentTag.Children.each do |iChildTag|
-                if (iChildTag == lObject)
-                  lFound = true
-                  break
-                end
-              end
-              if (!lFound)
-                # We have to remove iChildID from the tree, along with all its children
-                removeTreeBranch(iChildNodeID)
+      lTagNodeID = @TagsToMainTree[iParentTag]
+      if (lTagNodeID == nil)
+        logBug 'The updated Tag was not inserted in the main tree.'
+      else
+        # First remove Tags that are not part of the children anymore
+        children(lTagNodeID).each do |iChildNodeID|
+          lID, lObject, lKey = get_item_data(iChildNodeID)
+          if (lID == ID_TAG)
+            # Check if lObjectID is part of the children of iParentTag
+            lFound = false
+            iParentTag.Children.each do |iChildTag|
+              if (iChildTag == lObject)
+                lFound = true
+                break
               end
             end
-          end
-          # Then add new Tags
-          iParentTag.Children.each do |iChildTag|
-            lChildID = @TagsToMainTree[iChildTag]
-            if (lChildID == nil)
-              # We have to insert iChildTag, and all Shortcuts and children Tags associated to it
-              insertTreeBranch(lTagNodeID, iChildTag)
+            if (!lFound)
+              # We have to remove iChildID from the tree, along with all its children
+              removeTreeBranch(iChildNodeID)
             end
           end
         end
-      end
-      # If it was the root Tag, expand it (otherwise it can looks like a bug as root Tag does not have the + button.
-      if (iParentTag.Parent == nil)
-        expand(root_item)
+        # Then add new Tags
+        iParentTag.Children.each do |iChildTag|
+          lChildID = @TagsToMainTree[iChildTag]
+          if (lChildID == nil)
+            # We have to insert iChildTag, and all Shortcuts and children Tags associated to it
+            insertTreeBranch(lTagNodeID, iChildTag)
+          end
+        end
       end
     end
 
@@ -973,9 +986,7 @@ module PBS
     # * *iSC* (_Shortcut_): The added Shortcut
     def onShortcutCreate(iSC)
       # We update the tree accordingly
-      updateTree do
-        addShortcutInfo(iSC)
-      end
+      addShortcutInfo(iSC)
     end
 
     # A Shortcut has just been deleted
@@ -984,20 +995,18 @@ module PBS
     # * *iSC* (_Shortcut_): The deleted Shortcut
     def onShortcutDelete(iSC)
       # We update the tree accordingly
-      updateTree do
-        if (iSC.Tags.empty?)
-          # Delete it from root if the Root is displayed
-          if (@RealRootTag)
-            deleteObjectFromTree(root_item, iSC)
-          end
-        else
-          # For each Tag this Shortcut was belonging to, we will delete its node
-          iSC.Tags.each do |iTag, iNil|
-            lTagNodeID = @TagsToMainTree[iTag]
-            # It is possible that this Tag is not displayed
-            if (lTagNodeID != nil)
-              deleteObjectFromTree(lTagNodeID, iSC)
-            end
+      if (iSC.Tags.empty?)
+        # Delete it from root if the Root is displayed
+        if (@RealRootTag)
+          deleteObjectFromTree(root_item, iSC)
+        end
+      else
+        # For each Tag this Shortcut was belonging to, we will delete its node
+        iSC.Tags.each do |iTag, iNil|
+          lTagNodeID = @TagsToMainTree[iTag]
+          # It is possible that this Tag is not displayed
+          if (lTagNodeID != nil)
+            deleteObjectFromTree(lTagNodeID, iSC)
           end
         end
       end
@@ -1011,15 +1020,13 @@ module PBS
     # * *iOldIcon* (<em>Wx::Bitmap</em>): The previous icon (can be nil)
     def onTagDataUpdate(iTag, iOldName, iOldIcon)
       # We update the tree accordingly
-      updateTree do
-        # Retrieve the existing node
-        lTagNodeID = @TagsToMainTree[iTag]
-        if (lTagNodeID == nil)
-          logBug "Normally the tree should have registered Tag #{iTag.Name}, but unable to retrieve it."
-        else
-          # Refresh it
-          updateTreeNode(lTagNodeID)
-        end
+      # Retrieve the existing node
+      lTagNodeID = @TagsToMainTree[iTag]
+      if (lTagNodeID == nil)
+        logBug "Normally the tree should have registered Tag #{iTag.Name}, but unable to retrieve it."
+      else
+        # Refresh it
+        updateTreeNode(lTagNodeID)
       end
     end
 
@@ -1031,16 +1038,14 @@ module PBS
     # * *iOldMetadata* (_Object_): The previous metadata, or nil if it was not modified
     def onShortcutDataUpdate(iSC, iOldContent, iOldMetadata)
       # We update the tree accordingly
-      updateTree do
-        # Just retrieve existing nodes and update them
-        traverse do |iItemID|
-          lID, lObject = get_item_data(iItemID)
-          if (lObject == iSC)
-            # Store the new ID before updating the node
-            set_item_data(iItemID, [ ID_SHORTCUT, iSC ])
-            # Update iItemID with the new info from iSC
-            updateTreeNode(iItemID)
-          end
+      # Just retrieve existing nodes and update them
+      traverse do |iItemID|
+        lID, lObject, lKey = get_item_data(iItemID)
+        if (lObject == iSC)
+          # Store the new ID before updating the node
+          set_item_data(iItemID, [ ID_SHORTCUT, iSC, nil ])
+          # Update iItemID with the new info from iSC
+          updateTreeNode(iItemID)
         end
       end
     end
@@ -1052,21 +1057,19 @@ module PBS
     # * *iOldTags* (<em>map<Tag,nil></em>): The old Tags set
     def onShortcutTagsUpdate(iSC, iOldTags)
       # We update the tree accordingly
-      updateTree do
-        # First, delete any reference to iSC
-        lToBeDeleted = []
-        traverse do |iItemID|
-          lID, lObject = get_item_data(iItemID)
-          if (lObject == iSC)
-            lToBeDeleted << iItemID
-          end
+      # First, delete any reference to iSC
+      lToBeDeleted = []
+      traverse do |iItemID|
+        lID, lObject, lKey = get_item_data(iItemID)
+        if (lObject == iSC)
+          lToBeDeleted << iItemID
         end
-        lToBeDeleted.each do |iItemID|
-          delete(iItemID)
-        end
-        # Then add iSC everywhere needed
-        addShortcutInfo(iSC)
       end
+      lToBeDeleted.each do |iItemID|
+        delete(iItemID)
+      end
+      # Then add iSC everywhere needed
+      addShortcutInfo(iSC)
     end
 
     # Update all items affected by a multiple selection
@@ -1075,27 +1078,25 @@ module PBS
     # * *iSelection* (_MultipleSelection_): The selection
     def refreshSelectedItems(iSelection)
       # Update each item impacted by this selection
-      updateTree do
-        (iSelection.SelectedPrimaryShortcuts + iSelection.SelectedSecondaryShortcuts).each do |iSCInfo|
-          iSC, iParentTag = iSCInfo
-          # Find the node of the Tag (it is possible that it does not exist anymore in case of deleted cut item)
-          lParentNodeID = @TagsToMainTree[iParentTag]
-          if (lParentNodeID != nil)
-            # Check each child, and update the one for our Shortcut
-            children(lParentNodeID).each do |iChildNodeID|
-              # If this child is for our SC, update it
-              lID, lObject = get_item_data(iChildNodeID)
-              if (lObject == iSC)
-                updateTreeNode(iChildNodeID)
-              end
+      (iSelection.SelectedPrimaryShortcuts + iSelection.SelectedSecondaryShortcuts).each do |iSCInfo|
+        iSC, iParentTag = iSCInfo
+        # Find the node of the Tag (it is possible that it does not exist anymore in case of deleted cut item)
+        lParentNodeID = @TagsToMainTree[iParentTag]
+        if (lParentNodeID != nil)
+          # Check each child, and update the one for our Shortcut
+          children(lParentNodeID).each do |iChildNodeID|
+            # If this child is for our SC, update it
+            lID, lObject, lKey = get_item_data(iChildNodeID)
+            if (lObject == iSC)
+              updateTreeNode(iChildNodeID)
             end
           end
         end
-        (iSelection.SelectedPrimaryTags + iSelection.SelectedSecondaryTags).each do |iTag|
-          # Find the node of the Tag
-          lTagNodeID = @TagsToMainTree[iTag]
-          updateTreeNode(lTagNodeID)
-        end
+      end
+      (iSelection.SelectedPrimaryTags + iSelection.SelectedSecondaryTags).each do |iTag|
+        # Find the node of the Tag
+        lTagNodeID = @TagsToMainTree[iTag]
+        updateTreeNode(lTagNodeID)
       end
     end
 
@@ -1200,7 +1201,7 @@ module PBS
       rParentTag = nil
 
       lParentNodeID = get_item_parent(iNodeID)
-      lParentID, rParentTag = get_item_data(lParentNodeID)
+      lParentID, rParentTag, lKey = get_item_data(lParentNodeID)
       if (lParentID != ID_TAG)
         logBug "Parent node #{lParentNodeID} should be flagged as a Tag, but is flagged as #{lParentID}."
       end
@@ -1245,7 +1246,7 @@ module PBS
 
       # Get the selection from the main tree
       selections.each do |iSelectionID|
-        lID, lObject = get_item_data(iSelectionID)
+        lID, lObject, lKey = get_item_data(iSelectionID)
         case lID
         when ID_TAG
           rSelection.selectTag(lObject)
@@ -1276,7 +1277,7 @@ module PBS
         @OldHoveredTag = nil
         if (lItemID != 0)
           # Check this is a Tag
-          lID, lObject = get_item_data(lItemID)
+          lID, lObject, lKey = get_item_data(lItemID)
           if (@TagsToMainTree[lObject] != nil)
             @OldHoveredTag = lObject
           end
