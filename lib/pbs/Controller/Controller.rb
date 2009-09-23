@@ -325,15 +325,31 @@ module PBS
 
       # Undo this operation
       def undo
-        @AtomicOperations.reverse_each do |iAtomicOperation|
-          iAtomicOperation.undoOperation
+        setupTextProgress(Wx::get_app.get_top_window, "Undo #{@Title}",
+          :Cancellable => true,
+          :Title => "Undo #{@Title}",
+          :Icon => getGraphic('IconProcess32.png')
+        ) do |ioProgressDlg|
+          ioProgressDlg.setRange(@AtomicOperations.size)
+          @AtomicOperations.reverse_each do |iAtomicOperation|
+            iAtomicOperation.undoOperation
+            ioProgressDlg.incValue
+          end
         end
       end
 
       # Redo this operation
       def redo
-        @AtomicOperations.each do |iAtomicOperation|
-          iAtomicOperation.doOperation
+        setupTextProgress(Wx::get_app.get_top_window, "Redo #{@Title}",
+          :Cancellable => true,
+          :Title => "Redo #{@Title}",
+          :Icon => getGraphic('IconProcess32.png')
+        ) do |ioProgressDlg|
+          ioProgressDlg.setRange(@AtomicOperations.size)
+          @AtomicOperations.each do |iAtomicOperation|
+            iAtomicOperation.doOperation
+            ioProgressDlg.incValue
+          end
         end
       end
 

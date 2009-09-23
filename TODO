@@ -26,7 +26,6 @@
 **** Find a way to veto the collapse of the RootTag in PBSTreeCtrl
 
 *** Other
-**** ProgressBar during open/import/paste (in the common method)
 **** External library directories have to be customizable in the options
 **** Types config
 **** Importing Icon indexes from EXE/DLL using Icon Indexes
@@ -71,8 +70,10 @@
 
 
 * TODO quickly
-**** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + implement visual progressions + hierarchical transactions + Use it for a splash screen, as startup might be slow..
-* Try reenabling GC
+**** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + hierarchical transactions
 * Increase performances:
-** Startup speed
-** Memory consumption
+** Memory consumption (Try reenabling GC)
+* Timer.every(xxx) loops have to quit when quitting PBS
+* Make commands use the progress bars correctly
+* Bug correction: disable shortcuts while editing label in TreeCtrl.
+* MainWindow icon should be the Tag's one.

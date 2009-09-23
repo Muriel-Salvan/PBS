@@ -58,7 +58,8 @@ module PBS
         # Ensure wxRuby is installed, and propose it to be in a local repository if needed
         lInstaller = RDI::Installer.new(iPBSRootDir)
         lInstaller.setDefaultOptions( {
-          :PreferredViews => [ 'SimpleWxGUI', 'Text' ]
+          :PreferredViews => [ 'SimpleWxGUI', 'Text' ],
+          :PreferredProgressViews => [ 'SimpleWxGUI', 'Text' ]
         } )
         # Get the local installation directory for Gems
         lLocalGemsDir = lInstaller.getDefaultInstallLocation('Gem', RDI::DEST_LOCAL)
