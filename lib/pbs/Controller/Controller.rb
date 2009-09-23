@@ -192,9 +192,11 @@ module PBS
         lShortcutsList = iParams[:shortcutsList]
         ioController.accessShortcutCommandsPlugin(@PluginName) do |iPlugin|
           ioController.undoableOperation("#{iPlugin.pluginDescription[:Title]} on #{lShortcutsList.size} Shortcuts") do
+            ioController.addProgressionRange(lShortcutsList.size)
             lShortcutsList.each do |ioShortcut|
               # Call the plugin
               iPlugin.execute(ioController, ioShortcut)
+              ioController.incProgression
             end
           end
         end

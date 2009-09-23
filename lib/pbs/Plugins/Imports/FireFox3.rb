@@ -139,9 +139,11 @@ module PBS
             end
           end
           # Create all corresponding Tags
+          ioController.setProgressionText('Import Tags')
           lRootFolders.each do |iRootID|
             createTags(ioController, lFolders[iRootID], ioParentTag)
           end
+          ioController.setProgressionText('Import Shortcuts')
           # Now, all Tags have been created, and for each Folder ID we have the corresponding Tag in lFolders[ID][3]
           # We read bookmarks that have icons
           ioDB.execute("

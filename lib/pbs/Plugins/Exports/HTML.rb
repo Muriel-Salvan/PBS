@@ -27,21 +27,25 @@ module PBS
             # Add also a key with nil, containing Shortcuts having no Tag
             # map< Tag, list< Shortcut > >
             lShortcutsPerTag = {}
+            lTotal = 0
             iController.ShortcutsList.each do |iShortcut|
               if (iShortcut.Tags.empty?)
                 if (lShortcutsPerTag[nil] == nil)
                   lShortcutsPerTag[nil] = []
                 end
                 lShortcutsPerTag[nil] << iShortcut
+                lTotal += 1
               else
                 iShortcut.Tags.each do |iTag, iNil|
                   if (lShortcutsPerTag[iTag] == nil)
                     lShortcutsPerTag[iTag] = []
                   end
                   lShortcutsPerTag[iTag] << iShortcut
+                  lTotal += 1
                 end
               end
             end
+            iController.addProgressionRange(lTotal)
             # Now write the file
             File.open(iDialog.path, 'w') do |oFile|
               oFile << "
@@ -56,12 +60,12 @@ module PBS
               # First, dump Shortcuts without Tags
               if (lShortcutsPerTag[nil] != nil)
                 lShortcutsPerTag[nil].each do |iShortcut|
-                  dumpShortcutHTML(iShortcut, oFile)
+                  dumpShortcutHTML(iController, iShortcut, oFile)
                 end
               end
               # Then dump every Tag and its associated Shortcuts
               iController.RootTag.Children.each do |iChildTag|
-                dumpTagsAndShortcutsInHTML(iChildTag, lShortcutsPerTag, oFile)
+                dumpTagsAndShortcutsInHTML(iController, iChildTag, lShortcutsPerTag, oFile)
               end
               # then close the remaining Tags
               oFile << "
@@ -76,20 +80,21 @@ module PBS
       # Dump a Tag, along with its sub-Tags and Shortcuts in a file, in HTML format
       #
       # Parameters:
+      # * *iController* (_Controller_): The data model controller
       # * *iTag* (_Tag_): The Tag we are dumping
       # * *iShortcutsPerTag* (<em>map<Tag,list<Shortcut>></em>): The list of Shortcuts belonging to each Tag
       # * *oFile* (_IO_): The file to write to
-      def dumpTagsAndShortcutsInHTML(iTag, iShortcutsPerTag, oFile)
+      def dumpTagsAndShortcutsInHTML(iController, iTag, iShortcutsPerTag, oFile)
         oFile << "<H3>#{iTag.Name}</H3><UL>\n"
         # First, write Shortcuts
         if (iShortcutsPerTag[iTag] != nil)
           iShortcutsPerTag[iTag].each do |iShortcut|
-            dumpShortcutHTML(iShortcut, oFile)
+            dumpShortcutHTML(iController, iShortcut, oFile)
           end
         end
         # Then sub-Tags
         iTag.Children.each do |iChildTag|
-          dumpTagsAndShortcutsInHTML(iChildTag, iShortcutsPerTag, oFile)
+          dumpTagsAndShortcutsInHTML(iController, iChildTag, iShortcutsPerTag, oFile)
         end
         oFile << "</UL>\n"
       end
@@ -97,9 +102,10 @@ module PBS
       # Dump a Shortcut in an HTML format
       #
       # Parameters:
+      # * *iController* (_Controller_): The data model controller
       # * *iShortcut* (_Shortcut_): The Shortcut to dump
       # * *oFile* (_IO_): The file to write the dump to
-      def dumpShortcutHTML(iShortcut, oFile)
+      def dumpShortcutHTML(iController, iShortcut, oFile)
         # Here, we know the types
         lTypeName = iShortcut.Type.pluginDescription[:PluginName]
         case lTypeName
@@ -111,6 +117,7 @@ module PBS
           logErr "Unknown Shortcut type for HTML export plugin: #{lTypeName}. Using its content summary. Need to adapt HTML plugin."
           oFile << "<LI><A HREF=\"#{iShortcut.Type.getContentSummary(iShortcut.Content)}\" TYPE=\"#{lTypeName}\" ICON=\"#{getBitmapStandardURI(iShortcut.Metadata['icon'])}\">#{iShortcut.Metadata['title']}</A></LI>\n"
         end
+        iController.incProgression
       end
 
     end

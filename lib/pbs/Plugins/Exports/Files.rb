@@ -25,8 +25,11 @@ module PBS
             # Keep a correspondance between a Tag and its corresponding directory
             # map< Tag, String >
             lTagsToPaths = {}
+            iController.setProgressionText('Create Tags')
             createTagsInDir(iController.RootTag, iDialog.path, lTagsToPaths)
             # Then export Shortcuts
+            iController.setProgressionText('Create Shortcuts')
+            iController.addProgressionRange(iController.ShortcutsList.size)
             iController.ShortcutsList.each do |iShortcut|
               if (iShortcut.Tags.empty?)
                 exportShortcut(iController, iShortcut, iDialog.path)
@@ -35,6 +38,7 @@ module PBS
                   exportShortcut(iController, iShortcut, lTagsToPaths[iTag])
                 end
               end
+              iController.incProgression
             end
           end
         end

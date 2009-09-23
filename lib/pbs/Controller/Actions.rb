@@ -103,6 +103,14 @@ module PBS
       @CurrentProgressDlg.incValue(iIncrement)
     end
 
+    # Set the progression text
+    #
+    # Parameters:
+    # * *iText* (_String_): Text
+    def setProgressionText(iText)
+      @CurrentProgressDlg.setText(iText)
+    end
+
     # Create a Tag if it does not exist already, and return it.
     # This method is protected for Undo/Redo management.
     #

@@ -49,12 +49,15 @@ module PBS
             # Keep a correspondance between the IDs given to Tags and the real Tags associated to it
             # map< Integer, Tag >
             lIDsToTags = {}
+            ioController.setProgressionText('Import Tags')
             importXMLTags(ioController, lTagsElement, ioController.RootTag, lIDsToTags)
             # And now the Shortcuts
             lShortcutsElement = lXML.root.elements['shortcuts']
             if (lShortcutsElement == nil)
               logErr "XML file does not have a \"shortcuts\" tag. Invalid XML file, ignoring it."
             else
+              ioController.setProgressionText('Import Shortcuts')
+              ioController.addProgressionRange(lShortcutsElements.elements.size)
               lShortcutsElement.elements.each do |iShortcutElement|
                 lTypeName = iShortcutElement.attributes['type']
                 # The icon
@@ -84,6 +87,7 @@ module PBS
                   },
                   lTags
                 )
+                ioController.incProgression
               end
             end
           end

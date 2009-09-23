@@ -307,11 +307,16 @@ module PBS
       @BitmapsList = [iIcon]
       # Parse all files in the Graphics dir to add some others
       Dir.glob("#{$PBS_GraphicsDir}/*") do |iFileName|
-        begin
-          @BitmapsList << createBitmapFromFile(iFileName)
-        rescue Exception
-          # Happens if a file not understandeable by Wx::Bitmap appears in the directory. Nothing serious.
-          logErr "Error while reading file #{iFileName}: #{$!}. Ignoring this file."
+        if (!File.directory?(iFileName))
+          begin
+            lBitmap = createBitmapFromFile(iFileName)
+            if (lBitmap != nil)
+              @BitmapsList << lBitmap
+            end
+          rescue Exception
+            # Happens if a file not understandeable by Wx::Bitmap appears in the directory. Nothing serious.
+            logErr "Error while reading file #{iFileName}: #{$!}. Ignoring this file."
+          end
         end
       end
 
