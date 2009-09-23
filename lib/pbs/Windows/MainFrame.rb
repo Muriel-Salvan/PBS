@@ -47,6 +47,12 @@ module PBS
     # * *iOldTag* (_Tag_): The old Tag to integrate (can be nil during startup)
     def onPluginOptionsChanged(iNewOptions, iNewTag, iOldOptions, iOldTag)
       @TCMainTree.setRootTag(iNewTag)
+      # Set our icon to the Tag's one
+      if (iNewTag == @Controller.RootTag)
+        self.icon = Wx::Icon.from_bitmap(getGraphic('Icon32.png'))
+      else
+        self.icon = Wx::Icon.from_bitmap(@Controller.getTagIcon(iNewTag))
+      end
     end
 
     # Options have changed
@@ -511,9 +517,6 @@ module PBS
       # Set the main tree context menu
       @TCMainTree.setContextMenu(@EditMenu)
 
-      # Don't forget the main icon
-      self.icon = Wx::Icon.from_bitmap(getGraphic('Icon32.png'))
-
       # Set the application title, as it depends on context
       setAppTitle
 
@@ -523,6 +526,18 @@ module PBS
       end
       @TCMainTree.evt_left_up do |iEvent|
         onMainTreeSelectionUpdated
+      end
+      evt_tree_item_activated(@TCMainTree) do |iEvent|
+        lItemID = iEvent.item
+        if (lItemID != 0)
+          # Get the item data
+          lID, lObject, lKey = @TCMainTree.get_item_data(lItemID)
+          if (lID == ID_SHORTCUT)
+            # Run the corresponding Shortcut
+            lObject.run
+          end
+        end
+        iEvent.skip
       end
 
       # Resize it as it will always be resized by users having more than 10 shortcuts
