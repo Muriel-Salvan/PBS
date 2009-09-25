@@ -435,10 +435,13 @@ module PBS
             (@RealRootTag))
           iEvent.veto
         else
+          # Remove the 'Del' key from accelerators
+          @Controller.blockAccelerator([ 0, Wx::K_DELETE ] )
           iEvent.skip
         end
       end
       evt_tree_end_label_edit(self) do |iEvent|
+        @Controller.unblockAccelerator([ 0, Wx::K_DELETE ] )
         # First, retrieve who we are editing (we are sure it can't be the root)
         lID, lObject, lKey = get_item_data(iEvent.item)
         lNewName = iEvent.label
@@ -483,6 +486,29 @@ module PBS
         lMousePosition = Wx::Point.new(iEvent.x, iEvent.y)
         notifyMouseChangedItems(0, lMousePosition)
       end
+
+      # Run on double-click
+      evt_tree_item_activated(self) do |ioEvent|
+        lItemID = ioEvent.item
+        if (lItemID != 0)
+          # Get the item data
+          lID, lObject, lKey = get_item_data(lItemID)
+          if (lID == ID_SHORTCUT)
+            # Run the corresponding Shortcut
+            lObject.run
+          end
+        end
+        ioEvent.skip
+      end
+
+      # Prevent Root collapsing
+      evt_tree_item_collapsing(self) do |ioEvent|
+        lItemID = ioEvent.item
+        if (lItemID == root_item)
+          ioEvent.veto
+        end
+      end
+
     end
 
     # Compare 2 items for sort
@@ -936,6 +962,13 @@ module PBS
       @ItemsToSort.each do |iItemID, iNil|
         sort_children(iItemID)
       end
+      # Check if we need to expand the Root item.
+      # This needs to be done here because of a WxRuby bug preventing from doing it when there is no child.
+      # TODO (WxRuby): Make expand work event if there are no children
+      if ((!is_expanded(root_item)) and
+          (get_children_count(root_item) > 0))
+        expand(root_item)
+      end
       thaw
       refresh
     end
@@ -948,9 +981,8 @@ module PBS
     def onTagChildrenUpdate(iParentTag, iOldChildrenList)
       # We update the tree accordingly
       lTagNodeID = @TagsToMainTree[iParentTag]
-      if (lTagNodeID == nil)
-        logBug 'The updated Tag was not inserted in the main tree.'
-      else
+      # It can be normal that the Tag is not present
+      if (lTagNodeID != nil)
         # First remove Tags that are not part of the children anymore
         children(lTagNodeID).each do |iChildNodeID|
           lID, lObject, lKey = get_item_data(iChildNodeID)
@@ -1022,9 +1054,8 @@ module PBS
       # We update the tree accordingly
       # Retrieve the existing node
       lTagNodeID = @TagsToMainTree[iTag]
-      if (lTagNodeID == nil)
-        logBug "Normally the tree should have registered Tag #{iTag.Name}, but unable to retrieve it."
-      else
+      # It is possible that it does not exist
+      if (lTagNodeID != nil)
         # Refresh it
         updateTreeNode(lTagNodeID)
       end

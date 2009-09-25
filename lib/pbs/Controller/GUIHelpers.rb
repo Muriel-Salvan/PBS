@@ -9,30 +9,8 @@ module PBS
   # * get easily toolbar buttons and menu items mapping PBS commands
   module GUIHelpers
 
-    # Set the accelerator table for a given frame
-    #
-    # Parameters:
-    # * *oFrame* (<em>Wx::Frame</em>): The frame for which we set the accelerator table
-    def setAcceleratorTableForFrame(oFrame)
-      if (!defined?(@AcceleratorTable))
-        # Cache it for performance
-        @AcceleratorTable = []
-        @Commands.each do |iCommandID, iCommand|
-          if (iCommand[:Accelerator] != nil)
-            lCommand = @Commands[iCommandID]
-            if (lCommand == nil)
-              logBug "Unknown command of ID #{iCommandID}. Ignoring it from the accelerator table."
-            else
-              @AcceleratorTable << Wx::AcceleratorEntry.new(lCommand[:Accelerator][0], lCommand[:Accelerator][1], iCommandID)
-            end
-          end
-        end
-      end
-      oFrame.accelerator_table = Wx::AcceleratorTable.new(@AcceleratorTable)
-    end
-
     # Add a command in a menu.
-    # this method does not return the created menu item, as it will be deleted/recreated each time its appearance will be updated (limitations certainly due to bugs).
+    # This method does not return the created menu item, as it will be deleted/recreated each time its appearance will be updated (limitations certainly due to bugs).
     # To access to this menu later, always use the Wx::Menu object with the Command ID.
     #
     # Parameters:
@@ -49,6 +27,19 @@ module PBS
         lMenuItem = Wx::MenuItem.new(ioMenu, iCommandID)
         lCommand[:RegisteredMenuItems] << [ lMenuItem, iEvtWindow, iFetchParametersCode, iParams ]
         setMenuItemAppearanceWhileInsert(lMenuItem, iCommandID, ioMenu.menu_items.size, ioMenu, iEvtWindow, iFetchParametersCode)
+      end
+    end
+
+    # Remove commands related to an event handler.
+    #
+    # Parameters:
+    # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
+    def unregisterMenuEvt(iEvtWindow)
+      @Commands.each do |iCommandID, ioCommand|
+        ioCommand[:RegisteredMenuItems].delete_if do |iRegisteredMenuInfo|
+          iMenuItem, iRegisteredEvtWindow, iCode, iParams = iRegisteredMenuInfo
+          next (iRegisteredEvtWindow == iEvtWindow)
+        end
       end
     end
 
@@ -72,6 +63,19 @@ module PBS
       end
 
       return rButton
+    end
+
+    # Remove a whole toolbar
+    #
+    # Parameters:
+    # * *iToolbar* (<em>Wx::Toolbar</em>): The toolbar in which we add the command
+    def unregisterToolbar(iToolbar)
+      @Commands.each do |iCommandID, ioCommand|
+        ioCommand[:RegisteredToolbarButtons].delete_if do |iRegisteredToolbarButtonInfo|
+          iButton, iParams = iRegisteredToolbarButtonInfo
+          next (iButton.tool_bar == iToolbar)
+        end
+      end
     end
 
     # Update the GUI Enabled property of a menu item.
@@ -123,6 +127,39 @@ module PBS
     def setToolbarButtonGUITitle(iToolbarButton, iCommandID, iGUITitle)
       findRegisteredToolbarButtonParams(iToolbarButton, iCommandID) do |ioParams|
         ioParams[:GUITitle] = iGUITitle
+      end
+    end
+
+    # Block a given accelerator
+    #
+    # Parameters:
+    # * *iAccelerator* (<em>[Integer,Integer]</em>): The accelerator to block
+    def blockAccelerator(iAccelerator)
+      # Find it among the commands
+      @Commands.each do |iCommandID, ioCommand|
+        if (ioCommand[:Accelerator] == iAccelerator)
+          # Found it
+          @BlockedAccelerators[iAccelerator] = iCommandID
+          updateCommand(iCommandID) do |ioUpdateCommand|
+            ioUpdateCommand[:Accelerator] = [ 0, K_NOKEY ]
+            logDebug "Accelerator [#{iAccelerator.join(", ")}] blocked from command #{iCommandID}."
+          end
+          break
+        end
+      end
+    end
+
+    # Unblock a given accelerator previously blocked
+    #
+    # Parameters:
+    # * *iAccelerator* (<em>[Integer,Integer]</em>): The accelerator to unblock
+    def unblockAccelerator(iAccelerator)
+      lCommandID = @BlockedAccelerators[iAccelerator]
+      if (lCommandID != nil)
+        updateCommand(lCommandID) do |ioUpdateCommand|
+          ioUpdateCommand[:Accelerator] = iAccelerator
+          logDebug "Accelerator [#{iAccelerator.join(", ")}] unblocked from command #{lCommandID}."
+        end
       end
     end
 

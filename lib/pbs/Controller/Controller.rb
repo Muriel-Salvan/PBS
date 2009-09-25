@@ -55,6 +55,11 @@ module PBS
   # Number of errors showing in a single dialog
   MAX_ERRORS_PER_DIALOG = 10
 
+  # This constant represents a key code that does not exist.
+  # It is used to block hotkeys (removing assignment does not remove them)
+  # TODO (WxRuby): Bug: Removing accelerators associated to menu items should really deactivate them
+  K_NOKEY = 1
+
   # This class stores session information, and relays info from model to gui.
   # * Stores the main data (Shortcuts/Tags)
   # * Handles Undo/Redo management.
@@ -873,7 +878,7 @@ module PBS
       lMenu.delete(lCommandID)
       iCommand[:RegisteredMenuItems].delete_if do |iMenuItemInfo|
         iMenuItem, iEvtWindow, iParametersCode, iAdditionalParams = iMenuItemInfo
-        ioMenuItem == iMenuItem
+        next (ioMenuItem == iMenuItem)
       end
       # Create the new one and register it
       lNewMenuItem = Wx::MenuItem.new(lMenu, lCommandID)
@@ -896,16 +901,16 @@ module PBS
       else
         # find the registered menu item
         lFound = false
-        lCommand[:RegisteredMenuItems].each do |iMenuItemInfo|
-          iMenuItem, iEvtWindow, iFetchParametersCode, iParams = iMenuItemInfo
+        lCommand[:RegisteredMenuItems].each do |ioMenuItemInfo|
+          iMenuItem, iEvtWindow, iFetchParametersCode, ioParams = ioMenuItemInfo
           if ((iMenuItem.menu == iMenu) and
               (iMenuItem.get_id == iCommandID))
             # Found it
-            lOldParams = iParams.clone
-            yield(iParams)
-            if (lOldParams != iParams)
+            lOldParams = ioParams.clone
+            yield(ioParams)
+            if (lOldParams != ioParams)
               # Update the appearance
-              updateMenuItemAppearance(iMenuItem, lCommand, iEvtWindow, iFetchParametersCode, iParams)
+              updateMenuItemAppearance(iMenuItem, lCommand, iEvtWindow, iFetchParametersCode, ioParams)
             end
             lFound = true
           end
@@ -1037,6 +1042,11 @@ module PBS
 
       # The tips provider
       @TipsProvider = nil
+
+      # The blocked accelerators
+      # map< [ Integer, Integer ], Integer >
+      # map< Accelerator,          CommandID >
+      @BlockedAccelerators = {}
 
       # Undo/Redo management
       # Controller::UndoableOperation
@@ -1568,6 +1578,30 @@ module PBS
     def _UNDO_deleteShortcut(iSCToDelete)
       @ShortcutsList.delete_if do |iSC|
         iSCToDelete == iSC
+      end
+    end
+
+    # Dump debugging info
+    def dumpDebugInfo
+      logDebug '=== Options:'
+      @Options.each do |iKey, iValue|
+        logDebug "    #{iKey.to_s}: #{iValue.inspect}"
+      end
+      # Create index based on plugin names
+      # map< String, Integer >
+      lCommandIndex = {}
+      @Commands.each do |iKey, iCommand|
+        lPluginName = iCommand[:PluginName]
+        if (lPluginName == nil)
+          lPluginName = iKey.to_s
+        end
+        lCommandIndex[lPluginName] = iKey
+      end
+      logDebug '=== Commands:'
+      lCommandIndex.keys.sort.each do |iPluginName|
+        lKey = lCommandIndex[iPluginName]
+        lCommand = @Commands[lKey]
+        logDebug "    #{iPluginName} (ID=#{lKey.to_s}): #{lCommand.inspect}"
       end
     end
 

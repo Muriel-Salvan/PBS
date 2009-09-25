@@ -243,9 +243,6 @@ module PBS
       super(iParent)
       @Controller = iController
 
-      # Are we closing the main window ?
-      lClosingMain = false
-
       # The close event
       evt_close do |iEvent|
         @Controller.executeCommand(Wx::ID_CLOSE, :instancesToClose => [ self ] )
@@ -466,7 +463,7 @@ module PBS
       addMenuCommand(lHelpMenu, Wx::ID_ABOUT) do |iEvent, oValidator|
         oValidator.authorizeCmd(
           :parentWindow => self,
-          :PBSRootDir => @PBSRootDir
+          :PBSRootDir => @Controller.PBSRootDir
         )
       end
 
@@ -511,9 +508,6 @@ module PBS
       lStatusBar = Wx::StatusBar.new(self)
       self.status_bar = lStatusBar
 
-      # Set the Accelerator table for this frame
-      @Controller.setAcceleratorTableForFrame(self)
-
       # Set the main tree context menu
       @TCMainTree.setContextMenu(@EditMenu)
 
@@ -527,22 +521,21 @@ module PBS
       @TCMainTree.evt_left_up do |iEvent|
         onMainTreeSelectionUpdated
       end
-      evt_tree_item_activated(@TCMainTree) do |iEvent|
-        lItemID = iEvent.item
-        if (lItemID != 0)
-          # Get the item data
-          lID, lObject, lKey = @TCMainTree.get_item_data(lItemID)
-          if (lID == ID_SHORTCUT)
-            # Run the corresponding Shortcut
-            lObject.run
-          end
-        end
-        iEvent.skip
-      end
 
       # Resize it as it will always be resized by users having more than 10 shortcuts
       self.size = [300, 400]
       
+    end
+
+    # Unregister everything that might be referenced.
+    # This is called just before destruction.
+    def unregisterAll
+      # The main tree
+      @Controller.unregisterGUI(@TCMainTree)
+      # The menus
+      @Controller.unregisterMenuEvt(self)
+      # The toolbars
+      @Controller.unregisterToolbar(@ToolBar)
     end
 
   end

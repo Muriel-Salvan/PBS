@@ -6,7 +6,6 @@
 
 * Testing
 ** REGRESSION
-** Test what happens if we delete a Tag that is the Root one of one of the instantiated plugins.
 
 * Development
 
@@ -23,7 +22,6 @@
 **** Set recently opened files in the File menu
 **** In the main tree, F2 should edit the label
 **** Sort Tags tree in the EditShortcut dialog
-**** Find a way to veto the collapse of the RootTag in PBSTreeCtrl
 
 *** Other
 **** External library directories have to be customizable in the options
@@ -74,5 +72,6 @@
 * Increase performances:
 ** Memory consumption (Try reenabling GC)
 * Timer.every(xxx) loops have to quit when quitting PBS
-* Bug correction: disable shortcuts while editing label in TreeCtrl.
 * Make integration plugin that puts itself as a FireFox plugin.
+* Propose to activate/deactivate in menus all possible integration plugins instance configured in options.
+* Use make_modal to make just the last Progress window modal (test with many MainWindow with and without to be sure)

@@ -81,6 +81,8 @@ module PBS
         # If we try to reuse it, we'll get into some ObjectPreviouslyDeleted exceptions when invoking the menu a second time.
         rMenu = Wx::Menu.new
 
+        # Eventually unregister previous menu
+        @Controller.unregisterMenuEvt(self)
         # First, add a PBS submenu
         lPBSMenu = Wx::Menu.new
         lIntPluginsSubMenu = Wx::Menu.new
@@ -462,6 +464,8 @@ module PBS
       # * *iController* (_Controller_): The model controller
       # * *ioInstance* (_Object_): The instance created via createNewInstance that we now have to delete
       def deleteInstance(iController, ioInstance)
+        # Eventually unregister previous menu
+        iController.unregisterMenuEvt(ioInstance)
         ioInstance.remove_icon
         ioInstance.destroy
       end

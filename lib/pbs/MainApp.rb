@@ -7,7 +7,7 @@
 # This is made on purpose, as depending on the way the application is launched, wxruby may be statically compiled in the executable that invoked pbs.rb, and in this case there is no require authorized.
 
 # Disabling the Garbage Collector prevents several main WxRuby bugs:
-# * The Drag'n'Drop from the main tree does not cause SegFaults anymore.
+# * The Drag'n'Drop from the main tree does not cause SegFaults anymore [ Corrected in wxRuby 2.0.1 ].
 # * Destroying Windows manually does not cause SegFaults anymore during random events.
 # * Not destroying Windows manually does not cause ObjectPreviouslyDeleted exceptions on exit.
 # However, disabling GC does increase memory consumption of around 30Mb every 5 minutes of usage.

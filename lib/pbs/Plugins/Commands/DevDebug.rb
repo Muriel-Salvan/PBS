@@ -26,10 +26,7 @@ module PBS
         else
           logDebug 'Gem not defined.'
         end
-        logDebug '=== Options:'
-        ioController.Options.each do |iKey, iValue|
-          logDebug "    #{iKey.to_s}: #{iValue.inspect}"
-        end
+        ioController.dumpDebugInfo
         ioController.notifyRegisteredGUIs(:onDevDebug)
       end
 

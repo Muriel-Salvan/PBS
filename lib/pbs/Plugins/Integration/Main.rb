@@ -49,7 +49,8 @@ module PBS
       # * *iController* (_Controller_): The model controller
       # * *ioInstance* (_Object_): The instance created via createNewInstance that we now have to delete
       def deleteInstance(iController, ioInstance)
-        # Nothing to do except destroying for real
+        # Clean up everything that was registered before destruction
+        ioInstance.unregisterAll
         ioInstance.destroy
       end
 
