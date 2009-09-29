@@ -11,7 +11,7 @@
 # * Destroying Windows manually does not cause SegFaults anymore during random events.
 # * Not destroying Windows manually does not cause ObjectPreviouslyDeleted exceptions on exit.
 # However, disabling GC does increase memory consumption of around 30Mb every 5 minutes of usage.
-GC.disable
+#GC.disable
 
 require 'rUtilAnts/Platform'
 RUtilAnts::Platform.initializePlatform

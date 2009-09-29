@@ -51,6 +51,9 @@ module PBS
       def deleteInstance(iController, ioInstance)
         # Clean up everything that was registered before destruction
         ioInstance.unregisterAll
+        # Wait for any timer event that has to finish
+        ioInstance.killTimers
+        # Quit everything
         ioInstance.destroy
       end
 

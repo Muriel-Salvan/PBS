@@ -112,7 +112,7 @@ module PBS
       # * @Clipboard_SerializedSelection
       # Note that we are already in the process of a delete event from the clipboard.
       @Clipboard_AlreadyProcessingDelete = false
-      Wx::Timer.every(500) do
+      safeTimerEvery(@TimersManager, 500) do
         # Check if the clipboard has some data we can paste
         Wx::Clipboard.open do |iClipboard|
           if (iClipboard.supported?(Tools::DataObjectSelection.getDataFormat))
@@ -145,6 +145,8 @@ module PBS
 
     # Notify the GUI that we are quitting
     def notifyExit
+      # Stop Timers of the Controller
+      @TimersManager.killTimers
       # Notify everybody
       notifyRegisteredGUIs(:onExiting)
       # Delete any integration plugin instance

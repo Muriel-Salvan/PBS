@@ -246,7 +246,8 @@ module PBS
       # * *iToolTip* (_String_): The tool tip to display
       # * *iPosition* (<em>Wx::Point</em>): Position to give to the window
       # * *iTimeout* (_Integer_): Timeout in milliseconds before destruction
-      def initialize(iParent, iToolTip, iPosition, iTimeout)
+      # * *iSafeTimersManager* (_SafeTimersManager_): The safe timers manager that will be used to secure the timeout timer
+      def initialize(iParent, iToolTip, iPosition, iTimeout, iSafeTimersManager)
         super(iParent, Wx::ID_ANY, iToolTip,
           :style => Wx::FRAME_TOOL_WINDOW|Wx::FRAME_NO_TASKBAR|Wx::FRAME_FLOAT_ON_PARENT,
           :pos => iParent.client_to_screen(iPosition)
@@ -269,7 +270,7 @@ module PBS
         self.size = Wx::Size.new(lWidth + BORDER_SIZE, lHeight + BORDER_SIZE)
 
         # Kill after timeout
-        Wx::Timer.after(iTimeout) do
+        safeTimerAfter(iSafeTimersManager, iTimeout) do
           if (iParent.LastToolTip == self)
             iParent.notifyHintKilled(self)
             destroy
@@ -332,6 +333,9 @@ module PBS
       super(iWindow,
         :style => Wx::TR_EDIT_LABELS|Wx::TR_HAS_BUTTONS|Wx::TR_MULTIPLE|Wx::TR_EXTENDED
       )
+
+      # The safe Timers manager for this tree
+      @TimersManager = RUtilAnts::GUI::SafeTimersManager.new
 
       # The Root Tag to be displayed
       # Tag
@@ -477,7 +481,8 @@ module PBS
       evt_motion do |iEvent|
         lMousePosition = Wx::Point.new(iEvent.x, iEvent.y)
         lItemID, lFlags = hit_test(lMousePosition)
-        if (lItemID != @LastItemUnderMouse[0])
+        if ((@LastItemUnderMouse == nil) or
+            (lItemID != @LastItemUnderMouse[0]))
           notifyMouseChangedItems(lItemID, lMousePosition)
         end
         iEvent.skip
@@ -554,7 +559,7 @@ module PBS
       @LastItemUnderMouse = [ iItemID, Time.now ]
       lOurTimeStamp = @LastItemUnderMouse.clone
       # Set the hint to come after 1.5s
-      Wx::Timer.after(1500) do
+      safeTimerAfter(@TimersManager, 1500) do
         # Check if we are still on the same item
         if (lOurTimeStamp == @LastItemUnderMouse)
           # Time to display a hint
@@ -586,7 +591,7 @@ module PBS
         @LastToolTip = nil
       end
       if (lToolTip != nil)
-        @LastToolTip = HintFrame.new(self, lToolTip, iMousePosition, 2000)
+        @LastToolTip = HintFrame.new(self, lToolTip, iMousePosition, 2000, @TimersManager)
         @LastToolTip.show
       end
     end
@@ -1322,6 +1327,11 @@ module PBS
       end
 
       return @OldHoveredTag
+    end
+
+    # Stop remaining timers and wait for them to be safely removed
+    def killTimers
+      @TimersManager.killTimers
     end
 
   end

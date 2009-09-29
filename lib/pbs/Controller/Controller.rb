@@ -1143,6 +1143,9 @@ module PBS
     # * *iPBSRootDir* (_String_): PBS Root dir
     def initialize(iPBSRootDir)
       @PBSRootDir = iPBSRootDir
+
+      # The timers manager that will handle timers created for this Controller
+      @TimersManager = RUtilAnts::GUI::SafeTimersManager.new
       
       # Name of the default options file
       @DefaultOptionsFile = "#{iPBSRootDir}/Options.pbso"

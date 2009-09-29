@@ -38,6 +38,8 @@ module PBS
         # Integer
         @SizeMenu = nil
         @SizeSubMenu = nil
+        # The last registered views sub-menu
+        @ViewsSubMenu = nil
       end
 
       # Method that adds sub-Tags of a given Tag to a menu
@@ -82,7 +84,7 @@ module PBS
         rMenu = Wx::Menu.new
 
         # Eventually unregister previous menu
-        @Controller.unregisterMenuEvt(self)
+        unregisterAll
         # First, add a PBS submenu
         lPBSMenu = Wx::Menu.new
         lIntPluginsSubMenu = Wx::Menu.new
@@ -253,7 +255,9 @@ module PBS
       # Unregister from the Controller
       def unregisterAll
         @Controller.unregisterMenuEvt(self)
-        @Controller.unregisterViewsMenu(self, @ViewsSubMenu)
+        if (@ViewsSubMenu != nil)
+          @Controller.unregisterViewsMenu(self, @ViewsSubMenu)
+        end
       end
       
     end

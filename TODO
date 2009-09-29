@@ -48,7 +48,6 @@
 **** Add an option in OptionsDialog to enable/disable startup tips
 **** Get a way to use smooth scaling for bitmaps.
 **** Optionally remember plugins that we want to ignore always (if not installed), and set a way in options to remove them from the forget list.
-**** Timer.every(xxx) loops have to quit when quitting PBS
 
 ** Plugins
 *** Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
@@ -74,3 +73,4 @@
 * Increase performances:
 ** Memory consumption (Try reenabling GC)
 * Linux integration
+* Check TODOs in source code

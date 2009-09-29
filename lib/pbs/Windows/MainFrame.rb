@@ -546,6 +546,11 @@ module PBS
       @Controller.unregisterToolbar(@ToolBar)
     end
 
+    # Stop remaining timers and wait for them to be safely removed
+    def killTimers
+      @TCMainTree.killTimers
+    end
+
   end
 
 end
