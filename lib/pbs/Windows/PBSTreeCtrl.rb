@@ -334,7 +334,11 @@ module PBS
       )
 
       # The Root Tag to be displayed
+      # Tag
       @RootTag = nil
+      # Is the Root Tag to be displayed the real Root Tag from the Controller ?
+      # Boolean
+      @RealRootTag = false
 
       # TODO (WxRuby): Bug correction
       # Register this Event as otherwise moving the mouse over the TreeCtrl component generates tons of warnings. Bug ?

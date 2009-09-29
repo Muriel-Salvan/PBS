@@ -176,9 +176,50 @@ module PBS
     # Notify the GUI that options have changed
     #
     # Parameters:
-    # * *iOldOptions* (<em>map<Symbol,Object></em>): Old options
+    # * *iOldOptions* (<em>map<Symbol,Object></em>): Old options (can be nil)
     def notifyOptionsChanged(iOldOptions)
-      notifyRegisteredGUIs(:onOptionsChanged, iOldOptions)
+      # Update commands for views configured in the options
+      lRootTagID = getTagID(@RootTag)
+      lIdxViewCommand = 0
+      @Options[:intPluginsOptions].each do |iPluginID, iViewsList|
+        lPluginInfo = getIntegrationPlugins[iPluginID]
+        lIdxView = 0
+        iViewsList.each do |ioViewInfo|
+          iTagID, iEnabled, iOptions, iInstancesInfo = ioViewInfo
+          lTagName = nil
+          if (iTagID == lRootTagID)
+            lTagName = 'Root Tag'
+          else
+            lTagName = iTagID.join('/')
+          end
+          if (@Commands[ID_VIEWS_BASE + lIdxViewCommand] == nil)
+            addCommand( ID_VIEWS_BASE + lIdxViewCommand, {
+              :Title => "#{lPluginInfo[:PluginName]} on #{lTagName}",
+              :Description => "Activate/Deactivate view of #{lPluginInfo[:PluginName]} on #{lTagName}",
+              :Bitmap => getPluginBitmap(lPluginInfo),
+              :Plugin => PBS::Controller::ActivateViewCommand.new(iPluginID, lIdxView),
+              :Accelerator => nil,
+              :Checked => iEnabled
+            } )
+          else
+            updateCommand(ID_VIEWS_BASE + lIdxViewCommand) do |ioCommand|
+              ioCommand[:Title] = "#{lPluginInfo[:PluginName]} on #{lTagName}"
+              ioCommand[:Description] = "Activate/Deactivate view of #{lPluginInfo[:PluginName]} on #{lTagName}"
+              ioCommand[:Bitmap] = getPluginBitmap(lPluginInfo)
+              ioCommand[:Plugin].setNewView(iPluginID, lIdxView)
+              ioCommand[:Accelerator] = nil
+              ioCommand[:Checked] = iEnabled
+            end
+          end
+          lIdxView += 1
+          lIdxViewCommand += 1
+        end
+      end
+      # Delete following commands
+      while (@Commands[ID_VIEWS_BASE + lIdxViewCommand] != nil)
+        deleteCommand(ID_VIEWS_BASE + lIdxViewCommand)
+        lIdxViewCommand += 1
+      end
       # Notify each integration plugin that its own set of options has changed
       @Options[:intPluginsOptions].each do |iPluginID, ioPluginsList|
         ioPluginsList.each do |ioInstantiatedPluginInfo|
@@ -186,7 +227,8 @@ module PBS
           # Retrieve its old options
           lOldTagID = nil
           lOldOptions = nil
-          if (iOldOptions[:intPluginsOptions] != nil)
+          if ((iOldOptions != nil) and
+              (iOldOptions[:intPluginsOptions] != nil))
             iOldOptions[:intPluginsOptions][iPluginID].each do |iOldInstantiatedPluginInfo|
               iOldTagID, iOldActive, iOldInstanceOptions, iOldInstanceInfo = iOldInstantiatedPluginInfo
               if (iOldInstanceInfo.object_id == ioInstanceInfo.object_id)
@@ -199,6 +241,35 @@ module PBS
           updateIntPluginsInstance(iPluginID, ioInstantiatedPluginInfo, lOldOptions, lOldTagID)
         end
       end
+      # Delete views that are no longer among Options
+      if ((iOldOptions != nil) and
+          (iOldOptions[:intPluginsOptions] != nil))
+        iOldOptions[:intPluginsOptions].each do |iPluginID, ioPluginsList|
+          ioPluginsList.each do |ioInstantiatedPluginInfo|
+            iTagID, iActive, iOptions, iInstanceInfo = ioInstantiatedPluginInfo
+            if (iInstanceInfo[0] != nil)
+              # Check if we want to delete it
+              lFound = false
+              if (@Options[:intPluginsOptions][iPluginID] != nil)
+                @Options[:intPluginsOptions][iPluginID].each do |iNewInstantiatedPluginInfo|
+                  iNewTagID, iNewActive, iNewOptions, iNewInstanceInfo = iNewInstantiatedPluginInfo
+                  if (iInstanceInfo.object_id == iNewInstanceInfo.object_id)
+                    # Found it. Don't delete.
+                    lFound = true
+                    break
+                  end
+                end
+              end
+              if (!lFound)
+                # This view is unknown in the new set of options: delete it.
+                deleteView(iPluginID, iTagID, iInstanceInfo[0])
+              end
+            end
+          end
+        end
+      end
+      # Notify GUIs
+      notifyRegisteredGUIs(:onOptionsChanged, iOldOptions)
     end
 
     # Notify the GUI that data on the current opened file has been modified

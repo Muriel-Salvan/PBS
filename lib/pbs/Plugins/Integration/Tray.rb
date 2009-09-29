@@ -90,7 +90,10 @@ module PBS
         @Controller.getIntegrationPlugins.each do |iPluginName, iPluginInfo|
           @Controller.addMenuCommand(self, lIntPluginsSubMenu, ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex])
         end
-        lPBSMenu.append_sub_menu(lIntPluginsSubMenu, 'Instantiate a new view')
+        lPBSMenu.append_sub_menu(lIntPluginsSubMenu, 'Instantiate a new view from Root')
+        @ViewsSubMenu = Wx::Menu.new
+        @Controller.registerViewsMenu(self, @ViewsSubMenu)
+        lPBSMenu.append_sub_menu(@ViewsSubMenu, 'Instantiate a new view')
         lPBSMenu.append_separator
         @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_SETUP) do |iEvent, oValidator|
           oValidator.authorizeCmd(
@@ -247,6 +250,12 @@ module PBS
         @SizeSubMenu = iNewOptions[:sizeSubMenu]
       end
 
+      # Unregister from the Controller
+      def unregisterAll
+        @Controller.unregisterMenuEvt(self)
+        @Controller.unregisterViewsMenu(self, @ViewsSubMenu)
+      end
+      
     end
 
     class ConfigPanel < Wx::Panel
@@ -465,7 +474,7 @@ module PBS
       # * *ioInstance* (_Object_): The instance created via createNewInstance that we now have to delete
       def deleteInstance(iController, ioInstance)
         # Eventually unregister previous menu
-        iController.unregisterMenuEvt(ioInstance)
+        ioInstance.unregisterAll
         ioInstance.remove_icon
         ioInstance.destroy
       end

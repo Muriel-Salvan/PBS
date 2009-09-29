@@ -30,6 +30,7 @@ module PBS
   ID_NEW_SHORTCUT_BASE = 9000
   ID_SHORTCUT_COMMAND_BASE = 10000
   ID_INTEGRATION_INSTANCE_BASE = 11000
+  ID_VIEWS_BASE = 12000
 
   # Following constants are used in options
   TAGSUNICITY_NONE = 0
@@ -272,6 +273,44 @@ module PBS
 
     end
 
+    # Class used to activate a view
+    class ActivateViewCommand
+
+      # Constructor
+      #
+      # Parameters:
+      # * *iPluginID* (_String_): Name if the integration plugin
+      # * *iIdxView* (_Integer_): Index of the view to activate/deactivate
+      def initialize(iPluginID, iIdxView)
+        @PluginID, @IdxView = iPluginID, iIdxView
+      end
+
+      # Set the plugin ID and view index.
+      # This is used to avoid recreating a new object when commands are updated.
+      #
+      # Parameters:
+      # * *iPluginID* (_String_): Name if the integration plugin
+      # * *iIdxView* (_Integer_): Index of the view to activate/deactivate
+      def setNewView(iPluginID, iIdxView)
+        @PluginID, @IdxView = iPluginID, iIdxView
+      end
+
+      # Activate/deactivate a view
+      #
+      # Parameters:
+      # * *ioController* (_Controller_): The data model controller
+      def execute(ioController)
+        # Clone the old options
+        lOldOptions = ioController.Options.clone
+        lOldOptions[:intPluginsOptions][@PluginID][@IdxView] = ioController.Options[:intPluginsOptions][@PluginID][@IdxView].clone
+        # Change the Enabled status
+        ioController.Options[:intPluginsOptions][@PluginID][@IdxView][1] = !ioController.Options[:intPluginsOptions][@PluginID][@IdxView][1]
+        # Notify everybody
+        ioController.notifyOptionsChanged(lOldOptions)
+      end
+
+    end
+
     # This class is given to each GUI callback that wants to invoke some commands.
     # Developers of GUI plugins can use it to give GUI dependent parameters to the generic commands.
     class CommandValidator
@@ -467,6 +506,52 @@ module PBS
       end
     end
 
+    # Instantiate a new view
+    #
+    # Parameters:
+    # * *iPluginID* (_String_): The integration plugin ID
+    # * *iOptions* (_Object_): Options (used for notifications only)
+    # * *iTag* (_Tag_): Tag to display in this view
+    # * *iOldOptions* (_Object_): Old options (used for notifications only)
+    # * *iOldTagID* (<em>list<String></em>): Old Tag ID (used for notifications only)
+    def createView(iPluginID, iOptions, iTag, iOldOptions, iOldTagID)
+      rInstance = nil
+
+      logDebug "Instantiate integration plugin #{iPluginID} for Tag #{iTag.Name}"
+      begin
+        accessIntegrationPlugin(iPluginID) do |iPlugin|
+          rInstance = iPlugin.createNewInstance(self)
+          # And notify its options
+          rInstance.onPluginOptionsChanged(iOptions, iTag, iOldOptions, iOldTagID)
+          # Register it
+          registerGUI(rInstance)
+        end
+      rescue Exception
+        logExc $!, "Exception while instantiating plugin instance #{iPluginID} for Tag #{lTag.Name}"
+      end
+
+      return rInstance
+    end
+
+    # Delete a given view
+    #
+    # Parameters:
+    # * *iPluginID* (_String_): The integration plugin ID
+    # * *iTagID* (<em>list<String></em>): The Tag ID
+    # * *ioInstance* (_Object_): View to delete
+    def deleteView(iPluginID, iTagID, ioInstance)
+      logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+      # Unregister the GUI
+      unregisterGUI(ioInstance)
+      begin
+        accessIntegrationPlugin(iPluginID) do |iPlugin|
+          iPlugin.deleteInstance(self, ioInstance)
+        end
+      rescue Exception
+        logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+      end
+    end
+
     # Update the instantiated plugins instance
     #
     # Parameters:
@@ -502,20 +587,9 @@ module PBS
             # We can't create it for now. We need to have the correct existing Tag. Disable it for now to avoid further errors each time we change options.
             ioInstantiatedPluginInfo[1] = false
           else
-            logDebug "Instantiate integration plugin #{iPluginID} for Tag #{lTag.Name}"
-            begin
-              accessIntegrationPlugin(iPluginID) do |iPlugin|
-                ioInstanceInfo[0] = iPlugin.createNewInstance(self)
-                # And notify its options
-                ioInstanceInfo[0].onPluginOptionsChanged(iOptions, lTag, iOldOptions, iOldTagID)
-                if (iNotifyChanges)
-                  logMsg "Plugin #{iPlugin.pluginDescription[:Title]} has been instantiated for Tag #{lTag.Name}"
-                end
-                # Register it
-                registerGUI(ioInstanceInfo[0])
-              end
-            rescue Exception
-              logExc $!, "Exception while instantiating plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+            ioInstanceInfo[0] = createView(iPluginID, iOptions, lTag, iOldOptions, iOldTagID)
+            if (iNotifyChanges)
+              logMsg "Plugin #{iPlugin.pluginDescription[:Title]} has been instantiated for Tag #{lTag.Name}"
             end
           end
         else
@@ -537,16 +611,7 @@ module PBS
             end
             if (lTag == nil)
               # We have to remove the instance, as its Tag can't be found
-              logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
-              # Unregister the GUI
-              unregisterGUI(ioInstanceInfo[0])
-              begin
-                accessIntegrationPlugin(iPluginID) do |iPlugin|
-                  iPlugin.deleteInstance(self, ioInstance)
-                end
-              rescue Exception
-                logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
-              end
+              deleteView(iPluginID, iTagID, ioInstance)
               # Delete from the internals
               ioInstanceInfo[0] = nil
               # Also reset the Tag, as we will want to recompute it when instantiating
@@ -573,16 +638,7 @@ module PBS
       else
         if (ioInstance != nil)
           # We have to delete the instance
-          logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
-          # Unregister the GUI
-          unregisterGUI(ioInstanceInfo[0])
-          begin
-            accessIntegrationPlugin(iPluginID) do |iPlugin|
-              iPlugin.deleteInstance(self, ioInstance)
-            end
-          rescue Exception
-            logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
-          end
+          deleteView(iPluginID, iTagID, ioInstance)
           # Delete from the internals
           ioInstanceInfo[0] = nil
           # Also reset the Tag, as we will want to recompute it when instantiating
@@ -821,7 +877,10 @@ module PBS
       end
       ioMenuItem.text = lTitle
       ioMenuItem.help = lCommand[:Description]
-      ioMenuItem.bitmap = lCommand[:Bitmap]
+      # TODO (WxRuby) Bug: Setting a Bitmap on a ITEM_CHECK menuitem just wrecks everything. Correct it and remove the following if.
+      if (lCommand[:Checked] == nil)
+        ioMenuItem.bitmap = lCommand[:Bitmap]
+      end
       # Insert it
       oMenu.insert(iMenuItemPos, ioMenuItem)
       lEnabled = ((lCommand[:Enabled]) and
@@ -830,6 +889,9 @@ module PBS
       if (!lEnabled)
         # We enable it this way, as using lNewMenuItem.enable works only half (bug ?)
         oMenu.enable(iCommandID, false)
+      end
+      if (lCommand[:Checked] != nil)
+        ioMenuItem.check(lCommand[:Checked])
       end
       # Set its event
       iEvtWindow.evt_menu(ioMenuItem) do |iEvent|
@@ -881,7 +943,12 @@ module PBS
         next (ioMenuItem == iMenuItem)
       end
       # Create the new one and register it
-      lNewMenuItem = Wx::MenuItem.new(lMenu, lCommandID)
+      lNewMenuItem = nil
+      if (iCommand[:Checked] != nil)
+        lNewMenuItem = Wx::MenuItem.new(lMenu, lCommandID, '', '', Wx::ITEM_CHECK)
+      else
+        lNewMenuItem = Wx::MenuItem.new(lMenu, lCommandID)
+      end
       iCommand[:RegisteredMenuItems] << [ lNewMenuItem, iEvtWindow, iFetchParametersCode, iParams ]
       # Fill its attributes (do it at the same time it is inserted as otherwise bitmaps are ignored ... bug ?)
       setMenuItemAppearanceWhileInsert(lNewMenuItem, lCommandID, lMenuItemPos, lMenu, iEvtWindow, iFetchParametersCode, iParams)
@@ -946,6 +1013,9 @@ module PBS
                   ((iParams[:GUIEnabled] == nil) or
                    (iParams[:GUIEnabled])))
       lToolbar.enable_tool(lCommandID, lEnabled)
+      if (iCommand[:Checked] != nil)
+        lToolbar.toggle_tool(lCommandID, iCommand[:Checked])
+      end
     end
 
     # Find parameters associated to a registered toolbar button
@@ -987,7 +1057,8 @@ module PBS
     # * *iCommandID* (_Integer_): The command ID that has been changed
     def updateImpactedAppearance(iCommandID)
       lCommandParams = @Commands[iCommandID]
-      lCommandParams[:RegisteredMenuItems].each do |ioMenuItemInfo|
+      # We clone the list, as it will be modified inside the loop for menu items, as they are recreated each time we modify them.
+      lCommandParams[:RegisteredMenuItems].clone.each do |ioMenuItemInfo|
         ioMenuItem, iEvtWindow, iParametersCode, iAdditionalParams = ioMenuItemInfo
         updateMenuItemAppearance(ioMenuItem, lCommandParams, iEvtWindow, iParametersCode, iAdditionalParams)
       end
@@ -1020,6 +1091,52 @@ module PBS
       end
     end
 
+    # Add a new command
+    #
+    # Parameters:
+    # * *iCommandID* (_Integer_): The command ID
+    # * *iCommandInfo* (<em>map<Symbol,Object></em>): The command information
+    def addCommand(iCommandID, iCommandInfo)
+      if (@Commands[iCommandID] == nil)
+        @Commands[iCommandID] = iCommandInfo.merge( {
+          :Enabled => true,
+          :RegisteredMenuItems => [],
+          :RegisteredToolbarButtons => []
+        } )
+        # If the command belongs to the Views range, we must add menu items
+        # Consider we will not have more than 1000 views
+        if ((iCommandID >= ID_VIEWS_BASE) and
+            (iCommandID < ID_VIEWS_BASE + 1000))
+          @ViewsMenu.each do |ioMenuInfo|
+            iEvtHandler, ioMenu = ioMenuInfo
+            addMenuCommand(iEvtHandler, ioMenu, iCommandID)
+          end
+        end
+      else
+        logBug "Command #{iCommandID} was already registered. There is a conflict in the commands. Please check command IDs described in command plugins."
+      end
+    end
+
+    # Delete a given command.
+    # This also unregisters and deletes any menu item or toolbar button associated to it.
+    #
+    # Parameters:
+    # * *iCommandID* (_Integer_): Command ID to delete
+    def deleteCommand(iCommandID)
+      # Delete every menu item
+      @Commands[iCommandID][:RegisteredMenuItems].each do |iRegisteredMenuInfo|
+        iMenuItem, iRegisteredEvtWindow, iCode, iParams = iRegisteredMenuInfo
+        iMenuItem.menu.delete(iMenuItem)
+      end
+      # Delete every toolbar button
+      @Commands[iCommandID][:RegisteredToolbarButtons].each do |iRegisteredToolbarInfo|
+        iButton, iParams = iRegisteredToolbarInfo
+        iButton.toolbar.delete(iButton)
+      end
+      # Delete it for real
+      @Commands.delete(iCommandID)
+    end
+
     # Constructor
     #
     # Parameters:
@@ -1047,6 +1164,10 @@ module PBS
       # map< [ Integer, Integer ], Integer >
       # map< Accelerator,          CommandID >
       @BlockedAccelerators = {}
+
+      # The registered views menus
+      # list< [ Wx::EvtHandler, Wx::Menu ] >
+      @ViewsMenu = []
 
       # Undo/Redo management
       # Controller::UndoableOperation
@@ -1164,25 +1285,21 @@ module PBS
         if (lCommandID == nil)
           logBug "Command plugin #{iPluginName} does not declare any command ID. Ignoring it. Please check the pluginInfo method from this plugin."
         else
-          if (@Commands[lCommandID] == nil)
-            @Commands[lCommandID] = {
-              :Title => iCommandPluginInfo[:Title],
-              :Description => iCommandPluginInfo[:Description],
-              :Bitmap => getPluginBitmap(iCommandPluginInfo),
-              :Accelerator => iCommandPluginInfo[:Accelerator],
-              :Parameters => iCommandPluginInfo[:Parameters],
-              :Plugin => nil,
-              :PluginName => iPluginName
-            }
-          else
-            logBug "Command #{lCommandID} was already registered. There is a conflict in the commands. Please check command IDs returned by the pluginInfo methods of command plugins."
-          end
+          addCommand( lCommandID, {
+            :Title => iCommandPluginInfo[:Title],
+            :Description => iCommandPluginInfo[:Description],
+            :Bitmap => getPluginBitmap(iCommandPluginInfo),
+            :Accelerator => iCommandPluginInfo[:Accelerator],
+            :Parameters => iCommandPluginInfo[:Parameters],
+            :Plugin => nil,
+            :PluginName => iPluginName
+          } )
         end
       end
 
       # Create commands for each import plugin
       getImportPlugins.each do |iImportID, iImportInfo|
-        @Commands[ID_IMPORT_BASE + iImportInfo[:PluginIndex]] = {
+        addCommand( ID_IMPORT_BASE + iImportInfo[:PluginIndex], {
           :Title => "Import from #{iImportInfo[:Title]}",
           :Description => iImportInfo[:Description],
           :Bitmap => getPluginBitmap(iImportInfo),
@@ -1191,8 +1308,8 @@ module PBS
           :Parameters => [
             :parentWindow
           ]
-        }
-        @Commands[ID_IMPORT_MERGE_BASE + iImportInfo[:PluginIndex]] = {
+        } )
+        addCommand( ID_IMPORT_MERGE_BASE + iImportInfo[:PluginIndex], {
           :Title => "Import and merge from #{iImportInfo[:Title]}",
           :Description => iImportInfo[:Description],
           :Bitmap => getPluginBitmap(iImportInfo),
@@ -1201,11 +1318,11 @@ module PBS
           :Parameters => [
             :parentWindow
           ]
-        }
+        } )
       end
       # Create commands for each export plugin
       getExportPlugins.each do |iExportID, iExportInfo|
-        @Commands[ID_EXPORT_BASE + iExportInfo[:PluginIndex]] = {
+        addCommand( ID_EXPORT_BASE + iExportInfo[:PluginIndex], {
           :Title => "Export to #{iExportInfo[:Title]}",
           :Description => iExportInfo[:Description],
           :Bitmap => getPluginBitmap(iExportInfo),
@@ -1214,11 +1331,11 @@ module PBS
           :Parameters => [
             :parentWindow
           ]
-        }
+        } )
       end
       # Create commands for each type plugin
       getTypesPlugins.each do |iTypeID, iTypeInfo|
-        @Commands[ID_NEW_SHORTCUT_BASE + iTypeInfo[:PluginIndex]] = {
+        addCommand( ID_NEW_SHORTCUT_BASE + iTypeInfo[:PluginIndex], {
           :Title => iTypeInfo[:Title],
           :Description => "Create a new Shortcut of type #{iTypeInfo[:Description]}",
           :Bitmap => getPluginBitmap(iTypeInfo),
@@ -1228,11 +1345,11 @@ module PBS
             :tag,
             :parentWindow
           ]
-        }
+        } )
       end
       # Create commands for each Shortcut command plugin
       getShortcutCommandsPlugins.each do |iPluginID, iPluginInfo|
-        @Commands[ID_SHORTCUT_COMMAND_BASE + iPluginInfo[:PluginIndex]] = {
+        addCommand( ID_SHORTCUT_COMMAND_BASE + iPluginInfo[:PluginIndex], {
           :Title => iPluginInfo[:Title],
           :Description => iPluginInfo[:Description],
           :Bitmap => getPluginBitmap(iPluginInfo),
@@ -1241,50 +1358,39 @@ module PBS
           :Parameters => [
             :shortcutsList
           ]
-        }
+        } )
       end
       # Create commands that instantiate an instance on the Root Tag for each integration plugin
       getIntegrationPlugins.each do |iPluginID, iPluginInfo|
-        @Commands[ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex]] = {
+        addCommand( ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex], {
           :Title => iPluginInfo[:Title],
           :Description => iPluginInfo[:Description],
           :Bitmap => getPluginBitmap(iPluginInfo),
           :Plugin => InstantiateDefaultIntCommand.new(iPluginID),
           :Accelerator => iPluginInfo[:Accelerator]
-        }
+        } )
       end
 
       # Create Commands not yet implemented
       # TODO: Implement them
-      @Commands.merge!({
-        Wx::ID_FIND => {
-          :Title => 'Find',
-          :Description => 'Find a Shortcut',
-          :Bitmap => getGraphic('Find.png'),
-          :Accelerator => [ Wx::MOD_CMD, 'f'[0] ]
-        },
-        ID_STATS => {
-          :Title => 'Stats',
-          :Description => 'Give statistics on your Shortcuts use',
-          :Bitmap => getGraphic('Stats.png'),
-          :Accelerator => nil
-        },
-        Wx::ID_HELP => {
-          :Title => 'User manual',
-          :Description => 'Display help file',
-          :Bitmap => getGraphic('Help.png'),
-          :Accelerator => nil
-        }
-      })
-
-      # Create dynamic parameters of commands
-      @Commands.each do |iCommandID, ioCommandInfo|
-        ioCommandInfo.merge!({
-          :Enabled => true,
-          :RegisteredMenuItems => [],
-          :RegisteredToolbarButtons => []
-        })
-      end
+      addCommand( Wx::ID_FIND, {
+        :Title => 'Find',
+        :Description => 'Find a Shortcut',
+        :Bitmap => getGraphic('Find.png'),
+        :Accelerator => [ Wx::MOD_CMD, 'f'[0] ]
+      } )
+      addCommand( ID_STATS, {
+        :Title => 'Stats',
+        :Description => 'Give statistics on your Shortcuts use',
+        :Bitmap => getGraphic('Stats.png'),
+        :Accelerator => nil
+      } )
+      addCommand( Wx::ID_HELP, {
+        :Title => 'User manual',
+        :Description => 'Display help file',
+        :Bitmap => getGraphic('Help.png'),
+        :Accelerator => nil
+      } )
 
       if (lDefaultOptionsLoaded)
         # Now we mark 1 instance per integration plugin to be instantiated on the Root Tag.

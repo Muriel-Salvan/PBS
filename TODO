@@ -24,6 +24,7 @@
 **** Sort Tags tree in the EditShortcut dialog
 
 *** Other
+**** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + hierarchical transactions
 **** External library directories have to be customizable in the options
 **** Types config
 **** Importing Icon indexes from EXE/DLL using Icon Indexes
@@ -47,6 +48,7 @@
 **** Add an option in OptionsDialog to enable/disable startup tips
 **** Get a way to use smooth scaling for bitmaps.
 **** Optionally remember plugins that we want to ignore always (if not installed), and set a way in options to remove them from the forget list.
+**** Timer.every(xxx) loops have to quit when quitting PBS
 
 ** Plugins
 *** Create Windows/KDE programs shortcuts in start menu part of the additional plugin commands (this way, it is still possible to do it after a move of the program location)
@@ -63,15 +65,12 @@
 *** Create a plugin that scans Shortcuts for redirections and update them (see the accessFile code for handling redirections, and also handle <meta http-equiv="Refresh"> Tag if the user wants it)
 *** Add options to the FindIcon shortcut command plugin: Replace already set icons ?
 *** Create an integration plugin that execute some Shortcuts at startup time
+*** Make integration plugin that puts itself as a FireFox plugin.
 
 
 
 
 * TODO quickly
-**** Review the transactions with a Transaction class used to gather all information related to transactions (errors...), and use a global object to handle this correctly + hierarchical transactions
 * Increase performances:
 ** Memory consumption (Try reenabling GC)
-* Timer.every(xxx) loops have to quit when quitting PBS
-* Make integration plugin that puts itself as a FireFox plugin.
-* Propose to activate/deactivate in menus all possible integration plugins instance configured in options.
-* Use make_modal to make just the last Progress window modal (test with many MainWindow with and without to be sure)
+* Linux integration

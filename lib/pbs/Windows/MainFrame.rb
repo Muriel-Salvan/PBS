@@ -441,7 +441,10 @@ module PBS
       @Controller.getIntegrationPlugins.each do |iPluginName, iPluginInfo|
         addMenuCommand(lIntPluginsSubMenu, ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex])
       end
-      lToolsMenu.append_sub_menu(lIntPluginsSubMenu, 'Instantiate a new view')
+      lToolsMenu.append_sub_menu(lIntPluginsSubMenu, 'Instantiate a new view on Root')
+      @ViewsSubMenu = Wx::Menu.new
+      @Controller.registerViewsMenu(self, @ViewsSubMenu)
+      lToolsMenu.append_sub_menu(@ViewsSubMenu, 'Instantiate a new view')
       lToolsMenu.append_separator
       addMenuCommand(lToolsMenu, Wx::ID_SETUP) do |iEvent, oValidator|
         oValidator.authorizeCmd(
@@ -478,7 +481,7 @@ module PBS
       # Instantiate a default toolbar
       lDefaultToolBar = [
         Wx::ID_OPEN,
-        Wx::ID_SAVEAS,
+        Wx::ID_SAVE,
         Wx::ID_SEPARATOR,
         Wx::ID_EDIT,
         Wx::ID_UNDO,
@@ -524,6 +527,9 @@ module PBS
 
       # Resize it as it will always be resized by users having more than 10 shortcuts
       self.size = [300, 400]
+
+      # Update menus from start
+      onMainTreeSelectionUpdated
       
     end
 
@@ -534,6 +540,8 @@ module PBS
       @Controller.unregisterGUI(@TCMainTree)
       # The menus
       @Controller.unregisterMenuEvt(self)
+      # The views menu
+      @Controller.unregisterViewsMenu(self, @ViewsSubMenu)
       # The toolbars
       @Controller.unregisterToolbar(@ToolBar)
     end

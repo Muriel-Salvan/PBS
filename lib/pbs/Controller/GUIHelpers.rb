@@ -24,7 +24,12 @@ module PBS
       if (lCommand == nil)
         logBug "Unknown command of ID #{iCommandID}. Ignoring it from the menu."
       else
-        lMenuItem = Wx::MenuItem.new(ioMenu, iCommandID)
+        lMenuItem = nil
+        if (lCommand[:Checked] != nil)
+          lMenuItem = Wx::MenuItem.new(ioMenu, iCommandID, '', '', Wx::ITEM_CHECK)
+        else
+          lMenuItem = Wx::MenuItem.new(ioMenu, iCommandID)
+        end
         lCommand[:RegisteredMenuItems] << [ lMenuItem, iEvtWindow, iFetchParametersCode, iParams ]
         setMenuItemAppearanceWhileInsert(lMenuItem, iCommandID, ioMenu.menu_items.size, ioMenu, iEvtWindow, iFetchParametersCode)
       end
@@ -43,6 +48,58 @@ module PBS
       end
     end
 
+    # Remove commands related to an event handler.
+    #
+    # Parameters:
+    # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
+    # * *iCommandID* (_Integer_): The corresponding command ID to unregister
+    def unregisterMenuItem(iEvtWindow, iCommandID)
+      @Commands.each do |iCommandID, ioCommand|
+        ioCommand[:RegisteredMenuItems].delete_if do |iRegisteredMenuInfo|
+          iMenuItem, iRegisteredEvtWindow, iCode, iParams = iRegisteredMenuInfo
+          next ((iMenuItem.id == iCommandID) and
+                (iRegisteredEvtWindow == iEvtWindow))
+        end
+      end
+    end
+
+    # Register a menu to receive menu items corresponding to the views configured in the options
+    #
+    # Parameters:
+    # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
+    # * *ioMenu* (<em>Wx::Menu</em>): The menu that will receive menu items for views
+    def registerViewsMenu(iEvtHandler, ioMenu)
+      @ViewsMenu << [ iEvtHandler, ioMenu ]
+      # For each possible view, add a menu item
+      lIdx = ID_VIEWS_BASE
+      while (@Commands[lIdx] != nil)
+        addMenuCommand(iEvtHandler, ioMenu, lIdx)
+        lIdx += 1
+      end
+    end
+
+    # Unregister a menu that received menu items corresponding to the views configured in the options
+    #
+    # Parameters:
+    # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
+    # * *ioMenu* (<em>Wx::Menu</em>): The menu that will receive menu items for views
+    def unregisterViewsMenu(iEvtHandler, ioMenu)
+      # Unregister each menu item from this menu
+      lIdx = ID_VIEWS_BASE
+      while (ioMenu.find_item(lIdx) != nil)
+        # Unregister it
+        unregisterMenuItem(iEvtHandler, lIdx)
+        # Delete it
+        ioMenu.delete(lIdx)
+        # Check next one
+        lIdx += 1
+      end
+      # Delete it from the views menu
+      @ViewsMenu.delete_if do |iMenuInfo|
+        next (iMenuInfo == [ iEvtHandler, ioMenu ])
+      end
+    end
+
     # Add a command in a toolbar
     #
     # Parameters:
@@ -57,7 +114,11 @@ module PBS
       if (lCommand == nil)
         logBug "Unknown command of ID #{iCommandID}. Ignoring it from the toolbar."
       else
-        rButton = iToolbar.add_item(lCommand[:Bitmap], :id => iCommandID)
+        if (lCommand[:Checked] != nil)
+          rButton = iToolbar.add_item(lCommand[:Bitmap], :id => iCommandID, :kind => Wx::ITEM_CHECK)
+        else
+          rButton = iToolbar.add_item(lCommand[:Bitmap], :id => iCommandID)
+        end
         lCommand[:RegisteredToolbarButtons] << [ rButton, iParams ]
         updateToolbarButtonAppearance(rButton, lCommand)
       end
