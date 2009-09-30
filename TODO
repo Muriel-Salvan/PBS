@@ -65,12 +65,9 @@
 *** Add options to the FindIcon shortcut command plugin: Replace already set icons ?
 *** Create an integration plugin that execute some Shortcuts at startup time
 *** Make integration plugin that puts itself as a FireFox plugin.
-
+*** Some plugins (HTML) have specific code for every Shortcut type. Adapt it to the ProtableShellShortcut type.
 
 
 
 * TODO quickly
-* Increase performances:
-** Memory consumption (Try reenabling GC)
 * Linux integration
-* Check TODOs in source code

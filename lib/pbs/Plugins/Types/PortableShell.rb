@@ -64,18 +64,13 @@ module PBS
               if (iEvent.selection == @EditPanels.size-1)
                 @NBShells.selection = 0
               end
+              # Unregister it
               lEditPanelToDelete = @NBShells.get_page(iEvent.selection)
               @EditPanels.delete_if do |iPlatformID, iEditPanel|
-                if (lEditPanelToDelete == iEditPanel)
-                  # Remove this one
-                  # TODO: Check if this is correct to do it
-                  #iEditPanel.destroy
-                  # Delete it from the list
-                  next true
-                else
-                  next false
-                end
+                next (lEditPanelToDelete == iEditPanel)
               end
+              # Delete (and free) it for real
+              #@NBShells.delete_page(iEvent.selection)
             end
           end
           # Show the last tab (+)
@@ -149,10 +144,7 @@ module PBS
           @EditPanels.delete_if do |iPlatformID, iEditPanel|
             if (iContent[iPlatformID] == nil)
               # Remove this one
-              @NBShells.remove_page(@NBShells.get_page_index(iEditPanel))
-              # Free the Window itself
-              # TODO: Check if this is correct to do it
-              #iEditPanel.destroy
+              @NBShells.delete_page(@NBShells.get_page_index(iEditPanel))
               # Delete it from the list
               next true
             else
@@ -211,7 +203,13 @@ module PBS
       # Return:
       # * _String_: The content's summary
       def getContentSummary(iContent)
-        return @ShellPlugin.getContentSummary(iContent[RUBY_PLATFORM])
+        rSummary = ''
+
+        if (iContent[RUBY_PLATFORM] != nil)
+          rSummary = @ShellPlugin.getContentSummary(iContent[RUBY_PLATFORM])
+        end
+
+        return rSummary
       end
 
       # Run a given content
@@ -219,7 +217,11 @@ module PBS
       # Parameters:
       # * *iContent* (_Object_): Content created by this type
       def run(iContent)
-        @ShellPlugin.run(iContent[RUBY_PLATFORM])
+        if (iContent[RUBY_PLATFORM] != nil)
+          @ShellPlugin.run(iContent[RUBY_PLATFORM])
+        else
+          logErr "No content defined for platform #{RUBY_PLATFORM}."
+        end
       end
 
       # Fill a given XML element with a content.
@@ -259,7 +261,15 @@ module PBS
       # Return:
       # * <em>map<String,Object></em>: The corresponding metadata
       def getMetadataFromContent(iContent)
-        return @ShellPlugin.getMetadataFromContent(iContent[RUBY_PLATFORM])
+        rMetadata = {}
+
+        if (iContent[RUBY_PLATFORM] != nil)
+          rMetadata = @ShellPlugin.getMetadataFromContent(iContent[RUBY_PLATFORM])
+        else
+          logErr "No content defined for platform #{RUBY_PLATFORM}."
+        end
+
+        return rMetadata
       end
 
     end

@@ -304,6 +304,7 @@ module PBS
       # Create the bitmaps list that store icons to display
       # Always add the default one first
       # TODO: For performance reasons, keep this list in a class variable: this will avoid reading files several times, and it will also reuse previously added icons. However we still have to add the current icon at first place (and replace previous first place by doing it).
+      # TODO: Check if this TODO is still valable now that URLCache is implemented and used globally.
       @BitmapsList = [iIcon]
       # Parse all files in the Graphics dir to add some others
       Dir.glob("#{$PBS_GraphicsDir}/*") do |iFileName|

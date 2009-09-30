@@ -18,8 +18,9 @@ module PBS
     # * *ioMenu* (<em>Wx::Menu</em>): The menu in which we add the command
     # * *iCommandID* (_Integer_): ID of the command to add
     # * *iParams* (<em>map<Symbol,Object></em>): Additional properties, specific to this command item [optional = {}]
+    # * *iRegister* (_Boolean_): Do we register the menu item to the Controller for further updates ? [optional = true]
     # * *&iFetchParametersCode* (_CodeBlock_): Code that will use a command validator to fetch parameters, or nil if none needed
-    def addMenuCommand(iEvtWindow, ioMenu, iCommandID, iParams = {}, &iFetchParametersCode)
+    def addMenuCommand(iEvtWindow, ioMenu, iCommandID, iParams = {}, iRegister = true, &iFetchParametersCode)
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
         logBug "Unknown command of ID #{iCommandID}. Ignoring it from the menu."
@@ -30,8 +31,10 @@ module PBS
         else
           lMenuItem = Wx::MenuItem.new(ioMenu, iCommandID)
         end
-        lCommand[:RegisteredMenuItems] << [ lMenuItem, iEvtWindow, iFetchParametersCode, iParams ]
         setMenuItemAppearanceWhileInsert(lMenuItem, iCommandID, ioMenu.menu_items.size, ioMenu, iEvtWindow, iFetchParametersCode)
+        if (iRegister)
+          lCommand[:RegisteredMenuItems] << [ lMenuItem, iEvtWindow, iFetchParametersCode, iParams ]
+        end
       end
     end
 
@@ -68,13 +71,16 @@ module PBS
     # Parameters:
     # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
     # * *ioMenu* (<em>Wx::Menu</em>): The menu that will receive menu items for views
-    def registerViewsMenu(iEvtHandler, ioMenu)
-      @ViewsMenu << [ iEvtHandler, ioMenu ]
+    # * *iRegister* (_Boolean_): Do we register the menu item to the Controller for further updates ? [optional = true]
+    def registerViewsMenu(iEvtHandler, ioMenu, iRegister = true)
       # For each possible view, add a menu item
       lIdx = ID_VIEWS_BASE
       while (@Commands[lIdx] != nil)
-        addMenuCommand(iEvtHandler, ioMenu, lIdx)
+        addMenuCommand(iEvtHandler, ioMenu, lIdx, {}, iRegister)
         lIdx += 1
+      end
+      if (iRegister)
+        @ViewsMenu << [ iEvtHandler, ioMenu ]
       end
     end
 
@@ -106,9 +112,10 @@ module PBS
     # * *iToolbar* (<em>Wx::Toolbar</em>): The toolbar in which we add the command
     # * *iCommandID* (_Integer_): ID of the command to add
     # * *iParams* (<em>map<Symbol,Object></em>): Additional properties, specific to this command item [optional = {}]
+    # * *iRegister* (_Boolean_): Do we register the menu item to the Controller for further updates ? [optional = true]
     # Return:
     # * <em>Wx::ToolbarTool</em>: The created toolbar button, or nil if none.
-    def addToolbarCommand(iToolbar, iCommandID, iParams = {})
+    def addToolbarCommand(iToolbar, iCommandID, iParams = {}, iRegister = true)
       rButton = nil
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
@@ -119,8 +126,10 @@ module PBS
         else
           rButton = iToolbar.add_item(lCommand[:Bitmap], :id => iCommandID)
         end
-        lCommand[:RegisteredToolbarButtons] << [ rButton, iParams ]
         updateToolbarButtonAppearance(rButton, lCommand)
+        if (iRegister)
+          lCommand[:RegisteredToolbarButtons] << [ rButton, iParams ]
+        end
       end
 
       return rButton

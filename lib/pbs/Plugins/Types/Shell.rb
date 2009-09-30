@@ -60,8 +60,12 @@ module PBS
             ) do |iModalResult, iDialog|
               case iModalResult
               when Wx::ID_OK
-                # TODO: Check if we don't need to escape space characters or add " "
-                @TCCmd.value = iDialog.path
+                # If there are some spaces, add surrounding " "
+                if (iDialog.path.include?(' '))
+                  @TCCmd.value = "\"#{iDialog.path}\""
+                else
+                  @TCCmd.value = iDialog.path
+                end
               end
             end
           end

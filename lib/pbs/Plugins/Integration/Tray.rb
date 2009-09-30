@@ -38,8 +38,6 @@ module PBS
         # Integer
         @SizeMenu = nil
         @SizeSubMenu = nil
-        # The last registered views sub-menu
-        @ViewsSubMenu = nil
       end
 
       # Method that adds sub-Tags of a given Tag to a menu
@@ -83,32 +81,30 @@ module PBS
         # If we try to reuse it, we'll get into some ObjectPreviouslyDeleted exceptions when invoking the menu a second time.
         rMenu = Wx::Menu.new
 
-        # Eventually unregister previous menu
-        unregisterAll
         # First, add a PBS submenu
         lPBSMenu = Wx::Menu.new
         lIntPluginsSubMenu = Wx::Menu.new
         # For each integration plugin, add a menu item
         @Controller.getIntegrationPlugins.each do |iPluginName, iPluginInfo|
-          @Controller.addMenuCommand(self, lIntPluginsSubMenu, ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex])
+          @Controller.addMenuCommand(self, lIntPluginsSubMenu, ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex], {}, false)
         end
         lPBSMenu.append_sub_menu(lIntPluginsSubMenu, 'Instantiate a new view from Root')
-        @ViewsSubMenu = Wx::Menu.new
-        @Controller.registerViewsMenu(self, @ViewsSubMenu)
-        lPBSMenu.append_sub_menu(@ViewsSubMenu, 'Instantiate a new view')
+        lViewsSubMenu = Wx::Menu.new
+        @Controller.registerViewsMenu(self, lViewsSubMenu, false)
+        lPBSMenu.append_sub_menu(lViewsSubMenu, 'Instantiate a new view')
         lPBSMenu.append_separator
-        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_SETUP) do |iEvent, oValidator|
+        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_SETUP, {}, false) do |iEvent, oValidator|
           oValidator.authorizeCmd(
             :parentWindow => nil
           )
         end
         lPBSMenu.append_separator
-        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_CLOSE) do |iEvent, oValidator|
+        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_CLOSE, {}, false) do |iEvent, oValidator|
           oValidator.authorizeCmd(
             :instancesToClose => [ self ]
           )
         end
-        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_EXIT) do |iEvent, oValidator|
+        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_EXIT, {}, false) do |iEvent, oValidator|
           oValidator.authorizeCmd(
             :parentWindow => nil
           )
@@ -252,14 +248,6 @@ module PBS
         @SizeSubMenu = iNewOptions[:sizeSubMenu]
       end
 
-      # Unregister from the Controller
-      def unregisterAll
-        @Controller.unregisterMenuEvt(self)
-        if (@ViewsSubMenu != nil)
-          @Controller.unregisterViewsMenu(self, @ViewsSubMenu)
-        end
-      end
-      
     end
 
     class ConfigPanel < Wx::Panel
@@ -478,7 +466,6 @@ module PBS
       # * *ioInstance* (_Object_): The instance created via createNewInstance that we now have to delete
       def deleteInstance(iController, ioInstance)
         # Eventually unregister previous menu
-        ioInstance.unregisterAll
         ioInstance.remove_icon
         ioInstance.destroy
       end
