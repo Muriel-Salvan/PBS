@@ -46,28 +46,31 @@ module PBS
         'Credits',
         'Tips.txt',
         'pbsversion.rb',
-        'lib/*.rb',
-        'lib/Controller/*.rb',
-        'lib/Model/*.rb',
-        'lib/Windows/*.rb',
-        'lib/Windows/OptionsPanels/*.rb',
-        'ext/rubyzip-0.9.1/**/*',
-        "ext/#{RUBY_PLATFORM}/zlib/**/*",
-        'bin/Launcher.rb',
-        'lib/Common/*',
-        "lib/Common/#{RUBY_PLATFORM}/PlatformInfo.rb"
+        'lib/pbs/*.rb',
+        'lib/pbs/Common/*.rb',
+        'lib/pbs/Controller/*.rb',
+        'lib/pbs/Model/*.rb',
+        'lib/pbs/Windows/*.rb',
+        'lib/pbs/Windows/OptionsPanels/*.rb',
+        'ext/rUtilAnts/**/*',
+        'ext/RDI/**/*',
+        'bin/pbs.rb'
       ]
       if (iIncludeRubyGems)
-        @CoreFiles << 'ext/rubygems/**/*'
+        # TODO
+        #@CoreFiles << 'ext/rubygems/**/*'
       end
       @AdditionalFiles = [
-        'lib/Plugins/**/*',
-        'lib/Graphics/**/*'
+        'lib/pbs/Plugins/**/*',
+        'lib/pbs/Graphics/**/*'
       ]
-      if (iIncludeWxRuby)
-        # WxRuby
+      if (iIncludeAllExt)
+        # Include everything in the external directory
+        @AdditionalFiles << "ext/#{RUBY_PLATFORM}/**/*"
+      elsif (iIncludeWxRuby)
+        # Include WxRuby from the external directory
         lFound = false
-        Dir.glob("#{iRootDir}/ext/#{RUBY_PLATFORM}/wxruby*").each do |iFileName|
+        Dir.glob("#{iRootDir}/ext/#{RUBY_PLATFORM}/LocalGems/gems/wxruby*").each do |iFileName|
           if (File.directory?(iFileName))
             @AdditionalFiles << "#{iFileName}/**/*"
             lFound = true
@@ -75,13 +78,6 @@ module PBS
         end
         if (!lFound)
           puts "!!! No delivery of wxruby has been found in #{iRootDir}/ext/#{RUBY_PLATFORM}/wxruby*"
-        end
-      end
-      Dir.glob("#{iRootDir}/ext/#{RUBY_PLATFORM}/*").each do |iFileName|
-        if ((File.directory?(iFileName)) and
-            (iFileName.match(/wxruby/) == nil) and
-            (File.basename(iFileName) != 'zlib'))
-          @AdditionalFiles << "#{iFileName}/**/*"
         end
       end
     end
@@ -98,9 +94,9 @@ module PBS
       
       # Check that the tools we need to release are indeed here
       if (@IncludeWxRuby)
-        if ((!File.exists?("#{iRootDir}/ext/#{RUBY_PLATFORM}")) or
-            (Dir.glob("#{iRootDir}/ext/#{RUBY_PLATFORM}/wxruby*").empty?))
-          puts "!!! Need to have wxruby installed in #{iRootDir}/ext/#{RUBY_PLATFORM} to release including wxruby."
+        if ((!File.exists?("#{iRootDir}/ext/#{RUBY_PLATFORM}/LocalGems/gems")) or
+            (Dir.glob("#{iRootDir}/ext/#{RUBY_PLATFORM}/LocalGems/gems/wxruby*").empty?))
+          puts "!!! Need to have wxruby installed in #{iRootDir}/ext/#{RUBY_PLATFORM}/LocalGems/gems to release including wxruby."
           rSuccess = false
         end
       end
