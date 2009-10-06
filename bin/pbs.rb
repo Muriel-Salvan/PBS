@@ -104,8 +104,10 @@ module PBS
           # Protect against errors
           begin
             MainApp.new(iPBSRootDir, @DebugOption, lOpenFileNames).main_loop
+            setGUIForDialogs(nil)
             logInfo 'PBS closed correctly.'
           rescue Exception
+            setGUIForDialogs(nil)
             logExc $!, 'Un exception occurred during PBS run.'
           end
         else

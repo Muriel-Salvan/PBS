@@ -10,8 +10,9 @@
 # * The Drag'n'Drop from the main tree does not cause SegFaults anymore [ Corrected in wxRuby 2.0.1 ].
 # * Destroying Windows manually does not cause SegFaults anymore during random events.
 # * Not destroying Windows manually does not cause ObjectPreviouslyDeleted exceptions on exit.
+# * Random crashes when invoking a menu from the tray icon.
 # However, disabling GC does increase memory consumption of around 30Mb every 5 minutes of usage.
-#GC.disable
+GC.disable
 
 require 'rUtilAnts/Platform'
 RUtilAnts::Platform.initializePlatform
@@ -78,6 +79,11 @@ module PBS
           :Icon => getGraphic('Icon32.png')
         ) do |ioProgressDlg|
           ioProgressDlg.setRange(6)
+          # If we are in debug mode, make the GC clean memory every second.
+          # It will help finding bugs that are memory related.
+          if ($PBS_DevDebug)
+            Wx.get_app.gc_stress
+          end
           # Create the Controller
           lController = PBS::Controller.new(@PBSRootDir)
           ioProgressDlg.incValue

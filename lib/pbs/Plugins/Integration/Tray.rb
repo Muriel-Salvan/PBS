@@ -38,6 +38,43 @@ module PBS
         # Integer
         @SizeMenu = nil
         @SizeSubMenu = nil
+        end
+
+      # Return a new PBS menu
+      #
+      # Return:
+      # * <em>Wx::Menu</em>: The PBS menu
+      def createPBSMenu
+        rPBSMenu = Wx::Menu.new
+
+        lIntPluginsSubMenu = Wx::Menu.new
+        # For each integration plugin, add a menu item
+        @Controller.getIntegrationPlugins.each do |iPluginName, iPluginInfo|
+          @Controller.addMenuCommand(self, lIntPluginsSubMenu, ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex], {}, false)
+        end
+        rPBSMenu.append_sub_menu(lIntPluginsSubMenu, 'Instantiate a new view from Root')
+        lViewsSubMenu = Wx::Menu.new
+        @Controller.registerViewsMenu(self, lViewsSubMenu, false)
+        rPBSMenu.append_sub_menu(lViewsSubMenu, 'Instantiate a new view')
+        rPBSMenu.append_separator
+        @Controller.addMenuCommand(self, rPBSMenu, Wx::ID_SETUP, {}, false) do |iEvent, oValidator|
+          oValidator.authorizeCmd(
+            :parentWindow => nil
+          )
+        end
+        rPBSMenu.append_separator
+        @Controller.addMenuCommand(self, rPBSMenu, Wx::ID_CLOSE, {}, false) do |iEvent, oValidator|
+          oValidator.authorizeCmd(
+            :instancesToClose => [ self ]
+          )
+        end
+        @Controller.addMenuCommand(self, rPBSMenu, Wx::ID_EXIT, {}, false) do |iEvent, oValidator|
+          oValidator.authorizeCmd(
+            :parentWindow => nil
+          )
+        end
+
+        return rPBSMenu
       end
 
       # Method that adds sub-Tags of a given Tag to a menu
@@ -82,34 +119,7 @@ module PBS
         rMenu = Wx::Menu.new
 
         # First, add a PBS submenu
-        lPBSMenu = Wx::Menu.new
-        lIntPluginsSubMenu = Wx::Menu.new
-        # For each integration plugin, add a menu item
-        @Controller.getIntegrationPlugins.each do |iPluginName, iPluginInfo|
-          @Controller.addMenuCommand(self, lIntPluginsSubMenu, ID_INTEGRATION_INSTANCE_BASE + iPluginInfo[:PluginIndex], {}, false)
-        end
-        lPBSMenu.append_sub_menu(lIntPluginsSubMenu, 'Instantiate a new view from Root')
-        lViewsSubMenu = Wx::Menu.new
-        @Controller.registerViewsMenu(self, lViewsSubMenu, false)
-        lPBSMenu.append_sub_menu(lViewsSubMenu, 'Instantiate a new view')
-        lPBSMenu.append_separator
-        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_SETUP, {}, false) do |iEvent, oValidator|
-          oValidator.authorizeCmd(
-            :parentWindow => nil
-          )
-        end
-        lPBSMenu.append_separator
-        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_CLOSE, {}, false) do |iEvent, oValidator|
-          oValidator.authorizeCmd(
-            :instancesToClose => [ self ]
-          )
-        end
-        @Controller.addMenuCommand(self, lPBSMenu, Wx::ID_EXIT, {}, false) do |iEvent, oValidator|
-          oValidator.authorizeCmd(
-            :parentWindow => nil
-          )
-        end
-        rMenu.append_sub_menu(lPBSMenu, 'PBS')
+        rMenu.append_sub_menu(createPBSMenu, 'PBS')
         rMenu.append_separator
 
         # Parse all Tags

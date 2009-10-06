@@ -370,13 +370,7 @@ module PBS
             # Nothing to do, we'll display the error message later.
           end
           if (lCommand[:Plugin] == nil)
-            showModal(Wx::MessageDialog, nil,
-              "This command (#{iCommandID}) has not yet been implemented. Sorry.",
-              :caption => 'Not yet implemented',
-              :style => Wx::OK|Wx::ICON_EXCLAMATION
-            ) do |iModalResult, iDialog|
-              # Nothing to do
-            end
+            logMsg "This command (#{iCommandID}) has not yet been implemented. Sorry."
           end
         end
         if (lCommand[:Plugin] != nil)

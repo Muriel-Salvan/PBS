@@ -24,7 +24,7 @@ module PBS
       # Define needed attributes
       @Name = 'PBS'
       @Version = '0.0.6'
-      @StartupRBFile = 'bin/Launcher.rb'
+      @StartupRBFile = 'bin/pbs.rb'
       @ExeName = 'pbs'
       @IconName = "Distribution/#{RUBY_PLATFORM}/Icon.ico"
       @NSIFileName = "Distribution/#{RUBY_PLATFORM}/Installer/install.nsi"

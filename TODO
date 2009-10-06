@@ -71,3 +71,4 @@
 
 * TODO quickly
 * Linux integration
+* Replace destroy by Sizer.remove/detach when appropriate
