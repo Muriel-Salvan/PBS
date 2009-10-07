@@ -10,6 +10,28 @@ module PBS
   # Return:
   # * <em>list<RDI::Model::DependencyDescription></em>: The dependencies descriptions
   def self.getSQLite3Dependencies
+    rDeps = [ RDI::Model::DependencyDescription.new('Ruby-SQLite3').addDescription( {
+        :Testers => [
+          {
+            :Type => 'RubyRequires',
+            :Content => [ 'sqlite3' ]
+          }
+        ],
+        :Installers => [
+          {
+            :Type => 'Gem',
+            :Content => 'sqlite3-ruby --version 1.2.3',
+            :ContextModifiers => [
+              {
+                :Type => 'GemPath',
+                :Content => '%INSTALLDIR%'
+              }
+            ]
+          }
+        ]
+      } )
+      ]
+
     lLibDepDesc = nil
     case $rUtilAnts_Platform_Info.os
     when OS_WINDOWS
@@ -35,29 +57,11 @@ module PBS
       }
     # TODO: Specify for other OS
     end
-    return [
-      RDI::Model::DependencyDescription.new('Ruby-SQLite3').addDescription( {
-      :Testers => [
-        {
-          :Type => 'RubyRequires',
-          :Content => [ 'sqlite3' ]
-        }
-      ],
-      :Installers => [
-        {
-          :Type => 'Gem',
-          :Content => 'sqlite3-ruby --version 1.2.3',
-          :ContextModifiers => [
-            {
-              :Type => 'GemPath',
-              :Content => '%INSTALLDIR%'
-            }
-          ]
-        }
-      ]
-    } ),
-      RDI::Model::DependencyDescription.new('SQLite 3 Library').addDescription(lLibDepDesc)
-    ]
+    if (lLibDepDesc != nil)
+      rDeps << RDI::Model::DependencyDescription.new('SQLite 3 Library').addDescription(lLibDepDesc)
+    end
+
+    return rDeps
   end
 
 end
