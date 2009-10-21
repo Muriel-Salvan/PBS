@@ -27,7 +27,6 @@ RUtilAnts::URLCache.initializeURLCache
 require 'rUtilAnts/Plugins'
 RUtilAnts::Plugins.initializePlugins
 
-require 'pbsversion'
 # Common utilities
 require 'pbs/Common/Tools'
 # Do this to avoid having to "include Tools" in every class.
@@ -53,7 +52,19 @@ module PBS
     # * *iDebugOption* (_Boolean_): Is debug on ?
     # * *iStartupFileNames* (<em>list<String></em>): List of files to load at startup
     def initialize(iPBSRootDir, iDebugOption, iStartupFileNames)
-      logInfo "Starting PBS #{$PBS_VERSION}"
+      # Read version info
+      $PBS_ReleaseInfo = {
+        :Version => 'Development',
+        :Tags => [],
+        :DevStatus => 'Unofficial'
+      }
+      lReleaseInfoFileName = "#{iPBSRootDir}/ReleaseInfo"
+      if (File.exists?(lReleaseInfoFileName))
+        File.open(lReleaseInfoFileName, 'r') do |iFile|
+          $PBS_ReleaseInfo = eval(iFile.read)
+        end
+      end
+      logInfo "Starting PBS #{$PBS_ReleaseInfo[:Version]}"
       super()
       @PBSRootDir, @StartupFileNames = iPBSRootDir, iStartupFileNames
       # Global constants
@@ -75,7 +86,7 @@ module PBS
       begin
         # We can set a progress dialog, do it now: the user has already waited too long !!!
         setupBitmapProgress(nil, getGraphic('Splash.png'),
-          :Title => "Launching PBS #{$PBS_VERSION}",
+          :Title => "Launching PBS #{$PBS_ReleaseInfo[:Version]}",
           :Icon => getGraphic('Icon32.png')
         ) do |ioProgressDlg|
           ioProgressDlg.setRange(6)

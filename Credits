@@ -33,6 +33,11 @@
 * http://rubyzip.sourceforge.net/
 * Used to unzip dependencies downloaded from the web
 
+== rUtilAnts
+* Muriel Salvan <murielsalvan@users.sourceforge.net>
+* http://rutilants.sourceforge.net/
+* Used for various tools and helpers.
+
 == SQLite3-Ruby
 * Jamis Buck
 * http://rubyforge.org/projects/sqlite-ruby/

@@ -10,7 +10,7 @@ module PBS
 
     # Set the title of the application, depending on the context
     def setAppTitle
-      lAppTitle ="Portable Bookmarks and Shortcuts v#{$PBS_VERSION}"
+      lAppTitle ="Portable Bookmarks and Shortcuts v#{$PBS_ReleaseInfo[:Version]}"
       if (@Controller.CurrentOpenedFileName != nil)
         # Display the currently opened file name, without the path nor the extension as we are short on space
         lFileName = File.basename(@Controller.CurrentOpenedFileName)[0..-6]

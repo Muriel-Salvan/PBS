@@ -89,8 +89,8 @@ This software is provided Free and Open Source - http://www.opensource.org -, un
       lSTTitle = Wx::StaticText.new(self, Wx::ID_ANY, "PBS\nPortable\nBookmarks\nand\nShortcuts",
         :style => Wx::ALIGN_CENTRE
       )
-      lSTVersion = Wx::StaticText.new(self, Wx::ID_ANY, "v #{$PBS_VERSION}")
-      lSTVersionTags = Wx::StaticText.new(self, Wx::ID_ANY, $PBS_VERSION_TAGS.join(', '))
+      lSTVersion = Wx::StaticText.new(self, Wx::ID_ANY, "v #{$PBS_ReleaseInfo[:Version]}")
+      lSTVersionTags = Wx::StaticText.new(self, Wx::ID_ANY, $PBS_ReleaseInfo[:Tags].join(', '))
       lBClose = Wx::Button.new(self, Wx::ID_OK, 'Close')
       lHCPBSURL = Wx::HyperlinkCtrl.new(self, Wx::ID_ANY, 'PBS home page', 'http://pbstool.sourceforge.net',
         :style => Wx::NO_BORDER|Wx::HL_ALIGN_CENTRE|Wx::HL_CONTEXTMENU
