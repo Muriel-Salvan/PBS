@@ -98,7 +98,8 @@ module PBS
         :TerminalApplication => false
       )
       install(
-        :NSISFileName => "Distribution/#{RUBY_PLATFORM}/Installer/install.nsi"
+        :NSISFileName => "Distribution/#{RUBY_PLATFORM}/Installer/install.nsi",
+        :InstallerName => 'pbs'
       )
     end
     
@@ -128,4 +129,4 @@ module PBS
   
 end
 
-$ReleaseInfo = PBS::ReleaseInfo.new(Dir.getwd, true, true, true)
+PBS::ReleaseInfo.new(Dir.getwd, true, true, true)
