@@ -187,7 +187,26 @@ module PBS
           end
         end
 
+        # TODO: Remove the following process when wxRuby 2.0.2 is used. This is a workaround to avoid core dumps.
+        # Each Wx::Menu that has been created must be assigned to an instance variable
+        @SavedMenus = []
+        saveMenus(rMenu)
+
         return rMenu
+      end
+
+      # TODO: Remove the following method when wxRuby 2.0.2 is used. This is a workaround to avoid core dumps.
+      # Save created menus and sub-menus in an instance variable
+      #
+      # Parameters:
+      # * *iMenu* (<em>Wx::Menu</em>): Menu to save
+      def saveMenus(iMenu)
+        @SavedMenus << iMenu
+        iMenu.menu_items.each do |iMenuItem|
+          if (iMenuItem.is_sub_menu)
+            saveMenus(iMenuItem.sub_menu)
+          end
+        end
       end
 
       # Create an icon that fits the Tray

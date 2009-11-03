@@ -12,7 +12,7 @@
 # ** :Accelerator (<em>[Integer,Integer]</em>): The accelerator (modifier and key)
 # ** :Parameters (<em>list<Symbol></em>): The list of symbols that GUIs have to provide to the execute method
 {
-  :Title => 'Close',
+  :Title => 'Close view',
   :Description => 'Close this view',
   :BitmapName => 'Close.png',
   :CommandID => Wx::ID_CLOSE,
