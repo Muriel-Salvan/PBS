@@ -25,23 +25,25 @@ module PBS
         ) do |iModalResult, iDialog|
           case iModalResult
           when Wx::ID_OK
-            File.open(iDialog.path, 'w') do |oFile|
-              lXML = REXML::Document.new
-              lXML << REXML::XMLDecl.new
-              lRootElement = lXML.add_element('root')
-              lTagsElement = lRootElement.add_element('tags')
-              # First, create the Tags hierarchy
-              iController.setProgressionText('Dump Tags')
-              addTagChildrenInXMLElement(iController.RootTag, lTagsElement)
-              # Then export Shortcuts
-              lShortcutsElement = lRootElement.add_element('shortcuts')
-              iController.setProgressionText('Dump Shortcuts')
-              iController.addProgressionRange(iController.ShortcutsList.size)
-              iController.ShortcutsList.each do |iShortcut|
-                addShortcutInXMLElement(iShortcut, lShortcutsElement)
-                iController.incProgression
+            iController.undoableOperation("Export XML file #{File.basename(iDialog.path)[0..-5]}") do
+              File.open(iDialog.path, 'w') do |oFile|
+                lXML = REXML::Document.new
+                lXML << REXML::XMLDecl.new
+                lRootElement = lXML.add_element('root')
+                lTagsElement = lRootElement.add_element('tags')
+                # First, create the Tags hierarchy
+                iController.setProgressionText('Dump Tags')
+                addTagChildrenInXMLElement(iController.RootTag, lTagsElement)
+                # Then export Shortcuts
+                lShortcutsElement = lRootElement.add_element('shortcuts')
+                iController.setProgressionText('Dump Shortcuts')
+                iController.addProgressionRange(iController.ShortcutsList.size)
+                iController.ShortcutsList.each do |iShortcut|
+                  addShortcutInXMLElement(iShortcut, lShortcutsElement)
+                  iController.incProgression
+                end
+                lXML.write(oFile)
               end
-              lXML.write(oFile)
             end
           end
         end

@@ -21,24 +21,26 @@ module PBS
         ) do |iModalResult, iDialog|
           case iModalResult
           when Wx::ID_OK
-            # First, create the Tags hierarchy
-            # Keep a correspondance between a Tag and its corresponding directory
-            # map< Tag, String >
-            lTagsToPaths = {}
-            iController.setProgressionText('Create Tags')
-            createTagsInDir(iController.RootTag, iDialog.path, lTagsToPaths)
-            # Then export Shortcuts
-            iController.setProgressionText('Create Shortcuts')
-            iController.addProgressionRange(iController.ShortcutsList.size)
-            iController.ShortcutsList.each do |iShortcut|
-              if (iShortcut.Tags.empty?)
-                exportShortcut(iController, iShortcut, iDialog.path)
-              else
-                iShortcut.Tags.each do |iTag, iNil|
-                  exportShortcut(iController, iShortcut, lTagsToPaths[iTag])
+            iController.undoableOperation("Export in directory #{iDialog.path}") do
+              # First, create the Tags hierarchy
+              # Keep a correspondance between a Tag and its corresponding directory
+              # map< Tag, String >
+              lTagsToPaths = {}
+              iController.setProgressionText('Create Tags')
+              createTagsInDir(iController.RootTag, iDialog.path, lTagsToPaths)
+              # Then export Shortcuts
+              iController.setProgressionText('Create Shortcuts')
+              iController.addProgressionRange(iController.ShortcutsList.size)
+              iController.ShortcutsList.each do |iShortcut|
+                if (iShortcut.Tags.empty?)
+                  exportShortcut(iController, iShortcut, iDialog.path)
+                else
+                  iShortcut.Tags.each do |iTag, iNil|
+                    exportShortcut(iController, iShortcut, lTagsToPaths[iTag])
+                  end
                 end
+                iController.incProgression
               end
-              iController.incProgression
             end
           end
         end
