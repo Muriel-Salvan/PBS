@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -16,10 +16,10 @@ module PBS
 
       # Command that exits PBS
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *parentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
+      #   * *parentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParams)
         lWindow = iParams[:parentWindow]
         # Protect this method from concurrent executions (exiting Windows calls evt_close twice, user could click several times on close...)
@@ -32,14 +32,14 @@ module PBS
               begin
                 ioController.notifyExit
               rescue Exception
-                logExc $!, 'An error has occurred while exiting.'
+                log_exc $!, 'An error has occurred while exiting.'
               end
               lTryExit = false
             else
               # If no integration plugin is to be instantiated, bring the Options dialog
               lIntPluginActive = ioController.isIntPluginActive?
               if (!lIntPluginActive)
-                logMsg 'All views have been disabled or closed. Please activate some integration plugins to use to display PBS.'
+                log_msg 'All views have been disabled or closed. Please activate some integration plugins to use to display PBS.'
                 # Bring the Options dialog
                 ioController.executeCommand(Wx::ID_SETUP, :parentWindow => lWindow)
                 # Check again

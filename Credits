@@ -7,7 +7,7 @@
 * Used to parse HTML in HTML import plugin
 
 == RDI
-* Muriel Salvan <murielsalvan@users.sourceforge.net>
+* Muriel Salvan <muriel@x-aeon.com>
 * http://rdi.sourceforge.net/
 * Used to install dependencies at runtime
 
@@ -22,7 +22,7 @@
 * Used to automatically download Gem dependencies
 
 == RubyPackager
-* Muriel Salvan <murielsalvan@users.sourceforge.net>
+* Muriel Salvan <muriel@x-aeon.com>
 * http://rubypackager.sourceforge.net/
 * Used to package PBS to any platform
 
@@ -34,7 +34,7 @@
 * Used to unzip dependencies downloaded from the web
 
 == rUtilAnts
-* Muriel Salvan <murielsalvan@users.sourceforge.net>
+* Muriel Salvan <muriel@x-aeon.com>
 * http://rutilants.sourceforge.net/
 * Used for various tools and helpers.
 

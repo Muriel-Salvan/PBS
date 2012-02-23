@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,10 +11,10 @@ module PBS
 
       # Command that pastes an object from the clipboard
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *tag* (_Tag_): Tag in which we paste the clipboard's content (can be the Root tag)
+      #   * *tag* (_Tag_): Tag in which we paste the clipboard's content (can be the Root tag)
       def execute(ioController, iParams)
         lSelectedTag = iParams[:tag]
         # We are sure that we can paste, everything is already in the ioController.Clipboard_* variables.

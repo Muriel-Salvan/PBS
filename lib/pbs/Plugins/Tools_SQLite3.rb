@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -18,7 +18,7 @@ module PBS
       
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iFileName* (_String_): File containing the db
       def initialize(iFileName)
         @TmpFileName = nil
@@ -54,10 +54,10 @@ module PBS
     # If the DB is in use, it copies into a temporary file before opening it.
     # It also ensures the DB is closed at the end,
     #
-    # Parameters:
+    # Parameters::
     # * *iFileName* (_String_): File containing the db
     # * *CodeBlock*: The code called with the db opened:
-    # ** *ioDB* (<em>SQLite3::Database</em>): The DB object
+    #   * *ioDB* (<em>SQLite3::Database</em>): The DB object
     def self.openSQLite3DB(iFileName)
       lDB = SQLite3DB.new(iFileName)
       yield(lDB.DB)

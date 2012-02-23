@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -13,7 +13,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iParent* (<em>Wx::Window</em>): The parent window
       # * *iController* (_Controller_): The controller, for plugins info
       def initialize(iParent, iController)
@@ -40,8 +40,8 @@ module PBS
 
       # Set the list based on given options
       #
-      # Parameters:
-      # * *iDisplayedList* (<em>list<[String,list<String>,Boolean,Object,Object]></em>): The list of plugins
+      # Parameters::
+      # * *iDisplayedList* (<em>list< [String,list<String>,Boolean,Object,Object] ></em>): The list of plugins
       def setOptions(iDisplayedList)
         @DisplayedList = iDisplayedList
         set_item_count(@DisplayedList.size)
@@ -61,10 +61,10 @@ module PBS
 
       # Callback that returns item text
       #
-      # Parameters:
+      # Parameters::
       # * *iIdxItem* (_Integer_): Item's index
       # * *iIdxColumn* (_Integer_): Column's index
-      # Return:
+      # Return::
       # * _String_: The text
       def on_get_item_text(iIdxItem, iIdxColumn)
         rText = ''
@@ -83,7 +83,7 @@ module PBS
             rText = 'Root'
           end
         else
-          logBug "Unknown column ID #{iIdxColumn} for text list display."
+          log_bug "Unknown column ID #{iIdxColumn} for text list display."
         end
 
         return rText
@@ -91,10 +91,10 @@ module PBS
 
       # Callback that returns item image
       #
-      # Parameters:
+      # Parameters::
       # * *iIdxItem* (_Integer_): Item's index
       # * *iIdxColumn* (_Integer_): Column's index
-      # Return:
+      # Return::
       # * _Integer_: The image index
       def on_get_item_column_image(iIdxItem, iIdxColumn)
         rIdxImage = ''
@@ -129,7 +129,7 @@ module PBS
             end
           end
         else
-          logBug "Unknown column ID #{iIdxColumn} for image list display."
+          log_bug "Unknown column ID #{iIdxColumn} for image list display."
         end
 
         return rIdxImage
@@ -143,7 +143,7 @@ module PBS
       # Get the selected Tag to integrate
       # This method by config panels to get the Tag's icon for example
       #
-      # Return:
+      # Return::
       # * _Tag_: The corresponding Tag, or nil if it is not present
       def getIntegratedTag
         rTag = nil
@@ -158,7 +158,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iParent* (<em>Wx::Window</em>): The parent window
       # * *iController* (_Controller_): The controller
       # * *ioDisplayedItem* (<em>[String,Tag,Boolean,Object]</em>): The item info to display
@@ -253,7 +253,7 @@ module PBS
 
       # Get the options from the plugin specifics components
       #
-      # Return:
+      # Return::
       # * _Object_: The options
       def getOptions
         rOptions = nil
@@ -269,7 +269,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent window
     # * *iController* (_Controller_): The controller, used to get plugins specific data
     def initialize(iParent, iController)
@@ -362,7 +362,7 @@ module PBS
     # Deletes a given item ID, and refreshes everything.
     # It is assumed that we delete the currently displayed item.
     #
-    # Parameters:
+    # Parameters::
     # * *iItemID* (_Integer_): Item's ID to delete
     def deleteItem(iItemID)
       @DisplayedList.delete_at(iItemID)
@@ -391,7 +391,7 @@ module PBS
 
     # Set current components based on options
     #
-    # Parameters:
+    # Parameters::
     # * *iOptions* (<em>map<Symbol,Object></em>): Options
     def setOptions(iOptions)
       # Fill @DisplayedList
@@ -414,7 +414,7 @@ module PBS
 
     # Fill the options from the components
     #
-    # Parameters:
+    # Parameters::
     # * *oOptions* (<em>map<Symbol,Object></em>): The options to fill
     def fillOptions(oOptions)
       # Get options from the panel first if needed

@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -19,10 +19,10 @@ module PBS
         
         # Create a new Favicon provider, and ensure it will be closed
         #
-        # Parameters:
+        # Parameters::
         # * iFileName* (_String_): The database file name
         # * *CodeBlock*: Code to be called when the provider is ready to accept queries
-        # ** *iProvider* (_FaviconsProvider_): The resulting favicons provider
+        #   * *iProvider* (_FaviconsProvider_): The resulting favicons provider
         def self.createProvider(iFileName)
           lProvider = FaviconsProvider.new(iFileName)
           yield(lProvider)
@@ -31,7 +31,7 @@ module PBS
 
         # Constructor
         #
-        # Parameters:
+        # Parameters::
         # * iFileName* (_String_): The database file name
         def initialize(iFileName)
           @FaviconsDB = nil
@@ -42,7 +42,7 @@ module PBS
             # As we open a large file (often around 50Mb for Google Chrome favicons), we increase the cache size.
             @FaviconsDB.DB.execute("PRAGMA cache_size=50000")
           else
-            logErr "Favicons database #{iFileName} does not exist. Shortcuts will be created without favicons."
+            log_err "Favicons database #{iFileName} does not exist. Shortcuts will be created without favicons."
           end
         end
 
@@ -55,9 +55,9 @@ module PBS
 
         # Get the favicon for a given server
         #
-        # Parameters:
+        # Parameters::
         # * *iServerURL* (_String_): Name of the Server (contains the http:// also)
-        # Return:
+        # Return::
         # * <em>Wx::Bitmap</em>: The icon, or nil if none
         def getFavicon(iServerURL)
           rBitmap = nil
@@ -79,7 +79,7 @@ module PBS
                 end
               end
             rescue Exception
-              logBug "Error while reading favicon for server #{iServerURL}: #{$!}"
+              log_bug "Error while reading favicon for server #{iServerURL}: #{$!}"
               rBitmap = nil
             end
           end
@@ -91,18 +91,18 @@ module PBS
 
       # Execute the import
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParentWindow)
         # Get the profile path from the environment
         lProfileDir = ENV['USERPROFILE']
         if (lProfileDir == nil)
-          logErr 'The environment variable USERPROFILE is not set. Impossible to get Google Chrome bookmarks.'
+          log_err 'The environment variable USERPROFILE is not set. Impossible to get Google Chrome bookmarks.'
         else
           lBookmarksFileName = "#{lProfileDir}/Local Settings/Application Data/Google/Chrome/User Data/Default/Bookmarks"
           if (!File.exists?(lBookmarksFileName))
-            logErr "Bookmarks file #{lBookmarksFileName} does not exist."
+            log_err "Bookmarks file #{lBookmarksFileName} does not exist."
           else
             # OK, now we open it and import its content
             ioController.undoableOperation('Import bookmarks from Google Chrome') do
@@ -118,7 +118,7 @@ module PBS
 
       # Import bookmarks from a Google Chrome bookmarks file
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The Controller
       # * *iFaviconsProvider* (_FaviconsProvider_): The favicons provider
       # * *iFileName* (_String_): The file name
@@ -142,7 +142,7 @@ module PBS
         begin
           lBookmarks = eval(lFileContent)
         rescue Exception
-          logBug "Error while reading the bookmarks content from file #{iFileName}: #{$!}."
+          log_bug "Error while reading the bookmarks content from file #{iFileName}: #{$!}."
           lCancel = true
         end
         if (!lCancel)
@@ -161,7 +161,7 @@ module PBS
 
       # Import a Google Chrome item.
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The Controller
       # * *iFaviconsProvider* (_FaviconsProvider_): The favicons provider
       # * *iItem* (<em>map<String,Object></em>): The Google Chrome item
@@ -179,7 +179,7 @@ module PBS
             # Check an eventual file (in this case, no icon)
             lMatch = lURL.match(/^(file):\/\/([^\/]*).*$/)
             if (lMatch == nil)
-              logBug "Impossible to get the server name of URL #{lURL}. There will be no favicon for Shortcut #{lTitle}."
+              log_bug "Impossible to get the server name of URL #{lURL}. There will be no favicon for Shortcut #{lTitle}."
             end
           else
             lIconBitmap = iFaviconsProvider.getFavicon("#{lMatch[1]}://#{lMatch[2]}")
@@ -209,7 +209,7 @@ module PBS
             importGoogleChromItem(ioController, iFaviconsProvider, iChildItem, lNewTag)
           end
         else
-          logBug "Unknown Item Type: #{iItem['type']}. Ignoring item #{iItem['name']}."
+          log_bug "Unknown Item Type: #{iItem['type']}. Ignoring item #{iItem['name']}."
         end
       end
 

@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -40,7 +40,7 @@ module PBS
 
     # Options specifics to this plugin have changed
     #
-    # Parameters:
+    # Parameters::
     # * *iNewOptions* (_Object_): The new options
     # * *iNewTag* (_Tag_): The new Tag to integrate
     # * *iOldOptions* (_Object_): The old options (can be nil during startup)
@@ -57,7 +57,7 @@ module PBS
 
     # Options have changed
     #
-    # Parameters:
+    # Parameters::
     # * *iOldOptions* (<em>map<Symbol,Object></em>): The old options
     def onOptionsChanged(iOldOptions)
       if (@TCMainTree.isRootTagOnlySelected?)
@@ -189,7 +189,7 @@ module PBS
 
     # Refresh the Paste GUI items (enabling + title), based on the clipboard content and the current selection
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The selection (nil for the Root Tag)
     def refreshPaste(iSelection)
       lPasteEnabled = false
@@ -226,7 +226,7 @@ module PBS
 
     # Add a command to a menu belonging to this main frame
     #
-    # Parameters:
+    # Parameters::
     # * *iMenu* (<em>Wx::Menu</em>): The menu the command will belong to
     # * *iCommandID* (_Integer_): The command ID
     # * *&iFetchParametersCode* (_CodeBlock_): The code that will fetch for parameters for this command (can be nil)
@@ -236,7 +236,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iController* (_Controller_): The model controller
     def initialize(iParent, iController)

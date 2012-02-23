@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -13,7 +13,7 @@ module PBS
     # This method does not return the created menu item, as it will be deleted/recreated each time its appearance will be updated (limitations certainly due to bugs).
     # To access to this menu later, always use the Wx::Menu object with the Command ID.
     #
-    # Parameters:
+    # Parameters::
     # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
     # * *ioMenu* (<em>Wx::Menu</em>): The menu in which we add the command
     # * *iCommandID* (_Integer_): ID of the command to add
@@ -23,7 +23,7 @@ module PBS
     def addMenuCommand(iEvtWindow, ioMenu, iCommandID, iParams = {}, iRegister = true, &iFetchParametersCode)
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        logBug "Unknown command of ID #{iCommandID}. Ignoring it from the menu."
+        log_bug "Unknown command of ID #{iCommandID}. Ignoring it from the menu."
       else
         lMenuItem = nil
         if (lCommand[:Checked] != nil)
@@ -40,7 +40,7 @@ module PBS
 
     # Remove commands related to an event handler.
     #
-    # Parameters:
+    # Parameters::
     # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
     def unregisterMenuEvt(iEvtWindow)
       @Commands.each do |iCommandID, ioCommand|
@@ -53,7 +53,7 @@ module PBS
 
     # Remove commands related to an event handler.
     #
-    # Parameters:
+    # Parameters::
     # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
     # * *iCommandID* (_Integer_): The corresponding command ID to unregister
     def unregisterMenuItem(iEvtWindow, iCommandID)
@@ -68,7 +68,7 @@ module PBS
 
     # Register a menu to receive menu items corresponding to the views configured in the options
     #
-    # Parameters:
+    # Parameters::
     # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
     # * *ioMenu* (<em>Wx::Menu</em>): The menu that will receive menu items for views
     # * *iRegister* (_Boolean_): Do we register the menu item to the Controller for further updates ? [optional = true]
@@ -86,7 +86,7 @@ module PBS
 
     # Unregister a menu that received menu items corresponding to the views configured in the options
     #
-    # Parameters:
+    # Parameters::
     # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
     # * *ioMenu* (<em>Wx::Menu</em>): The menu that will receive menu items for views
     def unregisterViewsMenu(iEvtHandler, ioMenu)
@@ -108,18 +108,18 @@ module PBS
 
     # Add a command in a toolbar
     #
-    # Parameters:
+    # Parameters::
     # * *iToolbar* (<em>Wx::Toolbar</em>): The toolbar in which we add the command
     # * *iCommandID* (_Integer_): ID of the command to add
     # * *iParams* (<em>map<Symbol,Object></em>): Additional properties, specific to this command item [optional = {}]
     # * *iRegister* (_Boolean_): Do we register the menu item to the Controller for further updates ? [optional = true]
-    # Return:
+    # Return::
     # * <em>Wx::ToolbarTool</em>: The created toolbar button, or nil if none.
     def addToolbarCommand(iToolbar, iCommandID, iParams = {}, iRegister = true)
       rButton = nil
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        logBug "Unknown command of ID #{iCommandID}. Ignoring it from the toolbar."
+        log_bug "Unknown command of ID #{iCommandID}. Ignoring it from the toolbar."
       else
         if (lCommand[:Checked] != nil)
           rButton = iToolbar.add_item(lCommand[:Bitmap], :id => iCommandID, :kind => Wx::ITEM_CHECK)
@@ -137,7 +137,7 @@ module PBS
 
     # Remove a whole toolbar
     #
-    # Parameters:
+    # Parameters::
     # * *iToolbar* (<em>Wx::Toolbar</em>): The toolbar in which we add the command
     def unregisterToolbar(iToolbar)
       @Commands.each do |iCommandID, ioCommand|
@@ -151,7 +151,7 @@ module PBS
     # Update the GUI Enabled property of a menu item.
     # This property can put a veto to the enabling of a given command for this specific GUI (for example command Paste is enabled by the controller because there is something in the clipboard, but a particular GUI does not want it to be enabled because the user has not yet selected a place to Paste).
     #
-    # Parameters:
+    # Parameters::
     # * *iMenu* (<em>Wx::Menu</em>): Menu to which the menu item belongs.
     # * *iCommandID* (_Integer_): The command ID of the menu item
     # * *iGUIEnabled* (_Boolean_): Do we accept enabling the command ?
@@ -164,7 +164,7 @@ module PBS
     # Update the GUI Title property of a menu item.
     # If set, this property will override the title given by the controller.
     #
-    # Parameters:
+    # Parameters::
     # * *iMenu* (<em>Wx::Menu</em>): Menu to which the menu item belongs.
     # * *iCommandID* (_Integer_): The command ID of the menu item
     # * *iGUITitle* (_String_): The title (can be nil to remove overiding the normal title)
@@ -177,7 +177,7 @@ module PBS
     # Update the GUI Enabled property of a toolbar button
     # This property can put a veto to the enabling of a given command for this specific GUI (for example command Paste is enabled by the controller because there is something in the clipboard, but a particular GUI does not want it to be enabled because the user has not yet selected a place to Paste).
     #
-    # Parameters:
+    # Parameters::
     # * *iToolbarButton* (<em>Wx::ToolbarTool</em>): The toolbar button
     # * *iCommandID* (_Integer_): ID of the command to add
     # * *iGUIEnabled* (_Boolean_): Do we accept enabling the command ?
@@ -190,7 +190,7 @@ module PBS
     # Update the GUI Title property of a toolbar button
     # If set, this property will override the title given by the controller.
     #
-    # Parameters:
+    # Parameters::
     # * *iToolbarButton* (<em>Wx::ToolbarTool</em>): The toolbar button
     # * *iCommandID* (_Integer_): ID of the command to add
     # * *iGUITitle* (_String_): The title
@@ -202,7 +202,7 @@ module PBS
 
     # Block a given accelerator
     #
-    # Parameters:
+    # Parameters::
     # * *iAccelerator* (<em>[Integer,Integer]</em>): The accelerator to block
     def blockAccelerator(iAccelerator)
       # Find it among the commands
@@ -212,7 +212,7 @@ module PBS
           @BlockedAccelerators[iAccelerator] = iCommandID
           updateCommand(iCommandID) do |ioUpdateCommand|
             ioUpdateCommand[:Accelerator] = [ 0, K_NOKEY ]
-            logDebug "Accelerator [#{iAccelerator.join(", ")}] blocked from command #{iCommandID}."
+            log_debug "Accelerator [#{iAccelerator.join(", ")}] blocked from command #{iCommandID}."
           end
           break
         end
@@ -221,14 +221,14 @@ module PBS
 
     # Unblock a given accelerator previously blocked
     #
-    # Parameters:
+    # Parameters::
     # * *iAccelerator* (<em>[Integer,Integer]</em>): The accelerator to unblock
     def unblockAccelerator(iAccelerator)
       lCommandID = @BlockedAccelerators[iAccelerator]
       if (lCommandID != nil)
         updateCommand(lCommandID) do |ioUpdateCommand|
           ioUpdateCommand[:Accelerator] = iAccelerator
-          logDebug "Accelerator [#{iAccelerator.join(", ")}] unblocked from command #{lCommandID}."
+          log_debug "Accelerator [#{iAccelerator.join(", ")}] unblocked from command #{lCommandID}."
         end
       end
     end

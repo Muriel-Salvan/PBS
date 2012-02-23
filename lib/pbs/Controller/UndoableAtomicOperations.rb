@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -31,7 +31,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller giving access to the model
       def initialize(iController)
         @Controller = iController
@@ -41,9 +41,9 @@ module PBS
 
     # Add a new atomic operation in the current undoable transaction, and perform its operation.
     #
-    # Parameters:
+    # Parameters::
     # * *iUndoableAtomicOperation* (_UndoableAtomicOperation_): The atomic operation
-    # Return:
+    # Return::
     # * _Object_: The return of the doOperation
     def atomicOperation(iUndoableAtomicOperation)
       @CurrentUndoableOperation.AtomicOperations << iUndoableAtomicOperation
@@ -65,7 +65,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       # * *ioParentTag* (_Tag_): The Tag that will receive the new one
       # * *iName* (_String_): The Tag name
@@ -79,10 +79,10 @@ module PBS
 
       # Perform the operation
       #
-      # Return:
+      # Return::
       # * _Tag_: The newly created Tag
       def doOperation
-        logDebug "UAO_CreateTag #{@NewTag.Name}"
+        log_debug "UAO_CreateTag #{@NewTag.Name}"
         lOldChildrenList = @ParentTag.Children.clone
         @ParentTag._UNDO_addChild(@NewTag)
         @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
@@ -92,7 +92,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        logDebug "UNDO - UAO_CreateTag #{@NewTag.Name}"
+        log_debug "UNDO - UAO_CreateTag #{@NewTag.Name}"
         lOldChildrenList = @ParentTag.Children.clone
         @ParentTag._UNDO_deleteChild(@NewTag)
         @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
@@ -105,7 +105,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       # * *iTag* (_Tag_): The Tag to delete
       def initialize(iController, iTag)
@@ -117,7 +117,7 @@ module PBS
 
       # Perform the operation
       def doOperation
-        logDebug "UAO_DeleteTag #{@Tag.Name}"
+        log_debug "UAO_DeleteTag #{@Tag.Name}"
         lOldChildrenList = @ParentTag.Children.clone
         @ParentTag._UNDO_deleteChild(@Tag)
         @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
@@ -125,7 +125,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        logDebug "UNDO - UAO_DeleteTag #{@Tag.Name}"
+        log_debug "UNDO - UAO_DeleteTag #{@Tag.Name}"
         lOldChildrenList = @ParentTag.Children.clone
         @ParentTag._UNDO_addChild(@Tag)
         @Controller.notifyTagChildrenUpdate(@ParentTag, lOldChildrenList)
@@ -138,7 +138,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       # * *iTag* (_Tag_): The Tag being modified
       # * *iNewName* (_String_): The new name
@@ -182,7 +182,7 @@ module PBS
 
       # Perform the operation
       def doOperation
-        logDebug "UAO_UpdateTag #{@OldName}"
+        log_debug "UAO_UpdateTag #{@OldName}"
         if ((@NewName != nil) or
             (@NewIcon != nil) or
             (@OldIcon != nil))
@@ -211,7 +211,7 @@ module PBS
       # Undo the operation
       def undoOperation
         # Retrieve the Shortcut
-        logDebug "UNDO - UAO_UpdateTag #{@NewName}"
+        log_debug "UNDO - UAO_UpdateTag #{@NewName}"
         if ((@OldName != nil) or
             (@OldIcon != nil) or
             (@NewIcon != nil))
@@ -244,7 +244,7 @@ module PBS
       
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       # * *iType* (_ShortcutType_): The Shortcut type to create
       # * *iContent* (_Object_): The content
@@ -258,10 +258,10 @@ module PBS
 
       # Perform the operation
       #
-      # Return:
+      # Return::
       # * _Shortcut_: The newly created Shortcut
       def doOperation
-        logDebug "UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
+        log_debug "UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
         @Controller._UNDO_addShortcut(@NewShortcut)
         @Controller.notifyShortcutCreate(@NewShortcut)
 
@@ -270,7 +270,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        logDebug "UNDO - UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
+        log_debug "UNDO - UAO_CreateShortcut #{@NewShortcut.Metadata['title']}"
         @Controller._UNDO_deleteShortcut(@NewShortcut)
         @Controller.notifyShortcutDelete(@NewShortcut)
       end
@@ -282,7 +282,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       # * *iShortcut* (_Shortcut_): The Shortcut to delete
       def initialize(iController, iShortcut)
@@ -293,14 +293,14 @@ module PBS
 
       # Perform the operation
       def doOperation
-        logDebug "UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
+        log_debug "UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
         @Controller._UNDO_deleteShortcut(@Shortcut)
         @Controller.notifyShortcutDelete(@Shortcut)
       end
 
       # Undo the operation
       def undoOperation
-        logDebug "UNDO - UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
+        log_debug "UNDO - UAO_DeleteShortcut #{@Shortcut.Metadata['title']}"
         @Controller._UNDO_addShortcut(@Shortcut)
         @Controller.notifyShortcutCreate(@Shortcut)
       end
@@ -312,7 +312,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       # * *iShortcut* (_Shortcut_): The Shortcut being modified
       # * *iNewContent* (_Object_): The new Content
@@ -348,7 +348,7 @@ module PBS
 
       # Perform the operation
       def doOperation
-        logDebug "UAO_ModifySC #{@Shortcut.Metadata['title']}"
+        log_debug "UAO_ModifySC #{@Shortcut.Metadata['title']}"
         if (@NewContent != nil)
           @Shortcut._UNDO_setContent(@NewContent)
         end
@@ -368,7 +368,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        logDebug "UNDO - UAO_ModifySC #{@Shortcut.Metadata['title']}"
+        log_debug "UNDO - UAO_ModifySC #{@Shortcut.Metadata['title']}"
         if (@OldContent != nil)
           @Shortcut._UNDO_setContent(@OldContent)
         end
@@ -393,7 +393,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       def initialize(iController)
         super(iController)
@@ -403,14 +403,14 @@ module PBS
 
       # Perform the operation
       def doOperation
-        logDebug 'UAO_SetFileModified'
+        log_debug 'UAO_SetFileModified'
         @Controller._UNDO_setCurrentOpenedFileModified(true)
         @Controller.notifyCurrentOpenedFileUpdate
       end
 
       # Undo the operation
       def undoOperation
-        logDebug 'UNDO - UAO_SetFileModified'
+        log_debug 'UNDO - UAO_SetFileModified'
         @Controller._UNDO_setCurrentOpenedFileModified(@OldModifiedFlag)
         @Controller.notifyCurrentOpenedFileUpdate
       end
@@ -422,7 +422,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       # * *iNewFileName* (_String_): The new file name
       def initialize(iController, iNewFileName)
@@ -435,7 +435,7 @@ module PBS
 
       # Perform the operation
       def doOperation
-        logDebug "UAO_ChangeFile #{@NewFileName}"
+        log_debug "UAO_ChangeFile #{@NewFileName}"
         @Controller._UNDO_setCurrentOpenedFileName(@NewFileName)
         @Controller._UNDO_setCurrentOpenedFileModified(false)
         @Controller.notifyCurrentOpenedFileUpdate
@@ -443,7 +443,7 @@ module PBS
 
       # Undo the operation
       def undoOperation
-        logDebug "UNDO - UAO_ChangeFile #{@NewFileName}"
+        log_debug "UNDO - UAO_ChangeFile #{@NewFileName}"
         @Controller._UNDO_setCurrentOpenedFileName(@OldFileName)
         @Controller._UNDO_setCurrentOpenedFileModified(@OldFileModified)
         @Controller.notifyCurrentOpenedFileUpdate

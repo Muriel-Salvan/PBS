@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,13 +11,13 @@ module PBS
 
       # Command that pastes an object from the clipboard
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *parentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
-      # ** *selection* (_MultipleSelection_): the current selection.
-      # ** *deleteTaggedShortcuts* (_Boolean_): Do we delete systematically tagged Shortcuts ? (can be nil to prompt the user about it)
-      # ** *deleteOrphanShortcuts* (_Boolean_): Do we delete systematically orphan Shortcuts ? (can be nil to prompt the user about it)
+      #   * *parentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
+      #   * *selection* (_MultipleSelection_): the current selection.
+      #   * *deleteTaggedShortcuts* (_Boolean_): Do we delete systematically tagged Shortcuts ? (can be nil to prompt the user about it)
+      #   * *deleteOrphanShortcuts* (_Boolean_): Do we delete systematically orphan Shortcuts ? (can be nil to prompt the user about it)
       def execute(ioController, iParams)
         lWindow = iParams[:parentWindow]
         lSelection = iParams[:selection]

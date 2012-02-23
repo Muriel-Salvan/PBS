@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -78,9 +78,9 @@ module PBS
     # Even if it was set to nil, the default icon will be returned.
     # This method ensures a valid Wx::Bitmap object will be returned.
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The icon
     def getTagIcon(iTag)
       rIcon = iTag.Icon
@@ -96,9 +96,9 @@ module PBS
     # Even if it was set to nil, the default icon will be returned.
     # This method ensures a valid Wx::Bitmap object will be returned.
     #
-    # Parameters:
+    # Parameters::
     # * *iShortcut* (_Shortcut_): The Shortcut
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The icon
     def getShortcutIcon(iShortcut)
       rIcon = iShortcut.Metadata['icon']
@@ -112,58 +112,58 @@ module PBS
 
     # Get Import plugins descriptions
     #
-    # Return:
+    # Return::
     # * <em>map<String,map<Symbol,Object>></em>: The map of plugins description per plugin name
     def getImportPlugins
-      return getPluginsDescriptions('Import')
+      return get_plugins_descriptions('Import')
     end
 
     # Get Export plugins descriptions
     #
-    # Return:
+    # Return::
     # * <em>map<String,map<Symbol,Object>></em>: The map of plugins description per plugin name
     def getExportPlugins
-      return getPluginsDescriptions('Export')
+      return get_plugins_descriptions('Export')
     end
 
     # Get Types plugins descriptions
     #
-    # Return:
+    # Return::
     # * <em>map<String,map<Symbol,Object>></em>: The map of plugins description per plugin name
     def getTypesPlugins
-      return getPluginsDescriptions('Type')
+      return get_plugins_descriptions('Type')
     end
 
     # Get Commands plugins descriptions
     #
-    # Return:
+    # Return::
     # * <em>map<String,map<Symbol,Object>></em>: The map of plugins description per plugin name
     def getCommandPlugins
-      return getPluginsDescriptions('Command')
+      return get_plugins_descriptions('Command')
     end
 
     # Get ShortcutCommands plugins descriptions
     #
-    # Return:
+    # Return::
     # * <em>map<String,map<Symbol,Object>></em>: The map of plugins description per plugin name
     def getShortcutCommandsPlugins
-      return getPluginsDescriptions('ShortcutCommand')
+      return get_plugins_descriptions('ShortcutCommand')
     end
 
     # Get Integration plugins descriptions
     #
-    # Return:
+    # Return::
     # * <em>map<String,map<Symbol,Object>></em>: The map of plugins description per plugin name
     def getIntegrationPlugins
-      return getPluginsDescriptions('Integration')
+      return get_plugins_descriptions('Integration')
     end
 
     # Get bitmap associated to a plugin.
     # If no bitmap was provided by the plugin itself, a default bitmap is returned.
     #
-    # Parameters:
+    # Parameters::
     # * *ioPluginDescription* (<em>map<Symbol,Object></em>): The plugin description
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The bitmap
     def getPluginBitmap(ioPluginDescription)
       if (ioPluginDescription[:Bitmap] == nil)
@@ -175,60 +175,60 @@ module PBS
 
     # Get an access to a given Types plugin
     #
-    # Parameters:
+    # Parameters::
     # * *iPluginName* (_String_): Name of the plugin to access
     # * _CodeBlock_: The code called with the instantiated plugin:
-    # ** *ioPlugin* (_Object_): The instantiated plugin
+    #   * *ioPlugin* (_Object_): The instantiated plugin
     def accessTypesPlugin(iPluginName)
-      accessPlugin_Protected('Type', iPluginName) do |ioPlugin|
+      access_plugin_Protected('Type', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end
 
     # Get an access to a given Integration plugin
     #
-    # Parameters:
+    # Parameters::
     # * *iPluginName* (_String_): Name of the plugin to access
     # * _CodeBlock_: The code called with the instantiated plugin:
-    # ** *ioPlugin* (_Object_): The instantiated plugin
+    #   * *ioPlugin* (_Object_): The instantiated plugin
     def accessIntegrationPlugin(iPluginName)
-      accessPlugin_Protected('Integration', iPluginName) do |ioPlugin|
+      access_plugin_Protected('Integration', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end
 
     # Get an access to a given Import plugin
     #
-    # Parameters:
+    # Parameters::
     # * *iPluginName* (_String_): Name of the plugin to access
     # * _CodeBlock_: The code called with the instantiated plugin:
-    # ** *ioPlugin* (_Object_): The instantiated plugin
+    #   * *ioPlugin* (_Object_): The instantiated plugin
     def accessImportPlugin(iPluginName)
-      accessPlugin_Protected('Import', iPluginName) do |ioPlugin|
+      access_plugin_Protected('Import', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end
 
     # Get an access to a given Export plugin
     #
-    # Parameters:
+    # Parameters::
     # * *iPluginName* (_String_): Name of the plugin to access
     # * _CodeBlock_: The code called with the instantiated plugin:
-    # ** *ioPlugin* (_Object_): The instantiated plugin
+    #   * *ioPlugin* (_Object_): The instantiated plugin
     def accessExportPlugin(iPluginName)
-      accessPlugin_Protected('Export', iPluginName) do |ioPlugin|
+      access_plugin_Protected('Export', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end
 
     # Get an access to a given ShortcutCommands plugin
     #
-    # Parameters:
+    # Parameters::
     # * *iPluginName* (_String_): Name of the plugin to access
     # * _CodeBlock_: The code called with the instantiated plugin:
-    # ** *ioPlugin* (_Object_): The instantiated plugin
+    #   * *ioPlugin* (_Object_): The instantiated plugin
     def accessShortcutCommandsPlugin(iPluginName)
-      accessPlugin_Protected('ShortcutCommand', iPluginName) do |ioPlugin|
+      access_plugin_Protected('ShortcutCommand', iPluginName) do |ioPlugin|
         yield(ioPlugin)
       end
     end

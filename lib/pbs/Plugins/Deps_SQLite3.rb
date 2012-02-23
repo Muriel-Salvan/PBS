@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -7,7 +7,7 @@ module PBS
 
   # Get the dependency description of SQLite3
   #
-  # Return:
+  # Return::
   # * <em>list<RDI::Model::DependencyDescription></em>: The dependencies descriptions
   def self.getSQLite3Dependencies
     rDeps = [ RDI::Model::DependencyDescription.new('Ruby-SQLite3').addDescription( {
@@ -33,7 +33,7 @@ module PBS
       ]
 
     lLibDepDesc = nil
-    case $rUtilAnts_Platform_Info.os
+    case os
     when OS_WINDOWS
       lLibDepDesc = {
         :Testers => [

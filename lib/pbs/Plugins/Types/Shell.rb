@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -14,7 +14,7 @@ module PBS
 
         # Constructor
         #
-        # Parameters:
+        # Parameters::
         # * *iParent* (_Window_): The parent window
         def initialize(iParent)
           super(iParent)
@@ -52,7 +52,7 @@ module PBS
           evt_button(lBBOpen) do |iEvent|
             # Open dialog
             # Get the executables filters
-            lExtensions = "*#{$rUtilAnts_Platform_Info.getExecutableExtensions.join(';*')}"
+            lExtensions = "*#{getExecutableExtensions.join(';*')}"
             showModal(Wx::FileDialog, self,
               :message => 'Open program',
               :style => Wx::FD_OPEN|Wx::FD_FILE_MUST_EXIST,
@@ -74,7 +74,7 @@ module PBS
 
         # Get the content from the controls
         #
-        # Return:
+        # Return::
         # * _Object_: The corresponding content, which will be associated to a shortcut
         def getData
           return [ @TCCmd.value, @TCDir.value, @CBTerminal.value ]
@@ -82,7 +82,7 @@ module PBS
 
         # Set the Panel's contents based on a given content
         #
-        # Parameters:
+        # Parameters::
         # * *iContent* (_Object_): The content containing values to put in the panel
         def setData(iContent)
           lCmd, lDir, lInTerminal = iContent
@@ -99,7 +99,7 @@ module PBS
       # Create an empty content.
       # This is used for putting default values in the NewShortcut dialog.
       #
-      # Return:
+      # Return::
       # * _Object_: The default content
       def createEmptyContent
         return [ 'echo "Hello World"', nil, false ]
@@ -108,9 +108,9 @@ module PBS
       # Get a simple summary of a given content created by this Type.
       # This could be used in tool tips for example.
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): Content created by this type
-      # Return:
+      # Return::
       # * _String_: The content's summary
       def getContentSummary(iContent)
         return iContent[0]
@@ -118,7 +118,7 @@ module PBS
 
       # Run a given content
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): Content created by this type
       def run(iContent)
         lCmd, lDir, lInTerminal = iContent
@@ -135,9 +135,9 @@ module PBS
           Dir.chdir(lDir)
         end
         # Execute command
-        lException = $rUtilAnts_Platform_Info.execShellCmdNoWait(lCmd, lInTerminal)
+        lException = execShellCmdNoWait(lCmd, lInTerminal)
         if (lException != nil)
-          logErr "Error while executing \"#{lCmd}\": #{lException}"
+          log_err "Error while executing \"#{lCmd}\": #{lException}"
         end
         # Change back the current directory
         if (lOldDir != nil)
@@ -147,7 +147,7 @@ module PBS
 
       # Fill a given XML element with a content.
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): Content created by this type
       # * *oXMLContentElement* (<em>REXML::Element</em>): The XML element to fill with the data
       def getContentAsXMLText(iContent, oXMLContentElement)
@@ -163,9 +163,9 @@ module PBS
       # Create a content from an XML text.
       # The XML text has been created by getContentAsXMLText.
       #
-      # Parameters:
+      # Parameters::
       # * *iXMLContentElement* (<em>REXML::Element</em>): The XML element
-      # Return:
+      # Return::
       # * _Object_: Content created based on this XML element
       def createContentFromXMLText(iXMLContentElement)
         return [
@@ -177,9 +177,9 @@ module PBS
 
       # Get the metadata best reflecting the content.
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): The content to read from
-      # Return:
+      # Return::
       # * <em>map<String,Object></em>: The corresponding metadata
       def getMetadataFromContent(iContent)
         rMetadata = {}
@@ -191,7 +191,7 @@ module PBS
           lMatch = iContent[0].match(/^([^ ]*).*$/)
         end
         if (lMatch == nil)
-          logErr "Unable to get executable file name from #{iContent[0]}"
+          log_err "Unable to get executable file name from #{iContent[0]}"
         else
           lExeFileName = lMatch[1]
           lIcon = nil
@@ -201,19 +201,19 @@ module PBS
             # Get icon from it
             lIcon, lError = getBitmapFromURL(lExeFileName)
             if (lIcon == nil)
-              logErr "Error while getting icon from #{lExeFileName}: #{lError}"
+              log_err "Error while getting icon from #{lExeFileName}: #{lError}"
             end
           else
             # Find lExeFileName among the path
             lNewExeFileName = findExeInPath(lExeFileName)
             if (lNewExeFileName == nil)
-              logErr "File #{lExeFileName} does not exist in the PATH."
+              log_err "File #{lExeFileName} does not exist in the PATH."
             else
               lTitle = File.basename(lNewExeFileName)[0..-1-File.extname(lNewExeFileName).size]
               # Get icon from it
               lIcon, lError = getBitmapFromURL(lNewExeFileName)
               if (lIcon == nil)
-                logErr "Error while getting icon from #{lNewExeFileName}: #{lError}"
+                log_err "Error while getting icon from #{lNewExeFileName}: #{lError}"
               end
             end
           end

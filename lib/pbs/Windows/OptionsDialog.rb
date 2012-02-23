@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -10,9 +10,9 @@ module PBS
 
     # Create the buttons panel
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (_Window_): The parent window
-    # Return:
+    # Return::
     # * _Panel_: The panel containing controls
     def createButtonsPanel(iParent)
       rResult = Wx::Panel.new(iParent)
@@ -75,7 +75,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iOptions* (<em>map<Symbol,Object></em>): The options to fill in the components
     # * *iController* (_Controller_): The controller, used to get plugins specific data
@@ -135,7 +135,7 @@ module PBS
 
     # Set panels values based on options
     #
-    # Parameters:
+    # Parameters::
     # * *iOptions* (<em>map<Symbol,Object></em>): The options to fill in the components
     def setOptions(iOptions)
       # Fill panels components with options
@@ -147,7 +147,7 @@ module PBS
 
     # Get the options from the components
     #
-    # Return:
+    # Return::
     # * <em>map<Symbol,Object></em>: The options
     def getOptions
       rOptions = {}

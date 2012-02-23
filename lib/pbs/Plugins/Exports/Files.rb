@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,7 +11,7 @@ module PBS
 
       # Execute the export
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The data model controller
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(iController, iParentWindow)
@@ -48,14 +48,14 @@ module PBS
 
       # Create Tags in a directory
       #
-      # Parameters:
+      # Parameters::
       # * *iTag* (_Tag_): Tag to map in the given directory
       # * *iPath* (_String_): Path mapped to iTag
       # * *oTagsToPaths* (<em>map<Tag,String></em>): Correspondance between Tags and paths
       def createTagsInDir(iTag, iPath, oTagsToPath)
         iTag.Children.each do |iChildTag|
           # Make sure the name only has valid characters
-          lChildPath = "#{iPath}/#{getValidFileName(iChildTag.Name)}"
+          lChildPath = "#{iPath}/#{get_valid_file_name(iChildTag.Name)}"
           require 'fileutils'
           FileUtils.mkdir_p(lChildPath)
           oTagsToPath[iChildTag] = lChildPath
@@ -65,7 +65,7 @@ module PBS
 
       # Export a Shortcut in a directory
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The controller
       # * *iShortcut* (_Shortcut_): The Shortcut to export
       # * *iPath* (_String_): Directory in which we export the Shortcut
@@ -78,13 +78,13 @@ module PBS
         end
         case iShortcut.Type
         when lURLTypePlugin
-          File.open("#{iPath}/#{getValidFileName(iShortcut.Metadata['title'])}.url", 'w') do |oFile|
+          File.open("#{iPath}/#{get_valid_file_name(iShortcut.Metadata['title'])}.url", 'w') do |oFile|
             oFile << "[InternetShortcut]
 URL=#{iShortcut.Content}
 "
           end
         else
-          logErr "Can't create a file for Shortcuts of type #{iShortcut.Type.pluginDescription[:PluginName]}. Need to adapt the Files plugin to this Shortcuts' type."
+          log_err "Can't create a file for Shortcuts of type #{iShortcut.Type.pluginDescription[:PluginName]}. Need to adapt the Files plugin to this Shortcuts' type."
         end
       end
 

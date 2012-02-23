@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -18,7 +18,7 @@ module Wx
     # Get the serialized content.
     # Equivalent to marshal_dump (could be renamed if only load_file could work)
     #
-    # Return:
+    # Return::
     # * _String_: The serialized content
     def getSerialized
       rData = ''
@@ -32,7 +32,7 @@ module Wx
         end
         File.unlink(lFileName)
       else
-        logBug "Error while loading data from temporary file: #{lFileName}."
+        log_bug "Error while loading data from temporary file: #{lFileName}."
       end
 
       return rData
@@ -41,7 +41,7 @@ module Wx
     # Set the content based on a serialized one
     # Equivalent to marshal_load (could be renamed if only load_file could work)
     #
-    # Parameters:
+    # Parameters::
     # * *iData* (_String_): The serialized content
     def setSerialized(iData)
       # Require a temporary file
@@ -53,16 +53,16 @@ module Wx
       if (load_file(lFileName, Wx::BITMAP_TYPE_PNG))
         File.unlink(lFileName)
       else
-        logBug "Error while loading data from temporary file: #{lFileName}."
+        log_bug "Error while loading data from temporary file: #{lFileName}."
       end
     end
 
     # Compares 2 different bitmaps
     # It stores results in a cache to speed up comparisons
     #
-    # Parameters:
+    # Parameters::
     # * *iOtherBitmap* (<em>Wx::Bitmap</em>): The other bitmap to compare
-    # Return:
+    # Return::
     # * _Integer_: The comparison (self - iOtherBitmap)
     def <=>(iOtherBitmap)
       if (!defined?(@CacheDataCompare))
@@ -80,9 +80,9 @@ module Wx
 
     # Is the given bitmap equal to ourselves ?
     #
-    # Parameters:
+    # Parameters::
     # * *iOtherBitmap* (<em>Wx::Bitmap</em>): The other bitmap to compare
-    # Return:
+    # Return::
     # * _Boolean_: Is the given bitmap equal to ourselves ?
     def ==(iOtherBitmap)
       return ((self.object_id == iOtherBitmap.object_id) or

@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -10,20 +10,20 @@ module PBS
 
     # Get the image index corresponding to the status
     #
-    # Parameters:
+    # Parameters::
     # * *iStatus* (_Boolean_): Is the status checked ?
-    # Return:
+    # Return::
     # * _Integer_: The image index
     def getIdxImage(iStatus)
       return @ImageListManager.getImageIndex(iStatus) do
         rBitmap = nil
 
         if (iStatus)
-          rBitmap, lError = getURLContent("#{$PBS_GraphicsDir}/Checkbox_Checked.png", :LocalFileAccess => true) do |iFileName|
+          rBitmap, lError = get_url_content("#{$PBS_GraphicsDir}/Checkbox_Checked.png", :local_file_access => true) do |iFileName|
             next Wx::Bitmap.new(iFileName)
           end
         else
-          rBitmap , lError = getURLContent("#{$PBS_GraphicsDir}/Checkbox_UnChecked.png", :LocalFileAccess => true) do |iFileName|
+          rBitmap , lError = get_url_content("#{$PBS_GraphicsDir}/Checkbox_UnChecked.png", :local_file_access => true) do |iFileName|
             next Wx::Bitmap.new(iFileName)
           end
         end
@@ -34,7 +34,7 @@ module PBS
 
     # Populate a TreeCtrl component with Tags and checkboxes.
     #
-    # Parameters:
+    # Parameters::
     # * *iRootID* (_Integer_): ID of one of the tree's node where tags will be inserted
     # * *iRootTag* (_Tag_): Tag containing all tags to put in the tree
     # * *iSelectedTags* (<em>map<Tag,nil></em>): The set of selected tags
@@ -49,7 +49,7 @@ module PBS
 
     # Create the tags panel
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (_Window_): The parent window
     # * *iRootTag* (_Tag_): The root tag
     # * *iSelectedTags* (<em>map<Tag,nil></em>): The set of selected tags
@@ -85,7 +85,7 @@ module PBS
 
     # Create the tags map corresponding to the tags panel
     #
-    # Return:
+    # Return::
     # * <em>map<Tag,nil></em>: The corresponding tags set
     def createTagsFromPanel
       rTags = {}
@@ -101,9 +101,9 @@ module PBS
 
     # Create the buttons panel
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (_Window_): The parent window
-    # Return:
+    # Return::
     # * _Panel_: The panel containing controls
     def createButtonsPanel(iParent)
       rResult = Wx::Panel.new(iParent)
@@ -124,7 +124,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iSC* (_Shortcut_): The Shortcut containing info to edit (or nil if initial values needed)
     # * *iRootTag* (_Tag_): The root tag
@@ -187,7 +187,7 @@ module PBS
 
     # Get the new data from the components
     #
-    # Return:
+    # Return::
     # * _Object_: The Content
     # * <em>map<String,Object></em>: The Metadata
     # * <em>map<Tag,nil></em>: The Tags

@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -10,9 +10,9 @@ module PBS
 
     # Return the file content
     #
-    # Parameters:
+    # Parameters::
     # * *iFileName* (_String_): The file name, relative to PBS root dir
-    # Return:
+    # Return::
     # * <em>list<String></em>: The content
     def getFileContent(iFileName)
       rContent = []
@@ -23,7 +23,7 @@ module PBS
           rContent = iFile.readlines
         end
       else
-        logBug "Missing file #{lRealFileName}."
+        log_bug "Missing file #{lRealFileName}."
       end
 
       return rContent
@@ -31,7 +31,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iPBSRootDir* (_String_): The PBS Root dir
     def initialize(iParent, iPBSRootDir)
@@ -82,7 +82,7 @@ This software is provided Free and Open Source - http://www.opensource.org -, un
       evt_text_url(lTCMessage) do |iEvent|
         # What happens when user clicks a URL in the text
         if (iEvent.mouse_event.button(Wx::MOUSE_BTN_LEFT))
-          $rUtilAnts_Platform_Info.launchURL(iEvent.url)
+          launchURL(iEvent.url)
         end
       end
       lSBIcon = Wx::StaticBitmap.new(self, Wx::ID_ANY, getGraphic('Icon72.png'))

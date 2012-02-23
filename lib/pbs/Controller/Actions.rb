@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -13,17 +13,17 @@ module PBS
 
     # Perform an operation, protected with Undo/Redo methods
     #
-    # Parameters:
+    # Parameters::
     # * *iOperationTitle* (_String_): Title of the operation to perform to display as undo
     def undoableOperation(iOperationTitle)
       # This method can be called recursively. Be prepared for it.
       if (@CurrentUndoableOperation == nil)
-        logInfo "= #{iOperationTitle} ..."
+        log_info "= #{iOperationTitle} ..."
         # Create the corresponding ProgressBar
         setupTextProgress(Wx::get_app.get_top_window, iOperationTitle,
-          :Cancellable => true,
-          :Title => iOperationTitle,
-          :Icon => getGraphic('IconProcess32.png')
+          :cancellable => true,
+          :title => iOperationTitle,
+          :icon => getGraphic('IconProcess32.png')
         ) do |ioProgressDlg|
           @CurrentProgressDlg = ioProgressDlg
           # Create the current Undo context: this is the object that will be saved in the Undo/Redo stacks
@@ -34,16 +34,16 @@ module PBS
           @CurrentOperationShortcutsConflicts = nil
           # Don't display errors live, but store them temporarily instead
           lCurrentTransactionErrors = []
-          setLogErrorsStack(lCurrentTransactionErrors)
+          set_log_errors_stack(lCurrentTransactionErrors)
           notifyTransactionBegin
           begin
             # Call the command code
             yield
           rescue Exception
-            logExc $!, "Exception encountered during execution of \"#{iOperationTitle}\""
+            log_exc $!, "Exception encountered during execution of \"#{iOperationTitle}\""
           end
           notifyTransactionEnd
-          setLogErrorsStack(nil)
+          set_log_errors_stack(nil)
           # Check possible errors
           if (!lCurrentTransactionErrors.empty?)
             lErrorsText = nil
@@ -81,7 +81,7 @@ module PBS
           @CurrentUndoableOperation = nil
           @CurrentProgressDlg = nil
         end
-        logInfo "= ... #{iOperationTitle}"
+        log_info "= ... #{iOperationTitle}"
       else
         # No special transaction
         yield
@@ -91,7 +91,7 @@ module PBS
     # Add a given range to the current progression.
     # This sets the progression to determined if it was not already.
     #
-    # Parameters:
+    # Parameters::
     # * *iRange* (_Integer_): Range to add to the progression
     def addProgressionRange(iRange)
       @CurrentProgressDlg.incRange(iRange)
@@ -99,7 +99,7 @@ module PBS
 
     # Increment the current progression.
     #
-    # Parameters:
+    # Parameters::
     # * *iIncrement* (_Integer_): Increment to apply [optional = 1]
     def incProgression(iIncrement = 1)
       @CurrentProgressDlg.incValue(iIncrement)
@@ -107,7 +107,7 @@ module PBS
 
     # Set the progression text
     #
-    # Parameters:
+    # Parameters::
     # * *iText* (_String_): Text
     def setProgressionText(iText)
       @CurrentProgressDlg.setText(iText)
@@ -116,11 +116,11 @@ module PBS
     # Create a Tag if it does not exist already, and return it.
     # This method is protected for Undo/Redo management.
     #
-    # Parameters:
+    # Parameters::
     # * *iParentTag* (_Tag_): The parent Tag
     # * *iTagName* (_String_): The new Tag name
     # * *iIcon* (<em>Wx::Bitmap</em>): The icon (can be nil)
-    # Return:
+    # Return::
     # * _Tag_: The created Tag.
     def createTag(iParentTag, iTagName, iIcon)
       rTag = nil
@@ -142,7 +142,7 @@ module PBS
     # It also deletes all its sub-Tags.
     # It is assumed that no Shortcut references it any longer before calling this function, as well as any of its sub-Tags.
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag to delete
     def deleteTag(iTag)
       ensureUndoableOperation("Delete Tag #{iTag.Name}") do
@@ -154,12 +154,12 @@ module PBS
     # Modify the Tag based on new data.
     # Only this method should be used by commands to update a Tag's info.
     #
-    # Parameters:
+    # Parameters::
     # * *ioTag* (_Tag_): The Tag to modify
     # * *iNewName* (_String_): The new name
     # * *iNewIcon* (<em>Wx::Bitmap</em>): The new icon (can be nil)
     # * *iNewChildren* (<em>list<Tag></em>): The new list of sub-Tags
-    # Return:
+    # Return::
     # * _Boolean_: Did the data effectively changed ? (It will also be true if the update resulted in a delete of the Tag)
     def updateTag(ioTag, iNewName, iNewIcon, iNewChildren)
       rChanged = false
@@ -202,12 +202,12 @@ module PBS
 
     # Create a Shortcut if it does not exit, or merge Tags if already existing.
     #
-    # Parameters:
+    # Parameters::
     # * *iTypeName* (_String_): The type name
     # * *iContent* (_Object_): The content
     # * *iMetadata* (<em>map<String,Object></em>): The metadata
     # * *iTags* (<em>map<Tag,nil></em>): The set of Tags
-    # Return:
+    # Return::
     # * _Shortcut_: The newly created Shortcut
     def createShortcut(iTypeName, iContent, iMetadata, iTags)
       # First find if we don't violate unicity constraints
@@ -230,7 +230,7 @@ module PBS
 
     # Delete a given Shortcut
     #
-    # Parameters:
+    # Parameters::
     # * *iShortcut* (_Shortcut_): The Shortcut to delete
     def deleteShortcut(iShortcut)
       ensureUndoableOperation("Delete Shortcut #{iShortcut.Metadata['title']}") do
@@ -242,12 +242,12 @@ module PBS
     # Modify the Shortcut based on new data.
     # Only this method should be used by commands to update a Shortcut's info.
     #
-    # Parameters:
+    # Parameters::
     # * *ioSC* (_Shortcut_): The Shortcut to modify
     # * *iNewContent* (_Object_): The new Content
     # * *iNewMetadata* (<em>map<String,Object></em>): The new Metadata
     # * *iNewTags* (<em>map<Tag,nil></em>): The new Tags
-    # Return:
+    # Return::
     # * _Boolean_: Did the data effectively changed ? (It will also be true if the update resulted in a delete of the Shortcut)
     def updateShortcut(ioSC, iNewContent, iNewMetadata, iNewTags)
       rChanged = false
@@ -278,7 +278,7 @@ module PBS
     # Change the current file name opened.
     # This also resets the FileModified flag to false.
     #
-    # Parameters:
+    # Parameters::
     # * *iNewFileName* (_String_): New file name
     def changeCurrentFileName(iNewFileName)
       ensureUndoableOperation("Change opened file to #{File.basename(iNewFileName)}") do
@@ -298,9 +298,9 @@ module PBS
     # Method that check current work is saved, asks the user if not, and scratches the whole data.
     # In merge context, it does nothing.
     #
-    # Parameters:
+    # Parameters::
     # * *iParentWindow* (<em>Wx::Window</em>): The parent window
-    # Return:
+    # Return::
     # * _Boolean_: Has current work been saved (true also if user decides to continue without saving deliberately) ?
     def checkSavedWorkAndScratch(iParentWindow)
       rSaved = true
@@ -326,9 +326,9 @@ module PBS
 
     # Method that check current work is saved, asks the user if not.
     #
-    # Parameters:
+    # Parameters::
     # * *iParentWindow* (<em>Wx::Window</em>): The parent window
-    # Return:
+    # Return::
     # * _Boolean_: Has current work been saved (true also if user decides to continue without saving deliberately) ?
     def checkSavedWork(iParentWindow)
       rSaved = true
@@ -352,25 +352,25 @@ module PBS
     
     # Execute a given command
     #
-    # Parameters:
+    # Parameters::
     # * *iCommandID* (_Integer_): The command ID
     # * *iParams* (<em>map<Symbol,Object></em>): The parameters to give the command (nil if no parameters) [optional = nil]
     def executeCommand(iCommandID, iParams = nil)
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        logBug "Command #{iCommandID} is not registered. Can't execute it. Please check command plugins."
+        log_bug "Command #{iCommandID} is not registered. Can't execute it. Please check command plugins."
       else
         if (lCommand[:Plugin] == nil)
           # Get the plugin name to access
           begin
-            accessPlugin('Command', lCommand[:PluginName]) do |iPlugin|
+            access_plugin('Command', lCommand[:PluginName]) do |iPlugin|
               lCommand[:Plugin] = iPlugin
             end
           rescue Exception
             # Nothing to do, we'll display the error message later.
           end
           if (lCommand[:Plugin] == nil)
-            logMsg "This command (#{iCommandID}) has not yet been implemented. Sorry."
+            log_msg "This command (#{iCommandID}) has not yet been implemented. Sorry."
           end
         end
         if (lCommand[:Plugin] != nil)
@@ -378,20 +378,20 @@ module PBS
             # Check that the command did not need any parameters first
             if ((lCommand[:Parameters] != nil) and
                 (!lCommand[:Parameters].empty?))
-              logBug "Command #{iCommandID} should be called with parameters, but the GUI did not pass any. Please correct GUI code or command plugin parameters."
+              log_bug "Command #{iCommandID} should be called with parameters, but the GUI did not pass any. Please correct GUI code or command plugin parameters."
             end
             # Call the command method without parameters
             begin
               lCommand[:Plugin].execute(self)
             rescue
-              logExc $!, "Command \"#{lCommand[:Title]}\" (called without parameters) threw an exception"
+              log_exc $!, "Command \"#{lCommand[:Title]}\" (called without parameters) threw an exception"
             end
           else
             if (lCommand[:Parameters] != nil)
               # Check that all parameters have been set
               lCommand[:Parameters].each do |iParameterSymbol|
                 if (!iParams.has_key?(iParameterSymbol))
-                  logBug "Missing parameter #{iParameterSymbol.to_s} set by the GUI for command #{iCommandID}. Please correct GUI code or command plugin parameters."
+                  log_bug "Missing parameter #{iParameterSymbol.to_s} set by the GUI for command #{iCommandID}. Please correct GUI code or command plugin parameters."
                 end
               end
             end
@@ -399,7 +399,7 @@ module PBS
             begin
               lCommand[:Plugin].execute(self, iParams)
             rescue
-              logExc $!, "Command \"#{lCommand[:Title]}\" (called with parameters: #{iParams.inspect}) threw an exception"
+              log_exc $!, "Command \"#{lCommand[:Title]}\" (called with parameters: #{iParams.inspect}) threw an exception"
             end
           end
         end

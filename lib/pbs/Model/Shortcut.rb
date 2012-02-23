@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -27,7 +27,7 @@ module PBS
     # Constructor
     # This constructor should be used ONLY by UOA_* classes to ensure proper Undo/Redo management.
     #
-    # Parameters:
+    # Parameters::
     # * *iType* (_Type_): The type
     # * *iContent* (_Object_): The content
     # * *iMetadata* (<em>map<String,Object></em>): The metadata
@@ -42,7 +42,7 @@ module PBS
     # Get the summary of its content.
     # This could be used in tool tips for example.
     #
-    # Return:
+    # Return::
     # * _String_: The content's summary
     def getContentSummary
       @Type.getContentSummary(@Content)
@@ -50,9 +50,9 @@ module PBS
 
     # Dump the Shortcut's info in a String
     #
-    # Parameters:
+    # Parameters::
     # * *iPrefix* (_String_): The prefix to append to the strings [optional = '']
-    # Return:
+    # Return::
     # * _String_: The dump
     def dump(iPrefix)
       rDump = ''
@@ -82,7 +82,7 @@ module PBS
     # Set the content of the Shortcut. This is used only for Undo purposes.
     # !!! This method has to be called ONLY inside protected AtomicOperation classes
     #
-    # Parameters:
+    # Parameters::
     # * *iNewContent* (_Object_): The new content
     def _UNDO_setContent(iNewContent)
       @Content = iNewContent
@@ -91,7 +91,7 @@ module PBS
     # Set the metadata of the Shortcut. This is used only for Undo purposes.
     # !!! This method has to be called ONLY inside protected AtomicOperation classes
     #
-    # Parameters:
+    # Parameters::
     # * *iNewMetadata* (<em>map<String,Object></em>): The new metadata
     def _UNDO_setMetadata(iNewMetadata)
       @Metadata = iNewMetadata
@@ -100,7 +100,7 @@ module PBS
     # Set the tags of the Shortcut. This is used only for Undo purposes.
     # !!! This method has to be called ONLY inside protected AtomicOperation classes
     #
-    # Parameters:
+    # Parameters::
     # * *iNewTags* (<em>map<Tag,nil></em>): The new tags
     def _UNDO_setTags(iNewTags)
       # Remove Tags that are not part of the new list

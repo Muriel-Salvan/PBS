@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -15,9 +15,9 @@ module PBS
 
     # Create the buttons panel
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (_Window_): The parent window
-    # Return:
+    # Return::
     # * _Panel_: The panel containing controls
     def createButtonsPanel(iParent)
       rResult = Wx::Panel.new(iParent)
@@ -85,7 +85,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParentWindow* (<em>Wx::Window</em>): The parent window
     # * *iObjectTypeName* (_String_): Name of the objects we are comparing, that will be added as titles of their own region
     # * *iParameters* (...): The parameters to give the Dialog constructor
@@ -137,7 +137,7 @@ module PBS
 
     # Get the new data from the components
     #
-    # Return:
+    # Return::
     # * _String_: The name
     # * <em>Wx::Bitmap</em>: The icon (can be nil)
     def getData
@@ -147,14 +147,14 @@ module PBS
       when CHOOSE_CONFLICTING
         return @ConflictingObjectPanel.getData
       else
-        logBug "Unknown choice of conflicting dialog: #{@MergeChoose}."
+        log_bug "Unknown choice of conflicting dialog: #{@MergeChoose}."
         return @ConflictingObjectPanel.getData
       end
     end
 
     # Does the decision apply to future questions ?
     #
-    # Return:
+    # Return::
     # * _Boolean_: Does the decision apply to future questions ?
     def applyToAll?
       return @CBApplyToAll.value

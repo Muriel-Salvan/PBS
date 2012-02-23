@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,7 +11,7 @@ module PBS
 
       # Get the default options
       #
-      # Return:
+      # Return::
       # * _Object_: The default options (can be nil if none needed)
       def getDefaultOptions
         return nil
@@ -19,10 +19,10 @@ module PBS
 
       # Get the configuration panel
       #
-      # Parameters:
+      # Parameters::
       # * *iParent* (<em>Wx::Window</em>): The parent window
       # * *iController* (_Controller_): The controller
-      # Return:
+      # Return::
       # * <em>Wx::Panel</em>: The configuration panel, or nil if none needed
       def getConfigPanel(iParent, iController)
         return nil
@@ -30,9 +30,9 @@ module PBS
 
       # Create a new instance of the integration plugin
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
-      # Return:
+      # Return::
       # * _Object_: The instance of this integration plugin
       def createNewInstance(iController)
         require 'pbs/Windows/MainFrame'
@@ -45,7 +45,7 @@ module PBS
 
       # Delete a previously created instance
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       # * *ioInstance* (_Object_): The instance created via createNewInstance that we now have to delete
       def deleteInstance(iController, ioInstance)

@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -19,7 +19,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iGrid* (<em>Wx::Grid</em>): The grid that will use this GridTableBase
       # * *iBitmapsList* (<em>list<Wx::Bitmap></em>): The list of bitmaps to represent
       def initialize(iGrid, iBitmapsList)
@@ -30,7 +30,7 @@ module PBS
 
       # Return the number of columns
       #
-      # Return:
+      # Return::
       # * _Integer_: Number of columns
       def get_number_cols
         # Depends on the total number of bitmaps to display and the number of rows
@@ -39,7 +39,7 @@ module PBS
 
       # Return the number of rows
       #
-      # Return:
+      # Return::
       # * _Integer_: Number of rows
       def get_number_rows
         # Depends on the height of the grid, and the space allocated to each row
@@ -54,10 +54,10 @@ module PBS
 
       # Return the type name of the cell
       #
-      # Parameters:
+      # Parameters::
       # * *iRow* (_Integer_): The row number
       # * *iCol* (_Integer_): The column number
-      # Return:
+      # Return::
       # * _String_: Data type name
       def get_type_name(iRow, iCol)
         return 'Wx::Bitmap'
@@ -65,10 +65,10 @@ module PBS
 
       # Returns if a given cell is empty
       #
-      # Parameters:
+      # Parameters::
       # * *iRow* (_Integer_): The row number
       # * *iCol* (_Integer_): The column number
-      # Return:
+      # Return::
       # * _Boolean_: Is the cell empty ?
       def is_empty_cell(iRow, iCol)
         return true
@@ -77,11 +77,11 @@ module PBS
       # Return the attribute of a given cell.
       # I don't really get why this is useful yet. However it asks for it.
       #
-      # Parameters:
+      # Parameters::
       # * *iRow* (_Integer_): The row number
       # * *iCol* (_Integer_): The column number
       # * *iAttrKind* (_Integer_): The kind of attribute to return
-      # Return:
+      # Return::
       # * <em>Wx::GridCellAttr</em>: The corresponding attribute
       def get_attr(iRow, iCol, iAttrKind)
         return Wx::GridCellAttr.new(
@@ -101,7 +101,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iGrid* (<em>Wx::Grid</em>): The grid using this renderer
       # * *iBitmapsList* (<em>list<Wx::Bitmap></em>): The list of bitmaps to represent
       def initialize(iGrid, iBitmapsList)
@@ -112,7 +112,7 @@ module PBS
 
       # Draw the icon
       #
-      # Parameters:
+      # Parameters::
       # * *iGrid* (<em>Wx::Grid</em>): The grid that is rendering the item
       # * *iAttr* (<em>Wx::GridCellAttr</em>): The grid cell attribute
       # * *ioDC* (<em>Wx::DC</em>): The device context used to draw
@@ -149,15 +149,15 @@ module PBS
     # Create a Bitmap from a file.
     # This method resizes eventually the bitmap to fit the maximal size.
     #
-    # Parameters:
+    # Parameters::
     # * *iFileName* (_String_): The file name
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The Bitmap, or nil if error
     def createBitmapFromFile(iFileName)
       rBitmap, lError = getBitmapFromURL(iFileName)
 
       if (rBitmap == nil)
-        logErr "Error while getting bitmap from #{iFileName}: #{lError}"
+        log_err "Error while getting bitmap from #{iFileName}: #{lError}"
       else
         lNewWidth = rBitmap.width
         if (rBitmap.width > MAX_ICON_WIDTH)
@@ -179,9 +179,9 @@ module PBS
 
     # Create the buttons panel
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (_Window_): The parent window
-    # Return:
+    # Return::
     # * _Panel_: The panel containing controls
     def createButtonsPanel(iParent)
       rResult = Wx::Panel.new(iParent)
@@ -215,10 +215,10 @@ module PBS
                 @BitmapsList << lBitmap
                 notifyBitmapsListChanged
               else
-                logErr "Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
+                log_err "Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
               end
             rescue
-              logErr "Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
+              log_err "Error while reading file #{iDialog.path}: #{$!}. Ignoring this file."
             end
           end
         end
@@ -230,7 +230,7 @@ module PBS
     # Get the selected icon.
     # If it is the same as the previously set one, it returns nil
     #
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The bitmap
     def getSelectedBitmap
       if ((@GIcons.grid_cursor_row == 0) and
@@ -243,10 +243,10 @@ module PBS
 
     # Get the bitmap at a given Row/Col position
     #
-    # Parameters:
+    # Parameters::
     # * *iRow* (_Integer_): The row number
     # * *iCol* (_Integer_): The column number
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The selected bitmap, or nil if none
     def getBitmapAtPos(iRow, iCol)
       rBitmap = nil
@@ -292,7 +292,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iIcon* (<em>Wx::Bitmap</em>): The initial icon
     def initialize(iParent, iIcon)
@@ -316,7 +316,7 @@ module PBS
             end
           rescue Exception
             # Happens if a file not understandeable by Wx::Bitmap appears in the directory. Nothing serious.
-            logErr "Error while reading file #{iFileName}: #{$!}. Ignoring this file."
+            log_err "Error while reading file #{iFileName}: #{$!}. Ignoring this file."
           end
         end
       end

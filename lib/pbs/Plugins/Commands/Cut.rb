@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,10 +11,10 @@ module PBS
 
       # Command that cuts an object into the clipboard
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *selection* (_MultipleSelection_): the current selection.
+      #   * *selection* (_MultipleSelection_): the current selection.
       def execute(ioController, iParams)
         lSelection = iParams[:selection]
         lSerializedSelection = lSelection.getSerializedSelection

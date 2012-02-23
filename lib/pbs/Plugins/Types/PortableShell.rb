@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -14,7 +14,7 @@ module PBS
 
         # Constructor
         #
-        # Parameters:
+        # Parameters::
         # * *iParent* (_Window_): The parent window
         def initialize(iParent)
           super(iParent)
@@ -57,7 +57,7 @@ module PBS
           @NBShells.evt_auinotebook_page_close(@NBShells) do |iEvent|
             # The page iEvent.selection has been closed
             if (@EditPanels.size == 1)
-              logErr 'You cannot close the last parameters.'
+              log_err 'You cannot close the last parameters.'
               iEvent.veto
             else
               # Remove page number iEvent.selection, and get back to the first page if it was the last one
@@ -93,7 +93,7 @@ module PBS
                   addNewEditPanel(lNewPlatformName)
                   @NBShells.selection = @NBShells.get_page_index(@EditPanels[lNewPlatformName])
                 else
-                  logErr "Sorry, but platform #{lNewPlatformName} already has parameters defined."
+                  log_err "Sorry, but platform #{lNewPlatformName} already has parameters defined."
                   lNewPlatformName = nil
                 end
               end
@@ -115,7 +115,7 @@ module PBS
 
         # Get the content from the controls
         #
-        # Return:
+        # Return::
         # * _Object_: The corresponding content, which will be associated to a shortcut
         def getData
           rContent = {}
@@ -130,7 +130,7 @@ module PBS
 
         # Set the Panel's contents based on a given content
         #
-        # Parameters:
+        # Parameters::
         # * *iContent* (_Object_): The content containing values to put in the panel
         def setData(iContent)
           iContent.each do |iPlatformID, iShellContent|
@@ -159,7 +159,7 @@ module PBS
 
         # Add a new platform panel
         #
-        # Parameters:
+        # Parameters::
         # * *iPlatformID* (_String_): The platform ID
         def addNewEditPanel(iPlatformID)
           @EditPanels[iPlatformID] = PBS::Types::Shell::EditPanel.new(@NBShells)
@@ -183,13 +183,13 @@ module PBS
       # Constructor
       def initialize
         # Get a reference on the Shell plugin
-        @ShellPlugin, lError = getPluginInstance('Type', 'Shell')
+        @ShellPlugin, lError = get_plugin_instance('Type', 'Shell')
       end
 
       # Create an empty content.
       # This is used for putting default values in the NewShortcut dialog.
       #
-      # Return:
+      # Return::
       # * _Object_: The default content
       def createEmptyContent
         return { RUBY_PLATFORM => @ShellPlugin.createEmptyContent }
@@ -198,9 +198,9 @@ module PBS
       # Get a simple summary of a given content created by this Type.
       # This could be used in tool tips for example.
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): Content created by this type
-      # Return:
+      # Return::
       # * _String_: The content's summary
       def getContentSummary(iContent)
         rSummary = ''
@@ -214,19 +214,19 @@ module PBS
 
       # Run a given content
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): Content created by this type
       def run(iContent)
         if (iContent[RUBY_PLATFORM] != nil)
           @ShellPlugin.run(iContent[RUBY_PLATFORM])
         else
-          logErr "No content defined for platform #{RUBY_PLATFORM}."
+          log_err "No content defined for platform #{RUBY_PLATFORM}."
         end
       end
 
       # Fill a given XML element with a content.
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): Content created by this type
       # * *oXMLContentElement* (<em>REXML::Element</em>): The XML element to fill with the data
       def getContentAsXMLText(iContent, oXMLContentElement)
@@ -240,9 +240,9 @@ module PBS
       # Create a content from an XML text.
       # The XML text has been created by getContentAsXMLText.
       #
-      # Parameters:
+      # Parameters::
       # * *iXMLContentElement* (<em>REXML::Element</em>): The XML element
-      # Return:
+      # Return::
       # * _Object_: Content created based on this XML element
       def createContentFromXMLText(iXMLContentElement)
         rContent = {}
@@ -256,9 +256,9 @@ module PBS
 
       # Get the metadata best reflecting the content.
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): The content to read from
-      # Return:
+      # Return::
       # * <em>map<String,Object></em>: The corresponding metadata
       def getMetadataFromContent(iContent)
         rMetadata = {}
@@ -266,7 +266,7 @@ module PBS
         if (iContent[RUBY_PLATFORM] != nil)
           rMetadata = @ShellPlugin.getMetadataFromContent(iContent[RUBY_PLATFORM])
         else
-          logErr "No content defined for platform #{RUBY_PLATFORM}."
+          log_err "No content defined for platform #{RUBY_PLATFORM}."
         end
 
         return rMetadata

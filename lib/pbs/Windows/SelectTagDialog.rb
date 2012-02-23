@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -10,7 +10,7 @@ module PBS
 
     # Populate a TreeCtrl component with Tags.
     #
-    # Parameters:
+    # Parameters::
     # * *iRootID* (_Integer_): ID of one of the tree's node where tags will be inserted
     # * *iRootTag* (_Tag_): Tag containing all tags to put in the tree
     # * *iSelectedTags* (<em>map<Tag,nil></em>): The set of selected tags
@@ -28,9 +28,9 @@ module PBS
 
     # Create the buttons panel
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (_Window_): The parent window
-    # Return:
+    # Return::
     # * _Panel_: The panel containing controls
     def createButtonsPanel(iParent)
       rResult = Wx::Panel.new(iParent)
@@ -51,7 +51,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iRootTag* (_Tag_): Root Tag to display
     # * *iController* (_Controller_): Controller
@@ -90,7 +90,7 @@ module PBS
 
     # Return the selected Tag, or nil if none
     #
-    # Return:
+    # Return::
     # * _Tag_: The selected Tag, or nil if none
     def getSelectedTag
       rTag = nil

@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -10,7 +10,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent window
     def initialize(iParent)
       super(iParent)
@@ -74,7 +74,7 @@ module PBS
 
     # Set current components based on options
     #
-    # Parameters:
+    # Parameters::
     # * *iOptions* (<em>map<Symbol,Object></em>): Options
     def setOptions(iOptions)
       # Set default values based on the current options
@@ -86,7 +86,7 @@ module PBS
 
     # Fill the options from the components
     #
-    # Parameters:
+    # Parameters::
     # * *oOptions* (<em>map<Symbol,Object></em>): The options to fill
     def fillOptions(oOptions)
       oOptions[:tagsUnicity] = @RBTagsKey.selection

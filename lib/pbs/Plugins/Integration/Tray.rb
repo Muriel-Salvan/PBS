@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -22,7 +22,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       def initialize(iController)
         super()
@@ -42,7 +42,7 @@ module PBS
 
       # Return a new PBS menu
       #
-      # Return:
+      # Return::
       # * <em>Wx::Menu</em>: The PBS menu
       def createPBSMenu
         rPBSMenu = Wx::Menu.new
@@ -80,7 +80,7 @@ module PBS
       # Method that adds sub-Tags of a given Tag to a menu
       # This method just creates hierarchical menus of Tags, ignoring Shortcuts
       #
-      # Parameters:
+      # Parameters::
       # * *iTag* (_Tag_): Tag containing sub-Tags to add to the menu
       # * *ioMenu* (<em>Wx::Menu</em>): Menu to add the Tag to
       # * *oTagsToMenu* (<em>map<Tag,Wx::Menu></em>): Correspondance between Tags and menu
@@ -111,7 +111,7 @@ module PBS
 
       # Method called when invoking the menu
       #
-      # Return:
+      # Return::
       # * <em>Wx::Menu</em>: The menu to display
       def create_popup_menu
         # We have to create the menu each time, as WxRuby then destroys it.
@@ -198,7 +198,7 @@ module PBS
       # TODO (WxRuby): Remove the following method when wxRuby 2.0.2 is used. This is a workaround to avoid core dumps.
       # Save created menus and sub-menus in an instance variable
       #
-      # Parameters:
+      # Parameters::
       # * *iMenu* (<em>Wx::Menu</em>): Menu to save
       def saveMenus(iMenu)
         @SavedMenus << iMenu
@@ -211,9 +211,9 @@ module PBS
 
       # Create an icon that fits the Tray
       #
-      # Parameters:
+      # Parameters::
       # * *iBitmap* (<em>Wx::Bitmap</em>): The bitmap of the icon (can be nil for the default one)
-      # Return:
+      # Return::
       # * <em>Wx::Icon</em>: Resulting icon
       def makeTrayIcon(iBitmap)
         lRealBitmap = iBitmap
@@ -252,7 +252,7 @@ module PBS
       # Set the Tray icon from a bitmap
       # Resizes the bitmap if needed
       #
-      # Parameters:
+      # Parameters::
       # * *iBitmap* (<em>Wx::Bitmap</em>): The bitmap of the icon (can be nil for the default one)
       # * *iTitle* (_String_): Title to give to this icon (appears as the hint)
       def setTrayIcon(iBitmap, iTitle)
@@ -265,7 +265,7 @@ module PBS
 
       # Options specifics to this plugin have changed
       #
-      # Parameters:
+      # Parameters::
       # * *iNewOptions* (_Object_): The new options
       # * *iNewTag* (_Tag_): The new Tag to integrate
       # * *iOldOptions* (_Object_): The old options (can be nil during startup)
@@ -283,7 +283,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iParent* (<em>Wx::Window</em>): The parent window (can be called to get the current Tag to integrate)
       # * *iController* (_Controller_): The controller
       def initialize(iParent, iController)
@@ -430,7 +430,7 @@ module PBS
 
       # Create the options corresponding to this panel
       #
-      # Return:
+      # Return::
       # * _Object_: The corresponding options
       def getData
         return {
@@ -442,7 +442,7 @@ module PBS
 
       # Set the panel's content from given options
       #
-      # Parameters:
+      # Parameters::
       # * *iOptions* (_Object_): The corresponding options
       def setData(iOptions)
         @Icon = iOptions[:icon]
@@ -457,7 +457,7 @@ module PBS
 
       # Get the default options
       #
-      # Return:
+      # Return::
       # * _Object_: The default options (can be nil if none needed)
       def getDefaultOptions
         return {
@@ -469,10 +469,10 @@ module PBS
 
       # Get the configuration panel
       #
-      # Parameters:
+      # Parameters::
       # * *iParent* (<em>Wx::Window</em>): The parent window
       # * *iController* (_Controller_): The controller
-      # Return:
+      # Return::
       # * <em>Wx::Panel</em>: The configuration panel, or nil if none needed
       def getConfigPanel(iParent, iController)
         return ConfigPanel.new(iParent, iController)
@@ -480,9 +480,9 @@ module PBS
 
       # Create a new instance of the integration plugin
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
-      # Return:
+      # Return::
       # * _Object_: The instance of this integration plugin
       def createNewInstance(iController)
         return TrayIcon.new(iController)
@@ -490,7 +490,7 @@ module PBS
 
       # Delete a previously created instance
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The model controller
       # * *ioInstance* (_Object_): The instance created via createNewInstance that we now have to delete
       def deleteInstance(iController, ioInstance)

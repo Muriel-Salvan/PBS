@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -23,7 +23,7 @@ module PBS
     # Constructor
     # This constructor should be used ONLY by UOA_* classes to ensure proper Undo/Redo management.
     #
-    # Parameters:
+    # Parameters::
     # * *iName* (_String_): The name
     # * *iIcon* (<em>Wx::Bitmap</em>): The icon (can be nil)
     def initialize(iName, iIcon)
@@ -39,9 +39,9 @@ module PBS
 
     # Is this Tag a sub-Tag of another one ?
     #
-    # Parameters:
+    # Parameters::
     # * *iOtherTag* (_Tag_): The other Tag
-    # Return:
+    # Return::
     # * _Boolean_: Is this Tag a sub-Tag of another one ?
     def subTagOf?(iOtherTag)
       rFound = false
@@ -60,9 +60,9 @@ module PBS
 
     # Get the list of sub-Tags and Shortcuts that belong recursively to us.
     #
-    # Parameters:
+    # Parameters::
     # * *iShortcutsList* (<em>list<Shortcut></em>): The Shortcuts list to find which ones belong to us
-    # * *oSelectedShortcutsList* (<em>list<[Shortcut,Tag]></em>): The selected Shortcuts list (with the corresponding parent Tag) to be completed
+    # * *oSelectedShortcutsList* (<em>list< [Shortcut,Tag] ></em>): The selected Shortcuts list (with the corresponding parent Tag) to be completed
     # * *oSelectedSubTagsList* (<em>list<Tag></em>): The selected sub-Tags list to be completed
     def getSecondaryObjects(iShortcutsList, oSelectedShortcutsList, oSelectedSubTagsList)
       # The children
@@ -85,7 +85,7 @@ module PBS
     # Set the Parent's Tag
     # !!! This method has to be used only by the atomic operation dealing with Tags
     #
-    # Parameters:
+    # Parameters::
     # * *iParentTag* (_Tag_): The parent Tag
     def _UNDO_setParent(iParentTag)
       @Parent = iParentTag
@@ -94,7 +94,7 @@ module PBS
     # Add a child Tag
     # !!! This method has to be used only by the atomic operation dealing with Tags to ensure proper Undo/Redo management.
     #
-    # Parameters:
+    # Parameters::
     # * *iChildTag* (_Tag_): The child Tag
     def _UNDO_addChild(iChildTag)
       iChildTag._UNDO_setParent(self)
@@ -104,7 +104,7 @@ module PBS
     # Delete a given sub Tag.
     # !!! This method has to be used only by the atomic operation dealing with Tags to ensure proper Undo/Redo management.
     #
-    # Parameters:
+    # Parameters::
     # * *iChildTagToDelete* (_Tag_): The child Tag to delete
     def _UNDO_deleteChild(iChildTagToDelete)
       @Children.delete_if do |iChildTag|
@@ -120,7 +120,7 @@ module PBS
     # Set the name.
     # !!! This method has to be used only by the atomic operation dealing with Tags to ensure proper Undo/Redo management.
     #
-    # Parameters:
+    # Parameters::
     # * *iNewName* (_String_): The new name
     def _UNDO_setName(iNewName)
       @Name = iNewName
@@ -129,7 +129,7 @@ module PBS
     # Set the icon.
     # !!! This method has to be used only by the atomic operation dealing with Tags to ensure proper Undo/Redo management.
     #
-    # Parameters:
+    # Parameters::
     # * *iNewIcon* (<em>Wx::Bitmap</em>): The new icon (can be nil)
     def _UNDO_setIcon(iNewIcon)
       @Icon = iNewIcon
@@ -138,9 +138,9 @@ module PBS
     # Set the sub-Tags of the Tag. This is used only for Undo purposes.
     # !!! This method has to be called ONLY inside protected AtomicOperation classes
     #
-    # Parameters:
+    # Parameters::
     # * *iNewSubTags* (<em>list<Tag></em>): The new sub-Tags
-    # Return:
+    # Return::
     # * <em>map<Tag, list<Tag>></em>: The map of parent Tag changed with their old sub-Tags list
     def _UNDO_setSubTags(iNewSubTags)
       rChangedParents = {}

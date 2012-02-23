@@ -1,6 +1,6 @@
 #!/bin/env ruby
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -16,7 +16,7 @@ module PBS
     # 2. Check wxruby ok
     # 3. Run PBS
     #
-    # Parameters:
+    # Parameters::
     # * *iPBSRootDir* (_String_): The root dir of PBS
     def launch(iPBSRootDir)
       # Parse command line arguments
@@ -34,16 +34,19 @@ module PBS
       # Initialize logging
       $LOAD_PATH << "#{iPBSRootDir}/ext/rUtilAnts/lib"
       require 'rUtilAnts/Logging'
-      RUtilAnts::Logging::initializeLogging(iPBSRootDir, 'https://sourceforge.net/tracker/?group_id=261341&atid=1141657')
-      setLogFile(@LogFile)
-      activateLogDebug(@DebugOption)
+      RUtilAnts::Logging::install_logger_on_object(
+        :lib_root_dir => iPBSRootDir,
+        :bug_tracker_url => 'https://sourceforge.net/tracker/?group_id=261341&atid=1141657',
+        :debug_mode => @DebugOption,
+        :log_file => @LogFile
+      )
       lExit = false
       if (@DisplayUsage)
-        logMsg "Usage:\n#{lOptions}"
+        log_msg "Usage:\n#{lOptions}"
         lExit = true
       end
       if (@UsageError != nil)
-        logErr "Error while parsing command line arguments: #{@UsageError}.\n\nUsage:\n#{lOptions}."
+        log_err "Error while parsing command line arguments: #{@UsageError}.\n\nUsage:\n#{lOptions}."
         lExit = true
       end
       if (!lExit)
@@ -104,21 +107,21 @@ module PBS
           # Protect against errors
           begin
             MainApp.new(iPBSRootDir, @DebugOption, lOpenFileNames).main_loop
-            setGUIForDialogs(nil)
-            logInfo 'PBS closed correctly.'
+            set_gui_for_dialogs(nil)
+            log_info 'PBS closed correctly.'
           rescue Exception
-            setGUIForDialogs(nil)
-            logExc $!, 'Un exception occurred during PBS run.'
+            set_gui_for_dialogs(nil)
+            log_exc $!, 'Un exception occurred during PBS run.'
           end
         else
-          logErr "Error while installing wxRuby: #{lError}. #{lUnresolved.size} unresolved dependencies. Exiting."
+          log_err "Error while installing wxRuby: #{lError}. #{lUnresolved.size} unresolved dependencies. Exiting."
         end
       end
     end
 
     # Get command line parameters
     #
-    # Return:
+    # Return::
     # * _OptionParser_: The options parser
     def getOptions
       rOptions = OptionParser.new

@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -24,7 +24,7 @@ module PBS
 
     # Create the metadata panel
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (_Window_): The parent window
     def initialize(iParent)
       super(iParent)
@@ -72,7 +72,7 @@ module PBS
 
     # Get the new data from the components
     #
-    # Return:
+    # Return::
     # * _String_: The name
     # * <em>Wx::Bitmap</em>: The icon (can be nil)
     def getData
@@ -81,7 +81,7 @@ module PBS
 
     # Set the data in the components
     #
-    # Parameters:
+    # Parameters::
     # * *iName* (_String_): The name
     # * *iIcon* (<em>Wx::Bitmap</em>): The icon (can be nil)
     def setData(iName, iIcon)

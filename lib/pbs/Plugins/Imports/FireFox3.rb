@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,14 +11,14 @@ module PBS
 
       # Execute the import
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParentWindow)
         # Get the profile path from the environment
         lProfileDir = ENV['USERPROFILE'].gsub(/\\/,'/')
         if (lProfileDir == nil)
-          logErr 'The environment variable USERPROFILE is not set. Unable to get FireFox 3 bookmarks.'
+          log_err 'The environment variable USERPROFILE is not set. Unable to get FireFox 3 bookmarks.'
         else
           # Find the FireFox profiles dir
           lBookmarksFileName = nil
@@ -26,10 +26,10 @@ module PBS
             lBookmarksFileName = "#{iProfileDir}/places.sqlite"
           end
           if (lBookmarksFileName == nil)
-            logErr "Can't find profile dir in #{lProfileDir}/Application Data/Mozilla/Firefox/Profiles/*.default/places.sqlite"
+            log_err "Can't find profile dir in #{lProfileDir}/Application Data/Mozilla/Firefox/Profiles/*.default/places.sqlite"
           else
             if (!File.exists?(lBookmarksFileName))
-              logErr "Bookmarks file #{lBookmarksFileName} does not exist."
+              log_err "Bookmarks file #{lBookmarksFileName} does not exist."
             else
               # OK, now we open it and import its content
               ioController.undoableOperation('Import bookmarks from FireFox 3') do
@@ -44,7 +44,7 @@ module PBS
 
       # Create Tags from the map read from the database
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The Controller
       # * *ioFolderInfo* (<em>[ String, Integer, list< ... >, Tag ]): The folder info (need to fill the Tag in it)
       # * *ioParentTag* (_Tag_): The parent Tag where we want to import (can be the Root Tag).
@@ -62,9 +62,9 @@ module PBS
 
       # Import a single bookmark
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The Controller
-      # * *iFolders* (<em>map<Integer,[String,Integer,list<[...]>,Tag]></em>): The folders information
+      # * *iFolders* (<em>map<Integer,[String,Integer,list< [...] >,Tag]></em>): The folders information
       # * *iParentID* (_Integer_): The parent folder ID
       # * *iURL* (_String_): The URL
       # * *iTitle* (_String_): Title
@@ -95,7 +95,7 @@ module PBS
       
       # Import bookmarks from a database file used by FireFox 3
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The Controller
       # * *iFileName* (_String_): The database file name
       # * *ioParentTag* (_Tag_): The parent Tag where we want to import (can be the Root Tag).

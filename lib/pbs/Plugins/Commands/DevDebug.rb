@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,20 +11,20 @@ module PBS
 
       # Command that copies an object into the clipboard
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       def execute(ioController)
-        logDebug '=== Tags:'
-        logDebug dumpTag(ioController.RootTag)
-        logDebug '=== Shortcuts:'
-        logDebug dumpShortcutsList(ioController.ShortcutsList)
-        logDebug '=== $LOAD_PATH:'
-        logDebug $LOAD_PATH.join("\n")
+        log_debug '=== Tags:'
+        log_debug dumpTag(ioController.RootTag)
+        log_debug '=== Shortcuts:'
+        log_debug dumpShortcutsList(ioController.ShortcutsList)
+        log_debug '=== $LOAD_PATH:'
+        log_debug $LOAD_PATH.join("\n")
         if (defined?(Gem) != nil)
-          logDebug '=== Gem.path:'
-          logDebug Gem.path.join("\n")
+          log_debug '=== Gem.path:'
+          log_debug Gem.path.join("\n")
         else
-          logDebug 'Gem not defined.'
+          log_debug 'Gem not defined.'
         end
         ioController.dumpDebugInfo
         ioController.notifyRegisteredGUIs(:onDevDebug)

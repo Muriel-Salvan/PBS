@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -9,7 +9,7 @@ module PBS
     
     # Constructor
     # 
-    # Parameters:
+    # Parameters::
     # * *iRootDir* (_String_): The root dir
     # * *iIncludeRubyGems* (_Boolean_): Do we include RubyGems in the release ?
     # * *iIncludeWxRuby* (_Boolean_): Do we include WxRuby in the release ?
@@ -20,7 +20,7 @@ module PBS
       # Define needed attributes
       author(
         :Name => 'Muriel Salvan',
-        :EMail => 'murielsalvan@users.sourceforge.net',
+        :EMail => 'muriel@x-aeon.com',
         :WebPageURL => 'http://murielsalvan.users.sourceforge.net'
       )
       project(
@@ -106,9 +106,9 @@ module PBS
     # Check if the tools needed for the release are ok
     # This is meant to be overriden if needed
     #
-    # Parameters:
+    # Parameters::
     # * *iRootDir* (_String_): Root directory from where the release is happening
-    # Return:
+    # Return::
     # * _Boolean_: Success ?
     def checkReadyForRelease(iRootDir)
       rSuccess = true

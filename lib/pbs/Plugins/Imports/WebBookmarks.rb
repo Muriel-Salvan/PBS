@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -20,7 +20,7 @@ module PBS
 
       # Execute the import
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParentWindow)
@@ -41,7 +41,7 @@ module PBS
 
       # Import a Shortcut from a file
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The controller
       # * *iFileName* (_String_): The file containing the Shortcut
       # * *iParentTag* (_Tag_): The parent Tag in which the Shortcut has been found (can be the Root Tag)
@@ -84,7 +84,7 @@ module PBS
           if (lIconFile != nil)
             lIconBitmap, lError = getBitmapFromURL(lIconFile, lIconIndex)
             if (lIconBitmap == nil)
-              logErr "Error while reading icon from #{lIconFile},#{lIconIndex}: #{lError}"
+              log_err "Error while reading icon from #{lIconFile},#{lIconIndex}: #{lError}"
             end
           end
           # Tags
@@ -105,13 +105,13 @@ module PBS
             lNewTags
           )
         else
-          logBug "File #{iFileName} does not define any URL (could not find any line 'URL='). Ignoring this file."
+          log_bug "File #{iFileName} does not define any URL (could not find any line 'URL='). Ignoring this file."
         end
       end
 
       # Import Web Bookmarks from a directory
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iDirName* (_String_): Directory name
       # * *iTag* (_Tag_): Tag in which we add Shortcuts of this directory

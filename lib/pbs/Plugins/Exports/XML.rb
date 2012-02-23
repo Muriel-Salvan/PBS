@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -13,7 +13,7 @@ module PBS
 
       # Execute the export
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The data model controller
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(iController, iParentWindow)
@@ -51,7 +51,7 @@ module PBS
 
       # Add a Tag's children in an XML element
       #
-      # Parameters:
+      # Parameters::
       # * *iTag* (_Tag_): Tag to map in the given XML element
       # * *oXMLElement* (<em>REXML::Element</em>): XML element
       def addTagChildrenInXMLElement(iTag, oXMLElement)
@@ -72,7 +72,7 @@ module PBS
 
       # Add a Shortcut in an XML element
       #
-      # Parameters:
+      # Parameters::
       # * *iShortcut* (_Shortcut_): The Shortcut to export
       # * *oXMLElement* (<em>REXML::Element</em>): XML element
       def addShortcutInXMLElement(iShortcut, oXMLElement)

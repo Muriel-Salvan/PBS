@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -13,7 +13,7 @@ module PBS
 
       # Execute the import
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParentWindow)
@@ -36,7 +36,7 @@ module PBS
 
       # Import XML data from a file
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iFileName* (_String_): File name
       def importXMLData(ioController, iFileName)
@@ -44,7 +44,7 @@ module PBS
           lXML = REXML::Document.new(iFile)
           lTagsElement = lXML.root.elements['tags']
           if (lTagsElement == nil)
-            logErr "XML file does not have a \"tags\" tag. Invalid XML file, ignoring it."
+            log_err "XML file does not have a \"tags\" tag. Invalid XML file, ignoring it."
           else
             # Keep a correspondance between the IDs given to Tags and the real Tags associated to it
             # map< Integer, Tag >
@@ -54,7 +54,7 @@ module PBS
             # And now the Shortcuts
             lShortcutsElement = lXML.root.elements['shortcuts']
             if (lShortcutsElement == nil)
-              logErr "XML file does not have a \"shortcuts\" tag. Invalid XML file, ignoring it."
+              log_err "XML file does not have a \"shortcuts\" tag. Invalid XML file, ignoring it."
             else
               ioController.setProgressionText('Import Shortcuts')
               ioController.addProgressionRange(lShortcutsElements.elements.size)
@@ -72,7 +72,7 @@ module PBS
                 iShortcutElement.elements['tags'].elements.each do |iTagElement|
                   lTag = lIDsToTags[iTagElement.attributes['id'].to_i]
                   if (lTag == nil)
-                    logBug "Shortcut #{iShortcutElement.attributes['name']} was referencing Tag of ID #{iTagElement.attributes['id'].to_i}, but no Tag was registered under this ID in the XML file. Ignoring this Tag."
+                    log_bug "Shortcut #{iShortcutElement.attributes['name']} was referencing Tag of ID #{iTagElement.attributes['id'].to_i}, but no Tag was registered under this ID in the XML file. Ignoring this Tag."
                   else
                     lTags[lTag] = nil
                   end
@@ -96,7 +96,7 @@ module PBS
 
       # Import Tags encoded in an XML tag
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The controller
       # * *iTagsElement* (<em>REXML::Element</em>): XML element containing every <tag> XML tag
       # * *oParentTag* (_Tag_): The Tag in which we will instantiate the found Tags

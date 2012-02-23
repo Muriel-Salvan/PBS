@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -27,7 +27,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window
       # * *iType* (_ShortcutType_): The Shortcut Type used
       # * *iController* (_Controller_): The Controller
@@ -90,7 +90,7 @@ module PBS
 
       # Create the metadata corresponding to the metadata panel
       #
-      # Return:
+      # Return::
       # * <em>map<String,Object></em>: The corresponding metadata
       def getData
         rMetadata = {}
@@ -103,7 +103,7 @@ module PBS
 
       # Set the metadata panel's content from a given metadata
       #
-      # Parameters:
+      # Parameters::
       # * *iMetadata* (<em>map<String,Object></em>): The corresponding metadata
       def setData(iMetadata)
         @TCTitle.value = iMetadata['title']
@@ -115,7 +115,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iType* (_ShortcutType_): The Shortcut Type used
     # * *iController* (_Controller_): The Controller
@@ -142,7 +142,7 @@ module PBS
 
     # Get the new data from the components
     #
-    # Return:
+    # Return::
     # * _Object_: The Content
     # * <em>map<String,Object></em>: The Metadata
     def getData
@@ -151,7 +151,7 @@ module PBS
 
     # Set the data in the components
     #
-    # Parameters:
+    # Parameters::
     # * *iContent* (_Object_): The Content
     # * *iMetadata* (<em>map<String,Object></em>): The Metadata
     def setData(iContent, iMetadata)

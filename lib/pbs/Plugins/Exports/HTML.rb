@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,7 +11,7 @@ module PBS
 
       # Execute the export
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The data model controller
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(iController, iParentWindow)
@@ -81,7 +81,7 @@ module PBS
 
       # Dump a Tag, along with its sub-Tags and Shortcuts in a file, in HTML format
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The data model controller
       # * *iTag* (_Tag_): The Tag we are dumping
       # * *iShortcutsPerTag* (<em>map<Tag,list<Shortcut>></em>): The list of Shortcuts belonging to each Tag
@@ -103,7 +103,7 @@ module PBS
 
       # Dump a Shortcut in an HTML format
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The data model controller
       # * *iShortcut* (_Shortcut_): The Shortcut to dump
       # * *oFile* (_IO_): The file to write the dump to
@@ -116,7 +116,7 @@ module PBS
         when 'Shell'
           oFile << "<LI><A HREF=\"#{iShortcut.Content}\" TYPE=\"#{lTypeName}\" ICON=\"#{getBitmapStandardURI(iShortcut.Metadata['icon'])}\">#{iShortcut.Metadata['title']}</A></LI>\n"
         else
-          logErr "Unknown Shortcut type for HTML export plugin: #{lTypeName}. Using its content summary. Need to adapt HTML plugin."
+          log_err "Unknown Shortcut type for HTML export plugin: #{lTypeName}. Using its content summary. Need to adapt HTML plugin."
           oFile << "<LI><A HREF=\"#{iShortcut.Type.getContentSummary(iShortcut.Content)}\" TYPE=\"#{lTypeName}\" ICON=\"#{getBitmapStandardURI(iShortcut.Metadata['icon'])}\">#{iShortcut.Metadata['title']}</A></LI>\n"
         end
         iController.incProgression

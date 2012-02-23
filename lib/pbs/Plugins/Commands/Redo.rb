@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,7 +11,7 @@ module PBS
 
       # Redo last undone operation
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       def execute(ioController)
         # Get the last redoable operation

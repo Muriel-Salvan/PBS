@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -57,7 +57,7 @@ module PBS
                 @Clipboard_AlreadyProcessingDelete = false
               end
             else
-              logBug 'We have been notified of a clipboard Cut acknowledgement, but no item was marked as to be Cut.'
+              log_bug 'We have been notified of a clipboard Cut acknowledgement, but no item was marked as to be Cut.'
             end
           end
           # Deactivate the Paste command
@@ -71,7 +71,7 @@ module PBS
           when Wx::ID_COPY
             lCopyName = 'Copy'
           else
-            logBug "Unsupported copy mode from the clipboard: #{@Clipboard_CopyMode}."
+            log_bug "Unsupported copy mode from the clipboard: #{@Clipboard_CopyMode}."
           end
           if (@Clipboard_CopyID != @CopiedID)
             # Here, we have another application of PBS that has put data in the clipboard. It is not us anymore.
@@ -156,7 +156,7 @@ module PBS
           ioInstance, iTag = ioInstanceInfo
           if (ioInstance != nil)
             # We have to delete the instance
-            logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+            log_debug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
             accessIntegrationPlugin(iPluginID) do |iPlugin|
               # Unregister it if it was registered
               if (iActive)
@@ -177,7 +177,7 @@ module PBS
 
     # Notify the GUI that options have changed
     #
-    # Parameters:
+    # Parameters::
     # * *iOldOptions* (<em>map<Symbol,Object></em>): Old options (can be nil)
     def notifyOptionsChanged(iOldOptions)
       # Update commands for views configured in the options
@@ -318,7 +318,7 @@ module PBS
 
     # Notify that a given Tag's children list has changed
     #
-    # Parameters:
+    # Parameters::
     # * *iParentTag* (_Tag_): The Tag whose children list has changed
     # * *iOldChildrenList* (<em>list<Tag></em>): The old children list
     def notifyTagChildrenUpdate(iParentTag, iOldChildrenList)
@@ -327,7 +327,7 @@ module PBS
 
     # Mark a Tag whose data has been invalidated
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag whose data was invalidated
     # * *iOldName* (_String_): The previous name
     # * *iOldIcon* (<em>Wx::Bitmap</em>): The previous icon (can be nil)
@@ -337,7 +337,7 @@ module PBS
 
     # Mark a Shortcut whose data (content or metadata) has been invalidated
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The Shortcut whose data was invalidated
     # * *iOldContent* (_Object_): The previous content, or nil if it was not modified
     # * *iOldMetadata* (_Object_): The previous metadata, or nil if it was not modified
@@ -347,7 +347,7 @@ module PBS
 
     # Notify that a Shortcut has just been added
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The new Shortcut
     def notifyShortcutCreate(iSC)
       notifyRegisteredGUIs(:onShortcutCreate, iSC)
@@ -355,7 +355,7 @@ module PBS
 
     # Notify that a Shortcut has just been deleted
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The deleted Shortcut
     def notifyShortcutDelete(iSC)
       notifyRegisteredGUIs(:onShortcutDelete, iSC)
@@ -363,7 +363,7 @@ module PBS
 
     # Mark a Shortcut whose tags (content or metadata) have been invalidated
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The Shortcut whose Tags were invalidated
     # * *iOldTags* (<em>map<Tag,nil></em>): The old Tags set
     def notifyShortcutTagsUpdate(iSC, iOldTags)
@@ -382,7 +382,7 @@ module PBS
 
     # Notify the GUI that an object has just been copied
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The copied selection
     # * *iCopyID* (_Integer_): Unique ID identifying this Copy operation
     def notifyObjectsCopied(iSelection, iCopyID)
@@ -396,7 +396,7 @@ module PBS
 
     # Notify the GUI that an object has just been cut
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The copied selection
     # * *iCopyID* (_Integer_): Unique ID identifying this Copy operation
     def notifyObjectsCut(iSelection, iCopyID)
@@ -420,7 +420,7 @@ module PBS
 
     # Notify the GUI that a selection is being moved using Drag'n'Drop
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The copied selection
     def notifyObjectsDragMove(iSelection)
       @DragSelection = iSelection
@@ -430,7 +430,7 @@ module PBS
 
     # Notify the GUI that a selection is being copied using Drag'n'Drop
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The copied selection
     def notifyObjectsDragCopy(iSelection)
       @DragSelection = iSelection
@@ -440,7 +440,7 @@ module PBS
 
     # Notify the GUI that a selection is being invalidated using Drag'n'Drop
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The copied selection
     def notifyObjectsDragNone(iSelection)
       @DragSelection = iSelection
@@ -450,7 +450,7 @@ module PBS
 
     # Notify the GUI that a Drag'n'Drop operation has ended
     #
-    # Parameters:
+    # Parameters::
     # * *iDragResult* (_Integer_): The result of the Drag'n'Drop operation
     def notifyObjectsDragEnd(iDragResult)
       notifyRegisteredGUIs(:onObjectsDragEnd, @DragSelection, iDragResult)

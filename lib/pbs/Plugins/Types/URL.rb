@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -20,7 +20,7 @@ module PBS
 
         # Constructor
         #
-        # Parameters:
+        # Parameters::
         # * *iParent* (_Window_): The parent window
         def initialize(iParent)
           super(iParent)
@@ -41,7 +41,7 @@ module PBS
 
         # Get the content from the controls
         #
-        # Return:
+        # Return::
         # * _Object_: The corresponding content, which will be associated to a shortcut
         def getData
           return @TCURL.value
@@ -49,7 +49,7 @@ module PBS
 
         # Set the Panel's contents based on a given content
         #
-        # Parameters:
+        # Parameters::
         # * *iContent* (_Object_): The content containing values to put in the panel
         def setData(iContent)
           @TCURL.value = iContent
@@ -60,7 +60,7 @@ module PBS
       # Create an empty content.
       # This is used for putting default values in the NewShortcut dialog.
       #
-      # Return:
+      # Return::
       # * _Object_: The default content
       def createEmptyContent
         return 'http://www.google.com'
@@ -69,9 +69,9 @@ module PBS
       # Get a simple summary of a given content created by this Type.
       # This could be used in tool tips for example.
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): Content created by this type
-      # Return:
+      # Return::
       # * _String_: The content's summary
       def getContentSummary(iContent)
         return iContent
@@ -79,18 +79,18 @@ module PBS
 
       # Run a given content
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): Content created by this type
       def run(iContent)
-        lError = $rUtilAnts_Platform_Info.launchURL(iContent)
+        lError = launchURL(iContent)
         if (lError != nil)
-          logErr lError
+          log_err lError
         end
       end
 
       # Fill a given XML element with a content.
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): Content created by this type
       # * *oXMLContentElement* (<em>REXML::Element</em>): The XML element to fill with the data
       def getContentAsXMLText(iContent, oXMLContentElement)
@@ -100,9 +100,9 @@ module PBS
       # Create a content from an XML text.
       # The XML text has been created by getContentAsXMLText.
       #
-      # Parameters:
+      # Parameters::
       # * *iXMLContentElement* (<em>REXML::Element</em>): The XML element
-      # Return:
+      # Return::
       # * _Object_: Content created based on this XML element
       def createContentFromXMLText(iXMLContentElement)
         return iXMLContentElement.text
@@ -110,9 +110,9 @@ module PBS
 
       # Get the metadata best reflecting the content.
       #
-      # Parameters:
+      # Parameters::
       # * *iContent* (_Object_): The content to read from
-      # Return:
+      # Return::
       # * <em>map<String,Object></em>: The corresponding metadata
       def getMetadataFromContent(iContent)
         rMetadata = {}
@@ -120,14 +120,14 @@ module PBS
         # Get the favicon from the URL
         lURLMatch = iContent.match(/^(ftp|ftps|http|https):\/\/(.*)$/)
         if (lURLMatch == nil)
-          logErr "Could not identify a valid URL: #{iContent}"
+          log_err "Could not identify a valid URL: #{iContent}"
         else
           # Check the cache first
           if (!@@FaviconsCache.has_key?(iContent))
             # Fill the cache
             lIcon, lError = getFavicon(iContent)
             if (lIcon == nil)
-              logErr "Could not get favicon from #{iContent}: #{lError}."
+              log_err "Could not get favicon from #{iContent}: #{lError}."
             end
             @@FaviconsCache[iContent] = lIcon
           end
@@ -135,7 +135,7 @@ module PBS
         end
         lHTMLDoc, lError = getNokogiriContent(iContent)
         if (lHTMLDoc == nil)
-          logErr "Unable to read #{iContent}:\n#{lError}"
+          log_err "Unable to read #{iContent}:\n#{lError}"
         else
           lHTMLDoc.xpath('//head/title').each do |iTitleElement|
             # Found the Title from the web page
@@ -154,9 +154,9 @@ module PBS
 
       # Get the Nokogiri object corresponding to a given URL, or nil if none
       #
-      # Parameters:
+      # Parameters::
       # * *iURL* (_String_): The URL
-      # Return:
+      # Return::
       # * <em>Nokogiri::Document</em>: The corresponding document, or nil in case of failure
       # * _Exception_: The error, or nil in case of success
       def getNokogiriContent(iURL)
@@ -164,7 +164,7 @@ module PBS
         rError = nil
 
         # Get the title from the HTML header
-        lHTMLContent, rError = getURLContent(iURL) do |iHTMLContent|
+        lHTMLContent, rError = get_url_content(iURL) do |iHTMLContent|
           next iHTMLContent, nil
         end
         if (lHTMLContent != nil)
@@ -176,9 +176,9 @@ module PBS
 
       # Get the favicon associated to a URL
       #
-      # Parameters:
+      # Parameters::
       # * *iURL* (_String_): The HTML URL
-      # Return:
+      # Return::
       # * <em>Wx::Bitmap</em>: The favicon, or nil if none
       # * _Exception_: Exception, or nil if success
       def getFavicon(iURL)
@@ -190,14 +190,14 @@ module PBS
           lURLMatch = iURL.match(/^(ftp|ftps|http|https):\/\/(.*)$/)
         end
         if (lURLMatch == nil)
-          logErr "Could not identify a valid URL: #{iURL}"
+          log_err "Could not identify a valid URL: #{iURL}"
         else
           lURLProtocol, lURLServer, lURLPath = lURLMatch[1..3]
           lURLRoot = "#{lURLProtocol}://#{lURLServer}"
           # Get the HTML content
           lHTMLDoc, rError = getNokogiriContent(iURL)
           if (lHTMLDoc == nil)
-            logErr "Unable to read #{iURL}:\n#{rError}"
+            log_err "Unable to read #{iURL}:\n#{rError}"
           else
             # Try the rel="icon" and rel="shortcut icon" attributes
             ( lHTMLDoc.xpath('//head/link[@rel="icon"]') +
@@ -216,7 +216,7 @@ module PBS
                   lFaviconURL = "#{lURLRoot}/#{File.dirname(lURLPath)}/#{lFaviconURL}"
                 end
               end
-              logDebug "Found Favicon from website in URL #{lFaviconURL}"
+              log_debug "Found Favicon from website in URL #{lFaviconURL}"
               # Some websites store GIF, PNG or JPG files under extension .ico (http://xmlsoft.org/favicon.ico or http://www.gnu.org/favicon.ico)
               if (File.extname(lFaviconURL).upcase == '.ICO')
                 rIcon, rError = getBitmapFromURL(lFaviconURL, nil, [ Wx::BITMAP_TYPE_ICO, Wx::BITMAP_TYPE_GIF, Wx::BITMAP_TYPE_PNG, Wx::BITMAP_TYPE_JPEG ])
@@ -224,7 +224,7 @@ module PBS
                 rIcon, rError = getBitmapFromURL(lFaviconURL)
               end
               if (rIcon == nil)
-                logErr "Unable to get Favicon referenced in URL #{iURL} (#{lFaviconURL}): #{rError}"
+                log_err "Unable to get Favicon referenced in URL #{iURL} (#{lFaviconURL}): #{rError}"
               else
                 break
               end

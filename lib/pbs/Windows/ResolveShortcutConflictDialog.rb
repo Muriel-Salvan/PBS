@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -12,7 +12,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iSC* (_Shortcut_): The Shortcut containing existing info
     # * *iContent* (_Object_): The content issuing a conflict
@@ -31,7 +31,7 @@ module PBS
 
     # Get existing panel
     #
-    # Return:
+    # Return::
     # * <em>Wx::Panel</em>: The panel containing existing data
     def getExistingPanel
       require 'pbs/Windows/ContentMetadataPanel'
@@ -44,7 +44,7 @@ module PBS
 
     # Get conflicting panel
     #
-    # Return:
+    # Return::
     # * <em>Wx::Panel</em>: The panel containing conflicting data
     def getConflictingPanel
       require 'pbs/Windows/ContentMetadataPanel'

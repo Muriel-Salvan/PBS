@@ -8,4 +8,4 @@ There is a handy contextual menu: try right-clicking on a Shortcut or a Tag from
 The root Tag in the main tree can be used to drop or paste content. Selecting the root Tag selects all Tags and Shortcuts.
 Everything in PBS is undoable, even opening a new file, overwriting existing work.
 It is very easy to contribute to PBS by writing plugins for importing/exporting, for integrating PBS in other places, for creating new Shortcuts types. Check the documentation on http://pbstool.sourceforge.net/wiki/index.php/PBS_internal_architecture
-PBS has been developed by Muriel Salvan: murielsalvan@users.sourceforge.net
+PBS has been developed by Muriel Salvan: muriel@x-aeon.com

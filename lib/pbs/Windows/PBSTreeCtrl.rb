@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -12,7 +12,7 @@ module Wx
     # Clone method
     # TODO (WxRuby): Delete when Wx::Bitmap.clone will exist
     #
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The clone
     def clone
       return Wx::Bitmap.from_image(convert_to_image)
@@ -33,7 +33,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The data model controller
       # * *iPBSTreeCtrl* (_PBSTreeCtrl_): The PBS tree component that uses this drop target
       def initialize(iController, iPBSTreeCtrl)
@@ -70,11 +70,11 @@ module PBS
       # Use a cache of the last hovered item (otherwise it would be far too much CPU consuming as on_drag_over is always repeatedly called even if the mous does not move).
       # Expand Tag items on which the mouse stays hovering.
       #
-      # Parameters:
+      # Parameters::
       # * *iMouseX* (_Integer_): The x coordinate of the mouse.
       # * *iMouseY* (_Integer_): The y coordinate of the mouse.
       # * *iSuggestedResult* (_Integer_): Suggested value for return value. Determined by SHIFT or CONTROL key states.
-      # Return:
+      # Return::
       # * _Integer_: Returns the desired operation or Wx::DragNone. This is used for optical feedback from the side of the drop source, typically in form of changing the icon.
       def on_drag_over(iMouseX, iMouseY, iSuggestedResult)
         rResult = Wx::DRAG_NONE
@@ -98,7 +98,7 @@ module PBS
             when Wx::DRAG_COPY
               lCopyMode = Wx::ID_COPY
             else
-              logBug "Unknown suggested result: #{iSuggestedResult}"
+              log_bug "Unknown suggested result: #{iSuggestedResult}"
             end
             lPasteOK, lErrors = isPasteAuthorized?(
               @Controller,
@@ -163,11 +163,11 @@ module PBS
 
       # Called after on_drop returns true. By default this will usually get_data and will return the suggested default value.
       #
-      # Parameters:
+      # Parameters::
       # * *iMouseX* (_Integer_): The x coordinate of the mouse.
       # * *iMouseY* (_Integer_): The y coordinate of the mouse.
       # * *iSuggestedResult* (_Integer_): Suggested value for return value. Determined by SHIFT or CONTROL key states.
-      # Return:
+      # Return::
       # * _Integer_: Returns the desired operation or Wx::DragNone. This is used for optical feedback from the side of the drop source, typically in form of changing the icon.
       def on_data(iMouseX, iMouseY, iSuggestedResult)
         # Read what is being dragged in the source
@@ -191,7 +191,7 @@ module PBS
         when Wx::DRAG_COPY
           lCopyMode = Wx::ID_COPY
         else
-          logBug "Unknown suggested result: #{iSuggestedResult}"
+          log_bug "Unknown suggested result: #{iSuggestedResult}"
         end
         lPasteOK, lErrors = isPasteAuthorized?(
           @Controller,
@@ -206,17 +206,17 @@ module PBS
           end
           return iSuggestedResult
         else
-          logErr "Can't drop because of #{lErrors.size} errors:\n#{lErrors.join("\n")}"
+          log_err "Can't drop because of #{lErrors.size} errors:\n#{lErrors.join("\n")}"
           return Wx::DRAG_NONE
         end
       end
 
       # Called when the user drops a data object on the target. Return false to veto the operation.
       #
-      # Parameters:
+      # Parameters::
       # * *iMouseX* (_Integer_): The x coordinate of the mouse.
       # * *iMouseY* (_Integer_): The y coordinate of the mouse.
-      # Return:
+      # Return::
       # * _Boolean_: true to accept the data, false to veto the operation.
       def on_drop(iMouseX, iMouseY)
         # Here we are certain that we can drop, all the checks have been made in on_drag_over
@@ -241,7 +241,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iParent* (<em>Wx::Window</em>): Parent window
       # * *iToolTip* (_String_): The tool tip to display
       # * *iPosition* (<em>Wx::Point</em>): Position to give to the window
@@ -282,7 +282,7 @@ module PBS
 
     # Set the Root Tag to display. this can be any Tag, or the real root Tag
     #
-    # Parameters:
+    # Parameters::
     # * *iRootTag* (_Tag_): The new Root Tag to consider in the display
     def setRootTag(iRootTag)
       # Don't reset everything if nothing changed
@@ -315,7 +315,7 @@ module PBS
 
     # Notify that the hint previously created is destroyed
     #
-    # Parameters:
+    # Parameters::
     # * *iHintWindow* (_HintFrame_): The window being killed
     def notifyHintKilled(iHintWindow)
       @LastToolTip = nil
@@ -323,7 +323,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iController* (_Controller_): The data model controller
     # * *iWindow* (<em>Wx::Window</em>): The parent window
     def initialize(iController, iWindow)
@@ -470,7 +470,7 @@ module PBS
               end
             end
           else
-            logBug "We are editing an item of unknown ID: #{lID}."
+            log_bug "We are editing an item of unknown ID: #{lID}."
           end
         end
         # We always veto the event, as the label was forcefully modified by notifiers during this event
@@ -522,10 +522,10 @@ module PBS
 
     # Compare 2 items for sort
     #
-    # Parameters:
+    # Parameters::
     # * *iItemID1* (_Integer_): First item ID
     # * *iItemID2* (_Integer_): Second item ID
-    # Return:
+    # Return::
     # * _Integer: (First item - Second item)
     def on_compare_items(iItemID1, iItemID2)
       rCompare = 0
@@ -547,7 +547,7 @@ module PBS
 
     # Notify that the mouse is not on the same item anymore
     #
-    # Parameters:
+    # Parameters::
     # * *iItemID* (_Integer_): The new item ID the mouse is hovering (can be 0)
     # * *iMousePosition* (<em>Wx::Point</em>): The mouse position
     def notifyMouseChangedItems(iItemID, iMousePosition)
@@ -570,7 +570,7 @@ module PBS
 
     # Display a Hint
     #
-    # Parameters:
+    # Parameters::
     # * *iItemID* (_Integer_): The item ID for which we display the hint
     # * *iMousePosition* (<em>Wx::Point</em>): The mouse position to display the hint
     def displayHint(iItemID, iMousePosition)
@@ -583,7 +583,7 @@ module PBS
         when ID_SHORTCUT
           lToolTip = lObject.getContentSummary
         else
-          logBug "Asking tool tip for an item of unknwown ID: #{lID}. Ignoring it."
+          log_bug "Asking tool tip for an item of unknwown ID: #{lID}. Ignoring it."
         end
       end
       if (@LastToolTip != nil)
@@ -598,7 +598,7 @@ module PBS
 
     # Set the context menu
     #
-    # Parameters:
+    # Parameters::
     # * *iContextMenu* (<em>Wx::Menu</em>): The context menu to display on item right-click
     def setContextMenu(iContextMenu)
       @ContextMenu = iContextMenu
@@ -606,7 +606,7 @@ module PBS
 
     # Compute the drag image to use
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The new selection for the new drag image
     def computeDragImage(iSelection)
       # 1. Create the bitmap
@@ -630,7 +630,7 @@ module PBS
     # Set one of tree's node attributes to fit its associated data (Tag or Shortcut).
     # Only this method knows how to display tree nodes.
     #
-    # Parameters:
+    # Parameters::
     # * *iItemID* (_Integer_): The item of the main tree that we want to update
     def updateTreeNode(iItemID)
       lItemData = get_item_data(iItemID)
@@ -792,7 +792,7 @@ module PBS
         end
         set_item_image(iItemID, lIdxImage)
       else
-        logBug "Tree node #{iItemID} has unknown ID (#{lID}). It will be marked in the tree."
+        log_bug "Tree node #{iItemID} has unknown ID (#{lID}). It will be marked in the tree."
         lItemText = "!!! Unknown Data ID (Node ID: #{iItemID}, Data ID: #{lID}) !!!"
       end
       if ($PBS_DevDebug)
@@ -817,7 +817,7 @@ module PBS
 
     # Remove a branch
     #
-    # Parameters:
+    # Parameters::
     # * *iNodeID* (_Integer_): The node ID, root of the branch to remove
     def removeTreeBranch(iNodeID)
       # First remove children branches
@@ -831,13 +831,13 @@ module PBS
         # Remove a Tag reference
         lNodeID = @TagsToMainTree.delete(lObject)
         if (lNodeID != iNodeID)
-          logBug "We are removing node ID #{iNodeID}, referenced for Tag #{lObject.Name}, but this Tag ID was registered for another node of ID #{lNodeID}."
+          log_bug "We are removing node ID #{iNodeID}, referenced for Tag #{lObject.Name}, but this Tag ID was registered for another node of ID #{lNodeID}."
         end
       when ID_SHORTCUT
         # Remove a Shortcut reference
         # Nothing to do
       else
-        logBug "We are trying to remove a tree node (ID = #{iNodeID}) that is not registered as a Tag not a Shortcut (ID = #{lID})."
+        log_bug "We are trying to remove a tree node (ID = #{iNodeID}) that is not registered as a Tag not a Shortcut (ID = #{lID})."
       end
       # And remove the node itself
       delete(iNodeID)
@@ -845,7 +845,7 @@ module PBS
 
     # Insert a Tag in the main tree, and recursively all its children Tags and associated Shortcuts
     #
-    # Parameters:
+    # Parameters::
     # * *iParentID* (_Integer_): The node ID where the Tag will be inserted (can be nil for the first node to insert)
     # * *iTag* (_Tag_): The Tag to insert
     def insertTreeBranch(iParentID, iTag)
@@ -889,7 +889,7 @@ module PBS
 
     # Add information about a Shortcut into the tree
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The Shortcut to add
     def addShortcutInfo(iSC)
       if (iSC.Tags.empty?)
@@ -917,7 +917,7 @@ module PBS
     # Securely update the tree.
     # This method freezes the tree and ensures it becomes unfrozen.
     #
-    # Parameters:
+    # Parameters::
     # * *CodeBlock*: Code to execute while the tree is frozen
     def updateTree
       # First, freeze it for better performance during update
@@ -937,7 +937,7 @@ module PBS
 
     # Delete an object (found in item_data) that is a direct child of a given Node ID
     #
-    # Parameters:
+    # Parameters::
     # * *iParentNodeID* (_Integer_): The parent node ID
     # * *iObject* (_Object_): The object to find
     def deleteObjectFromTree(iParentNodeID, iObject)
@@ -954,7 +954,7 @@ module PBS
       end
       # Just a little Bug detection mechanism ... never know.
       if (!lFound)
-        logBug "Object #{iObject} should have been inserted under node #{iParentNodeID}). However no trace of this object in the children nodes."
+        log_bug "Object #{iObject} should have been inserted under node #{iParentNodeID}). However no trace of this object in the children nodes."
       end
     end
 
@@ -984,7 +984,7 @@ module PBS
 
     # Notify that a given Tag's children list has changed
     #
-    # Parameters:
+    # Parameters::
     # * *iParentTag* (_Tag_): The Tag whose children list has changed
     # * *iOldChildrenList* (<em>list<Tag></em>): The old children list
     def onTagChildrenUpdate(iParentTag, iOldChildrenList)
@@ -1023,7 +1023,7 @@ module PBS
 
     # A Shortcut has just been added
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The added Shortcut
     def onShortcutCreate(iSC)
       # We update the tree accordingly
@@ -1032,7 +1032,7 @@ module PBS
 
     # A Shortcut has just been deleted
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The deleted Shortcut
     def onShortcutDelete(iSC)
       # We update the tree accordingly
@@ -1055,7 +1055,7 @@ module PBS
 
     # An update has occured on a Tag's data
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag whose data was invalidated
     # * *iOldName* (_String_): The previous name
     # * *iOldIcon* (<em>Wx::Bitmap</em>): The previous icon (can be nil)
@@ -1072,7 +1072,7 @@ module PBS
 
     # An update has occured on a Shortcut's data
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The Shortcut whose data was invalidated
     # * *iOldContent* (_Object_): The previous content, or nil if it was not modified
     # * *iOldMetadata* (_Object_): The previous metadata, or nil if it was not modified
@@ -1092,7 +1092,7 @@ module PBS
 
     # An update has occured on a Shortcut's Tags
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The Shortcut whose Tags were invalidated
     # * *iOldTags* (<em>map<Tag,nil></em>): The old Tags set
     def onShortcutTagsUpdate(iSC, iOldTags)
@@ -1114,7 +1114,7 @@ module PBS
 
     # Update all items affected by a multiple selection
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The selection
     def refreshSelectedItems(iSelection)
       # Update each item impacted by this selection
@@ -1142,7 +1142,7 @@ module PBS
 
     # A selection has been copied
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The copied selection
     def onObjectsCopied(iSelection)
       @CopySelection = iSelection
@@ -1152,7 +1152,7 @@ module PBS
 
     # A selection has been cut
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The copied selection
     def onObjectsCut(iSelection)
       @CopySelection = iSelection
@@ -1162,7 +1162,7 @@ module PBS
 
     # A marked to be copied/cut object has been cancelled
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The copied selection
     def onCancelCopy(iSelection)
       lOldSelection = @CopySelection
@@ -1174,7 +1174,7 @@ module PBS
     # A marked to be cut selection has been effecively cut.
     # This notifications comes after having deleted the object already. So its goal is to only remove some context the GUI could have stored regarding the Cut operation.
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The copied selection
     def onCutPerformed(iSelection)
       @CopySelection = nil
@@ -1183,7 +1183,7 @@ module PBS
 
     # A selection is being moved using Drag'n'Drop
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The selection
     def onObjectsDragMove(iSelection)
       @DragSelection = iSelection
@@ -1193,7 +1193,7 @@ module PBS
 
     # A selection is being copied using Drag'n'Drop
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The selection
     def onObjectsDragCopy(iSelection)
       @DragSelection = iSelection
@@ -1203,7 +1203,7 @@ module PBS
 
     # A selection is being invalidated using Drag'n'Drop
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The selection
     def onObjectsDragNone(iSelection)
       @DragSelection = iSelection
@@ -1213,7 +1213,7 @@ module PBS
 
     # A Drag'n'Drop operation has ended
     #
-    # Parameters:
+    # Parameters::
     # * *iSelection* (_MultipleSelection_): The selection
     # * *iDragResult* (_Integer_): The result of the Drag'n'Drop operation
     def onObjectsDragEnd(iSelection, iDragResult)
@@ -1225,17 +1225,17 @@ module PBS
 
     # Display some debugging info
     def onDevDebug
-      logDebug '=== Correspondance between Tag IDs and Node IDs:'
+      log_debug '=== Correspondance between Tag IDs and Node IDs:'
       @TagsToMainTree.each do |iTag, iNodeID|
-        logDebug "#{iTag.Name} => #{iNodeID}"
+        log_debug "#{iTag.Name} => #{iNodeID}"
       end
     end
 
     # Get the Tag corresponding to the parent of a node
     #
-    # Parameters:
+    # Parameters::
     # * *iNodeID* (_Integer_): The node whose parent we want
-    # Return:
+    # Return::
     # * _Tag_: The Tag corresponding to the parent node (nil for the Root Tag)
     def getParentTag(iNodeID)
       rParentTag = nil
@@ -1243,7 +1243,7 @@ module PBS
       lParentNodeID = get_item_parent(iNodeID)
       lParentID, rParentTag, lKey = get_item_data(lParentNodeID)
       if (lParentID != ID_TAG)
-        logBug "Parent node #{lParentNodeID} should be flagged as a Tag, but is flagged as #{lParentID}."
+        log_bug "Parent node #{lParentNodeID} should be flagged as a Tag, but is flagged as #{lParentID}."
       end
 
       return rParentTag
@@ -1251,7 +1251,7 @@ module PBS
 
     # Return if the tree selection has effectively changed compared to the cache in @OldSelection
     #
-    # Return:
+    # Return::
     # * _Boolean_: Has tree selection changed ?
     def selectionChanged?
       rResult = false
@@ -1267,7 +1267,7 @@ module PBS
 
     # Is the Root Tag selected alone ?
     #
-    # Return:
+    # Return::
     # * _Boolean_: Is the Root Tag selected alone ?
     def isRootTagOnlySelected?
       lSelections = selections
@@ -1279,7 +1279,7 @@ module PBS
 
     # Get the currently selected object and its ID from the tree
     #
-    # Return:
+    # Return::
     # * _MultipleSelection_: The selection
     def getCurrentSelection
       rSelection = MultipleSelection.new(@Controller)
@@ -1295,7 +1295,7 @@ module PBS
           lParentTag = getParentTag(iSelectionID)
           rSelection.selectShortcut(lObject, lParentTag)
         else
-          logBug "One of the selected items has an unknown ID (#{lID})."
+          log_bug "One of the selected items has an unknown ID (#{lID})."
         end
       end
 
@@ -1305,9 +1305,9 @@ module PBS
     # Get the Tag behind mouse coordinates from the main tree.
     # Uses a cache with @OldHoveredNodeID and @OldHoveredTag
     #
-    # Parameters:
+    # Parameters::
     # * *iMousePos* (<em>Wx::Point</em>): Mouse coordinates in the main tree's reference
-    # Return:
+    # Return::
     # * _Tag_: The Tag the mouse is hovering, or nil if none.
     def getHoveredTag(iMousePos)
       # Check which one we are hovering.

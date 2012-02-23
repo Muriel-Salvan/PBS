@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -31,7 +31,7 @@ module PBS
 
       # Execute the import
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParentWindow* (<em>Wx::Window</em>): The parent window to display the dialog box (can be nil)
       def execute(ioController, iParentWindow)
@@ -54,14 +54,14 @@ module PBS
 
       # Import HTML data from a given Nokogiri element
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iElement* (<em>Nokogiri::XML::Element</em>): The element to retrieve data from
-      # * *iHeadersStack* (<em>list<[String,Tag]></em>): The stack of headers encountered and their corresponding Tag
+      # * *iHeadersStack* (<em>list< [String,Tag] ></em>): The stack of headers encountered and their corresponding Tag
       # * *iTagsDefinedInThisGroup* (<em>list<Tag></em>): List that keeps track of all Tags defined in this group
       # * *iHeaderJustDefined* (_Boolean_): Has last header just been defined ?
-      # Return:
-      # * <em>list<[String,Tag]></em>: The headers stack at the end of this method. This is useful in the case we want to just ignore some HTML tags (such as <dt>): the caller will use them at its level also.
+      # Return::
+      # * <em>list< [String,Tag] ></em>: The headers stack at the end of this method. This is useful in the case we want to just ignore some HTML tags (such as <dt>): the caller will use them at its level also.
       # * <em>list<Tag></em>: List that keeps track of all Tags defined in this group
       # * _Boolean_: Has last header just been defined ?
       def importHTMLDataFromElement(ioController, iElement, iHeadersStack, iTagsDefinedInThisGroup, iHeaderJustDefined)
@@ -167,7 +167,7 @@ module PBS
               when 'Shell'
                 lContent = iChildElement.attributes['href'].to_s
               else
-                logBug "Unknown link type: #{lTypeName}. Ignoring it."
+                log_bug "Unknown link type: #{lTypeName}. Ignoring it."
               end
               if (lContent != nil)
                 lIconURL = iChildElement.attributes['icon_uri'].to_s
@@ -197,7 +197,7 @@ module PBS
               rHeaderJustDefined = false
             end
           else
-            logBug "Unknown Tag: #{iChildElement.name}. Content: #{iChildElement.content}"
+            log_bug "Unknown Tag: #{iChildElement.name}. Content: #{iChildElement.content}"
           end
         end
 
@@ -206,7 +206,7 @@ module PBS
 
       # Import HTML data
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iFileName* (_String_): File name
       def importHTMLData(ioController, iFileName)

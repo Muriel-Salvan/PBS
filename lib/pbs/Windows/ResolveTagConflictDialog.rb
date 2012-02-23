@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -12,7 +12,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iParent* (<em>Wx::Window</em>): The parent
     # * *iTag* (_Tag_): The existing Tag
     # * *iName* (_String_): Tag name getting into conflict
@@ -29,7 +29,7 @@ module PBS
 
     # Get existing panel
     #
-    # Return:
+    # Return::
     # * <em>Wx::Panel</em>: The panel containing existing data
     def getExistingPanel
       require 'pbs/Windows/TagMetadataPanel'
@@ -42,7 +42,7 @@ module PBS
 
     # Get conflicting panel
     #
-    # Return:
+    # Return::
     # * <em>Wx::Panel</em>: The panel containing conflicting data
     def getConflictingPanel
       require 'pbs/Windows/TagMetadataPanel'

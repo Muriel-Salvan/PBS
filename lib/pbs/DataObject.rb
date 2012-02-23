@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -21,7 +21,7 @@ module PBS
 
       # Set the data to send to the clipboard
       #
-      # Parameters:
+      # Parameters::
       # * *iCopyType* (_Integer_): Type of the copy (Wx::ID_COPY/Wx::ID_CUT)
       # * *iCopyID* (_Integer_): ID of the copy
       # * *iSerializedSelection* (<em>MultipleSelection::Serialized</em>): The serialized selection (can be nil for acks)
@@ -36,7 +36,7 @@ module PBS
 
       # Get the data from the clipboard
       #
-      # Return:
+      # Return::
       # * _Integer_: Type of the copy (Wx::ID_COPY/Wx::ID_CUT)
       # * _Integer_: ID of the copy
       # * <em>MultipleSelection::Serialized</em>: The serialized selection (can be nil for acks)
@@ -46,7 +46,7 @@ module PBS
 
       # Get the data format
       #
-      # Return:
+      # Return::
       # * <em>Wx::DataFormat</em>: The data format
       def self.getDataFormat
         if (!defined?(@@PBS_CLIPBOARD_DATA_FORMAT))
@@ -58,9 +58,9 @@ module PBS
 
       # Get the list of all supported formats.
       #
-      # Parameters:
+      # Parameters::
       # * *iDirection* (_Object_): ? Not documented
-      # Return:
+      # Return::
       # * <em>list<Wx::DataFormat></em>: List of supported data formats
       def get_all_formats(iDirection)
         if (@DataAsText != nil)
@@ -72,7 +72,7 @@ module PBS
 
       # Method used by the clipboard itself to fill data
       #
-      # Parameters:
+      # Parameters::
       # * *iFormat* (<em>Wx::DataFormat</em>): The format used
       # * *iData* (_String_): The data
       def set_data(iFormat, iData)
@@ -82,15 +82,15 @@ module PBS
         when DataObjectSelection.getDataFormat
           @Data = iData
         else
-          logBug "Set unknown format: #{iFormat}"
+          log_bug "Set unknown format: #{iFormat}"
         end
       end
 
       # Method used by Wxruby to retrieve the data
       #
-      # Parameters:
+      # Parameters::
       # * *iFormat* (<em>Wx::DataFormat</em>): The format used
-      # Return:
+      # Return::
       # * _String_: The data
       def get_data_here(iFormat)
         rData = nil
@@ -101,7 +101,7 @@ module PBS
         when DataObjectSelection.getDataFormat
           rData = @Data
         else
-          logBug "Asked unknown format: #{iFormat}"
+          log_bug "Asked unknown format: #{iFormat}"
         end
 
         return rData
@@ -109,9 +109,9 @@ module PBS
 
       # Redefine this method to be used with Wx::DataObjectComposite that requires it
       #
-      # Parameters:
+      # Parameters::
       # * *iFormat* (<em>Wx::DataFormat</em>): The format used
-      # Return:
+      # Return::
       # * _Integer_: The data size
       def get_data_size(iFormat)
         rDataSize = 0
@@ -123,7 +123,7 @@ module PBS
         when DataObjectSelection.getDataFormat
           rDataSize = @Data.length
         else
-          logBug "Asked unknown format for size: #{iFormat}"
+          log_bug "Asked unknown format for size: #{iFormat}"
         end
 
         return rDataSize
@@ -136,7 +136,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iDragImage* (<em>Wx::DragImage</em>): The drag image to display
       # * *iWindow* (<em>Wx::Window</em>): The window initiating the Drag'n'Drop
       # * *iSelection* (_MultipleSelection_): The selection being dragged
@@ -159,9 +159,9 @@ module PBS
 
       # Change appearance.
       #
-      # Parameters:
+      # Parameters::
       # * *iEffect* (_Integer_): The effect to implement. One of DragCopy, DragMove, DragLink and DragNone.
-      # Return:
+      # Return::
       # * _Boolean_: false if you want default feedback, or true if you implement your own feedback. The return values is ignored under GTK.
       def give_feedback(iEffect)
         # Drag the image

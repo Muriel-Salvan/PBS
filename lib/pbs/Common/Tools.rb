@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -44,9 +44,9 @@ module PBS
     # This method is protected against missing files.
     # This is typically used to load icons from constants during the require period
     #
-    # Parameters:
+    # Parameters::
     # * *iFileSubName* (_String_): File path, relative to the Graphics directory
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The corresponding bitmap
     def getGraphic(iFileSubName)
       rBitmap, lError = getBitmapFromURL("#{$PBS_GraphicsDir}/#{iFileSubName}")
@@ -55,10 +55,10 @@ module PBS
         # Set the broken image if it exists
         lBrokenFileName = "#{$PBS_GraphicsDir}/Broken.png"
         if (File.exist?(lBrokenFileName))
-          logBug "Image #{$PBS_GraphicsDir}/#{iFileSubName} could not be loaded:\n#{lError}"
+          log_bug "Image #{$PBS_GraphicsDir}/#{iFileSubName} could not be loaded:\n#{lError}"
           rBitmap = Wx::Bitmap.new(lBrokenFileName)
         else
-          logBug "Image #{$PBS_GraphicsDir}/#{iFileSubName} could not be loaded and image #{$PBS_GraphicsDir}/Broken.png does not exist:\n#{lError}."
+          log_bug "Image #{$PBS_GraphicsDir}/#{iFileSubName} could not be loaded and image #{$PBS_GraphicsDir}/Broken.png does not exist:\n#{lError}."
           rBitmap = Wx::Bitmap.new
         end
       end
@@ -69,21 +69,21 @@ module PBS
     # Find an executable file in the system path directories.
     # It uses discrete extensions also, platform specific (for example optional .exe suffix for Windows)
     #
-    # Parameters:
+    # Parameters::
     # * *iExeName* (_String_): Name of file to search for
-    # Return:
+    # Return::
     # * _String_: The real complete file name, or nil if none found.
     def findExeInPath(iExeName)
       rFileName = nil
 
-      $rUtilAnts_Platform_Info.getSystemExePath.each do |iDir|
+      getSystemExePath.each do |iDir|
         # First, check the file itself
         if (File.exists?("#{iDir}/#{iExeName}"))
           # Found
           rFileName = "#{iDir}/#{iExeName}"
         else
           # Check possible extensions
-          $rUtilAnts_Platform_Info.getDiscreteExeExtensions.each do |iDiscreteExt|
+          getDiscreteExeExtensions.each do |iDiscreteExt|
             if (File.exists?("#{iDir}/#{iExeName}#{iDiscreteExt}"))
               # Found
               rFileName = "#{iDir}/#{iExeName}#{iDiscreteExt}"
@@ -101,7 +101,7 @@ module PBS
 
     # Set recursively children of a window as readonly
     #
-    # Parameters:
+    # Parameters::
     # * *iWindow* (<em>Wx::Window</em>): The window
     def setChildrenReadOnly(iWindow)
       iWindow.children.each do |iChildWindow|
@@ -119,7 +119,7 @@ module PBS
 
     # Apply bitmap layers based on flags on a given bitmap
     #
-    # Parameters:
+    # Parameters::
     # * *ioBitmap* (<em>Wx::Bitmap</em>): The bitmap to modify
     # * *iMasks* (<em>list<Wx::Bitmap></em>): The masks to apply to the bitmap
     def applyBitmapLayers(ioBitmap, iMasks)
@@ -152,9 +152,9 @@ module PBS
 
     # Create a String converting accents characters to their equivalent without accent.
     #
-    # Parameters:
+    # Parameters::
     # * *iString* (_String_): The string to convert
-    # Return:
+    # Return::
     # * _String_: The converted string
     def convertAccentsString(iString)
       rConverted = iString.clone
@@ -168,11 +168,11 @@ module PBS
 
     # Dump a Tag in a string
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag to dump
     # * *iPrefix* (_String_): Prefix of each dump line [optional = '']
     # * *iLastItem* (_Boolean_): Is this item the last one of the list it belongs to ? [optional = true]
-    # Return:
+    # Return::
     # * _String_: The tag dumped
     def dumpTag(iTag, iPrefix = '', iLastItem = true)
       rDump = ''
@@ -194,9 +194,9 @@ module PBS
 
     # Dump a Shortcuts list
     #
-    # Parameters:
+    # Parameters::
     # * *iShortcutsList* (<em>list<Shortcut></em>): The Shortcuts list to dump
-    # Return:
+    # Return::
     # * _String_: The string of Shortcuts dumped
     def dumpShortcutsList(iShortcutsList)
       rDump = ''
@@ -220,9 +220,9 @@ module PBS
     # Create a standard URI for a given bitmap
     # If the bitmap is nil, return an empty URI with header.
     #
-    # Parameters:
+    # Parameters::
     # * *iBitmap* (<em>Wx::Bitmap</em>): The bitmap to encode (can be nil)
-    # Return:
+    # Return::
     # * _String_: The corresponding URI
     def getBitmapStandardURI(iBitmap)
       rEncodedBitmap = 'data:image/png;base64,'
@@ -239,15 +239,15 @@ module PBS
     # The data string can have an empty content (but still a header) to identify a nil bitmap (used to indicate sometimes default bitmaps)
     # Currently it supports only images encoded in Base64 format.
     #
-    # Parameters:
+    # Parameters::
     # * *iIconData* (_String_): The icon data
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The corresponding bitmap, or nil otherwise
     def createBitmapFromStandardURI(iIconData)
       rIconBitmap = nil
 
       # Don't use URL caching for those ones.
-      accessFile(iIconData, :LocalFileAccess => true) do |iFileName, iFileBaseName|
+      access_file(iIconData, :local_file_access => true) do |iFileName, iFileBaseName|
         rIconBitmap = Wx::Bitmap.new(iFileName)
       end
 
@@ -283,13 +283,13 @@ module PBS
     # 2.2.1. If at least 1 of the primary selected Tags is in conflict with children of the Tag we import to:
     # 2.2.1.1. Fail (the operation would have been cancelled anyway due to Tags doublons)
     #
-    # Parameters:
+    # Parameters::
     # * *iController* (_Controller_): The controller
     # * *iSelection* (_MultipleSelection_): The selection in which we paste (nil in case of the Root Tag)
     # * *iCopyType* (_Integer_): The copy type of what is to be pasted (Wx::ID_COPY or Wx::ID_CUT)
     # * *iLocalSelection* (_MultipleSelection_): The local selection that can be pasted if the source data to be copied is us (nil if external application source of data to be pasted)
     # * *iSerializedSelection* (<em>MultipleSelection::Serialized</em>): The serialized selection to be pasted (nil if we don't have the information)
-    # Return:
+    # Return::
     # * _Boolean_: Can we paste ?
     # * <em>list<String></em>: Reasons why we can't paste (empty in case of success)
     def isPasteAuthorized?(iController, iSelection, iCopyType, iLocalSelection, iSerializedSelection)
@@ -472,7 +472,7 @@ module PBS
     # It resizes the image to merge to the DC dimensions.
     # It makes a logical or between the 2 masks.
     #
-    # Parameters:
+    # Parameters::
     # * *ioDC* (<em>Wx::DC</em>): The device context on which it is merged
     # * *ioMaskDC* (<em>Wx::DC</em>): The device context on which the mask is merged
     # * *iBitmap* (<em>Wx::Bitmap</em>): The bitmap to merge
@@ -492,7 +492,7 @@ module PBS
 
     # Save data in a file
     #
-    # Parameters:
+    # Parameters::
     # * *iController* (_Controller_): The controller giving data
     # * *iFileName* (_String_): The file name to save into
     def saveData(iController, iFileName)
@@ -510,7 +510,7 @@ module PBS
 
     # Open data from a file
     #
-    # Parameters:
+    # Parameters::
     # * *ioController* (_Controller_): The controller that will get data
     # * *iFileName* (_String_): The file name to load from
     def openData(ioController, iFileName)
@@ -539,7 +539,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iMarshallableObject* (_Object_): The marshallable object to store
       # * *iID* (_Integer_): ID used to identify this marshallable object type
       def initialize(iMarshallableObject, iID)
@@ -552,9 +552,9 @@ module PBS
     # Get a marshallable version of an object.
     # It calls recursively in case of embedded maps or arrays.
     #
-    # Parameters:
+    # Parameters::
     # * *iObject* (_Object_): The source object
-    # Return:
+    # Return::
     # * _Object_: The object ready to be marshalled
     def getMarshallableObject(iObject)
       rMarshallableObject = iObject
@@ -581,9 +581,9 @@ module PBS
     # Get an object from its marshallable version.
     # It calls recursively in case of embedded maps.
     #
-    # Parameters:
+    # Parameters::
     # * *iMarshallableObject* (_Object_): The marshallable object
-    # Return:
+    # Return::
     # * _Object_: The original object
     def getFromMarshallableObject(iMarshallableObject)
       rObject = iMarshallableObject
@@ -594,7 +594,7 @@ module PBS
           rObject = Wx::Bitmap.new
           rObject.setSerialized(iMarshallableObject.MarshallableObject)
         else
-          logBug "Unknown ID in marshallable object: #{iMarshallableObject.ID}. Returning marshallable object."
+          log_bug "Unknown ID in marshallable object: #{iMarshallableObject.ID}. Returning marshallable object."
         end
       elsif (iMarshallableObject.is_a?(Hash))
         rObject = {}
@@ -613,9 +613,9 @@ module PBS
 
     # Serialize options
     #
-    # Parameters:
+    # Parameters::
     # * *iOptions* (<em>map<Symbol,Object></em>): The options to be serialized
-    # Return:
+    # Return::
     # * <em>map<Symbol,Object></em>: The serialized options
     def serializeOptions(iOptions)
       lSerializableOptions = {}
@@ -639,9 +639,9 @@ module PBS
 
     # Unserialize options
     #
-    # Parameters:
+    # Parameters::
     # * *iSerializedOptions* (<em>map<Symbol,Object></em>): The serialized options
-    # Return:
+    # Return::
     # * <em>map<Symbol,Object></em>: The unserialized options
     def unserializeOptions(iSerializedOptions)
       rOptions = {}
@@ -667,7 +667,7 @@ module PBS
 
     # Save options data in a file
     #
-    # Parameters:
+    # Parameters::
     # * *iOptions* (<em>map<Symbol,Object></em>): The options
     # * *iFileName* (_String_): The file name to save into
     def saveOptionsData(iOptions, iFileName)
@@ -679,15 +679,15 @@ module PBS
           iFile.write(lData)
         end
       rescue Exception
-        logExc $!, "Exception while writing options in file #{iFileName}."
+        log_exc $!, "Exception while writing options in file #{iFileName}."
       end
     end
 
     # Open options data from a file
     #
-    # Parameters:
+    # Parameters::
     # * *iFileName* (_String_): The file name to load from
-    # Return:
+    # Return::
     # * <em>map<Symbol,Object></em>: The options
     def openOptionsData(iFileName)
       # First read the file
@@ -701,7 +701,7 @@ module PBS
 
     # Get a new Unique ID for Copy/Paste operations
     #
-    # Return:
+    # Return::
     # * _Integer_: The unique integer
     def getNewCopyID
       # Use a stupid generator, chances are quite thin to have the same results with a seed based on the current time (how can a user perform a cut simultaneously on 2 applications at the same time ?)
@@ -839,9 +839,9 @@ module PBS
 
     # Get the string representation of an accelerator
     #
-    # Parameters:
+    # Parameters::
     # * *iAccelerator* (<em>[Integer,Integer]</em>): The accelerator info
-    # Return:
+    # Return::
     # * _String_: The visual representation of this accelerator
     def getStringForAccelerator(iAccelerator)
       rResult = ''

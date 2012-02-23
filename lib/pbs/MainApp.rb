@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -15,17 +15,17 @@
 #GC.disable
 
 require 'rUtilAnts/Platform'
-RUtilAnts::Platform.initializePlatform
+RUtilAnts::Platform.install_platform_on_object
 require 'rUtilAnts/Misc'
-RUtilAnts::Misc.initializeMisc
+RUtilAnts::Misc.install_misc_on_object
 require 'rUtilAnts/GUI'
 RUtilAnts::GUI.initializeGUI
 require 'rUtilAnts/URLAccess'
-RUtilAnts::URLAccess.initializeURLAccess
+RUtilAnts::URLAccess.install_url_access_on_object
 require 'rUtilAnts/URLCache'
-RUtilAnts::URLCache.initializeURLCache
+RUtilAnts::URLCache.install_url_cache_on_object
 require 'rUtilAnts/Plugins'
-RUtilAnts::Plugins.initializePlugins
+RUtilAnts::Plugins.install_plugins_on_object
 
 # Common utilities
 require 'pbs/Common/Tools'
@@ -47,7 +47,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iPBSRootDir* (_String_): PBS root dir
     # * *iDebugOption* (_Boolean_): Is debug on ?
     # * *iStartupFileNames* (<em>list<String></em>): List of files to load at startup
@@ -64,7 +64,7 @@ module PBS
           $PBS_ReleaseInfo = eval(iFile.read)
         end
       end
-      logInfo "Starting PBS #{$PBS_ReleaseInfo[:Version]}"
+      log_info "Starting PBS #{$PBS_ReleaseInfo[:Version]}"
       super()
       @PBSRootDir, @StartupFileNames = iPBSRootDir, iStartupFileNames
       # Global constants
@@ -76,18 +76,18 @@ module PBS
 
     # Initialize the application
     #
-    # Return:
+    # Return::
     # * _Boolean_: Do we enter the event loop ?
     def on_init
       rEnterEventLoop = false
 
-      setGUIForDialogs(RUtilAnts::Logging::Logger::GUI_WX)
+      set_gui_for_dialogs(RUtilAnts::Logging::GUI_WX)
       # Protect it to display correct error messages
       begin
         # We can set a progress dialog, do it now: the user has already waited too long !!!
         setupBitmapProgress(nil, getGraphic('Splash.png'),
-          :Title => "Launching PBS #{$PBS_ReleaseInfo[:Version]}",
-          :Icon => getGraphic('Icon32.png')
+          :title => "Launching PBS #{$PBS_ReleaseInfo[:Version]}",
+          :icon => getGraphic('Icon32.png')
         ) do |ioProgressDlg|
           ioProgressDlg.setRange(6)
           # If we are in debug mode, make the GC clean memory every second.
@@ -112,7 +112,7 @@ module PBS
                   lFirstOne = false
                 end
               else
-                logErr "Unable to find file \"#{iFileName}\""
+                log_err "Unable to find file \"#{iFileName}\""
               end
             end
           end
@@ -128,7 +128,7 @@ module PBS
           # If no integration plugin is to be instantiated, bring the Options dialog
           lIntPluginActive = lController.isIntPluginActive?
           if (!lIntPluginActive)
-            logMsg 'All views have been disabled or closed. Please activate some integration plugins to use to display PBS.'
+            log_msg 'All views have been disabled or closed. Please activate some integration plugins to use to display PBS.'
             # Bring the Options dialog
             lController.executeCommand(Wx::ID_SETUP, :parentWindow => nil)
             # Check again
@@ -140,7 +140,7 @@ module PBS
           if (lController.Options[:displayStartupTips])
             lTopWindow = top_window
             if (lTopWindow == nil)
-              logErr 'No window available for tips display. Please specify at least 1 integration plugin to be used, or delete the current Options file.'
+              log_err 'No window available for tips display. Please specify at least 1 integration plugin to be used, or delete the current Options file.'
             else
               lController.showTips(lTopWindow)
             end
@@ -149,7 +149,7 @@ module PBS
           rEnterEventLoop = lIntPluginActive
         end
       rescue Exception
-        logExc $!, 'Exception occurred during startup. Quitting.'
+        log_exc $!, 'Exception occurred during startup. Quitting.'
         rEnterEventLoop = false
       end
 

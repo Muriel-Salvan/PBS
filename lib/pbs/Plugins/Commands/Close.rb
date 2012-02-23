@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -11,10 +11,10 @@ module PBS
 
       # Command that exits PBS
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *instancesToClose* (<em>list<Object></em>): The list of instances to find and close
+      #   * *instancesToClose* (<em>list<Object></em>): The list of instances to find and close
       def execute(ioController, iParams)
         lInstancesToClose = iParams[:instancesToClose]
         # Disable the selected Integration plugin instances from the Options and refresh

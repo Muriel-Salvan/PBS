@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -36,7 +36,7 @@ module PBS
 
         # Constructor
         #
-        # Parameters:
+        # Parameters::
         # * *iName* (_String_): The name
         # * *iIcon* (_String_): The icon (or nil if none)
         # * *iChildren* (<em>list<Integer></em>): The list of serialized sub-Tags IDs
@@ -50,7 +50,7 @@ module PBS
 
         # Return the name of a serialized Tag
         #
-        # Return:
+        # Return::
         # * _String_: Tag's name
         def getName
           return @Name
@@ -58,7 +58,7 @@ module PBS
 
         # Return the simple content to be pasted to the clipboard in case of a single selection of this item.
         #
-        # Return:
+        # Return::
         # * _String_: The clipboard content
         def getSingleClipContent
           return getName
@@ -68,7 +68,7 @@ module PBS
         # It is created as a sub Tag of a specified parent Tag (which can be the Root Tag).
         # It then creates recursively all its sub-Tags and associated Shortcuts.
         #
-        # Parameters:
+        # Parameters::
         # * *ioController* (_Controller_): The datamodel controller
         # * *iParentTag* (_Tag_): The existing parent Tag, or nil if it has no parent Tag
         # * *iSerializedTags* (<em>map<Integer,MultipleSelection::Serialized::Tag></em>): The list of serialized Tags per ID
@@ -86,7 +86,7 @@ module PBS
           @Children.each do |iChildTagID|
             lChildSerializedTag = iSerializedTags[iChildTagID]
             if (lChildSerializedTag == nil)
-              logBug "Tag ID #{iChildTagID} should be part of the selection, but unable to retrieve it."
+              log_bug "Tag ID #{iChildTagID} should be part of the selection, but unable to retrieve it."
             else
               lChildSerializedTag.createTag(ioController, lNewTag, iSerializedTags, ioShortcutsTags)
             end
@@ -120,7 +120,7 @@ module PBS
 
         # Constructor
         #
-        # Parameters:
+        # Parameters::
         # * *iTypePluginName* (_String_): The Types plugin name
         # * *iContent* (_Object_): The content
         # * *iMetadata* (<em>map<String,Object></em>): The metadata
@@ -132,7 +132,7 @@ module PBS
 
         # Get the name of the serialized Shortcut
         #
-        # Return:
+        # Return::
         # * _String_: The name
         def getName
           return @Metadata['title']
@@ -140,7 +140,7 @@ module PBS
 
         # Return the simple content to be pasted to the clipboard in case of a single selection of this item.
         #
-        # Return:
+        # Return::
         # * _String_: The clipboard content
         def getSingleClipContent
           rClipContent = nil
@@ -158,7 +158,7 @@ module PBS
         # It is assumed that its Tags are already created.
         # It is assumed that its Type exists already.
         #
-        # Parameters:
+        # Parameters::
         # * *ioController* (_Controller_): The controller that will receive the new Shortcut
         # * *iTagsSet* (<em>map<Tag,nil></em>): The Tags set to associate this Shortcut to
         def createShortcut(ioController, iTagsSet)
@@ -170,7 +170,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iTags* (<em>map<Integer,MultipleSelection::Serialized::Tag></em>): The map of Tags
       # * *iShortcuts* (<em>map<Integer,MultipleSelection::Serialized::Shortcut></em>): The map of Shortcuts
       # * *iSelectedTags* (<em>list<Integer></em>): The list of selected Tags IDs
@@ -192,7 +192,7 @@ module PBS
 
       # Get the list of serialized Shortcuts involved in this selection
       #
-      # Return:
+      # Return::
       # * <em>list<MultipleSelection::Serialized::Shortcut></em>: The Shortcuts involved in the selection
       def getSelectedShortcuts
         rShortcuts = []
@@ -206,7 +206,7 @@ module PBS
 
       # Get the list of primary selected serialized Tags
       #
-      # Return:
+      # Return::
       # * <em>list<MultipleSelection::Serialized::Tag></em>: The primary selected Tags
       def getSelectedPrimaryTags
         rTags = []
@@ -220,7 +220,7 @@ module PBS
 
       # Get a description from the serialized selection
       #
-      # Return:
+      # Return::
       # * _String_: The simple description
       def getDescription
         rDescription = nil
@@ -249,7 +249,7 @@ module PBS
       # Get the content of a single selected and serialized Tag or Shortcut, or nil otherwise.
       # In fact this function is useful to give an alternate text representation of the data to be put in the clipboard.
       #
-      # Return:
+      # Return::
       # * _String_: The single content
       def getSingleContent
         rContent = nil
@@ -270,7 +270,7 @@ module PBS
       # Create real Tags and Shortcuts in an existing Tag, based on our serialized data.
       # Useful for Open/Paste/Drop...
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The controller that will have the Tags and Shortcuts created
       # * *iParentTag* (_Tag_): The Tag in which we merge serialized data (can be the Root Tag)
       # * *iLocalSelection* (_MultipleSelection_): The local selection corresponding to this serialized one, or nil if it is from an external source. This is used in case of local selections (Copy/Cut/Paste or Drag/Drop in the same data source), to reuse the same Shortcuts.
@@ -284,7 +284,7 @@ module PBS
         @SelectedTags.each do |iTagID|
           lSerializedTag = @Tags[iTagID]
           if (lSerializedTag == nil)
-            logBug "Tag of ID #{iTagID} should be part of the serialized data, but unable to retrieve it."
+            log_bug "Tag of ID #{iTagID} should be part of the serialized data, but unable to retrieve it."
           else
             # Now we can create it
             lSerializedTag.createTag(ioController, iParentTag, @Tags, lShortcutsTags)
@@ -309,7 +309,7 @@ module PBS
             # External source: create from the serialized data completely.
             lSerializedShortcut = @Shortcuts[iShortcutID]
             if (lSerializedShortcut == nil)
-              logBug "Normally Shortcut of ID #{iShortcutID} should be part of the serialized selection, but unable to retrieve it."
+              log_bug "Normally Shortcut of ID #{iShortcutID} should be part of the serialized selection, but unable to retrieve it."
             else
               lSerializedShortcut.createShortcut(ioController, iTagsSet)
             end
@@ -317,7 +317,7 @@ module PBS
             # Local source: reuse the same Shortcut
             lShortcut = iLocalSelection.SerializedShortcutsIDs[iShortcutID]
             if (lShortcut == nil)
-              logBug "Normally Shortcut of ID #{iShortcutID} should be part of the local selection, but unable to retrieve it."
+              log_bug "Normally Shortcut of ID #{iShortcutID} should be part of the local selection, but unable to retrieve it."
             else
               # Merge Tags
               lNewTags = iTagsSet
@@ -331,7 +331,7 @@ module PBS
 
       # Is the serialized selection empty ?
       #
-      # Return:
+      # Return::
       # * _Boolean_: Is the serialized selection empty ?
       def empty?
         return ((@Tags.empty?) and
@@ -363,7 +363,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iController* (_Controller_): The model controller
     def initialize(iController)
       @Controller = iController
@@ -377,7 +377,7 @@ module PBS
 
     # Add a Tag to the selection
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag to add (nil in case of the Root Tag)
     def selectTag(iTag)
       if (iTag == @Controller.RootTag)
@@ -401,7 +401,7 @@ module PBS
 
     # Add a Shortcut to the selection
     #
-    # Parameters:
+    # Parameters::
     # * *iShortcut* (_Shortcut_): The Shortcut
     # * *iParentTag* (_Tag_): The Tag from which the Shortcut was selected (nil for Root)
     def selectShortcut(iShortcut, iParentTag)
@@ -414,9 +414,9 @@ module PBS
 
     # Is the given Tag selected as a primary selection ?
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag to check
-    # Return:
+    # Return::
     # * _Boolean_: Is the given Tag selected as a primary selection ?
     def isTagPrimary?(iTag)
       return @SelectedPrimaryTags.include?(iTag)
@@ -424,9 +424,9 @@ module PBS
 
     # Is the given Tag selected as a secondary selection ?
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag to check
-    # Return:
+    # Return::
     # * _Boolean_: Is the given Tag selected as a secondary selection ?
     def isTagSecondary?(iTag)
       return @SelectedSecondaryTags.include?(iTag)
@@ -434,10 +434,10 @@ module PBS
 
     # Is the given Shortcut selected as a primary selection ?
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The Shortcut to check
     # * *iParentTag* (_Tag_): The corresponding parent Tag (can be nil for root)
-    # Return:
+    # Return::
     # * _Boolean_: Is the given Shortcut selected as a primary selection ?
     def isShortcutPrimary?(iSC, iParentTag)
       if (iParentTag == nil)
@@ -449,10 +449,10 @@ module PBS
 
     # Is the given Shortcut selected as a secondary selection ?
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The Shortcut to check
     # * *iParentTag* (_Tag_): The corresponding parent Tag (can be nil for root)
-    # Return:
+    # Return::
     # * _Boolean_: Is the given Shortcut selected as a secondary selection ?
     def isShortcutSecondary?(iSC, iParentTag)
       if (iParentTag == nil)
@@ -464,7 +464,7 @@ module PBS
 
     # Is the selection empty ?
     #
-    # Return:
+    # Return::
     # * _Boolean_: Is the selection empty ?
     def empty?
       return ((@SelectedPrimaryShortcuts.empty?) and
@@ -473,7 +473,7 @@ module PBS
 
     # Is the selection about a single Tag ?
     #
-    # Return:
+    # Return::
     # * _Boolean_: Is the selection about a single Tag ?
     def singleTag?
       return ((@SelectedPrimaryShortcuts.empty?) and
@@ -482,7 +482,7 @@ module PBS
 
     # Is the selection about a single Shortcut ?
     #
-    # Return:
+    # Return::
     # * _Boolean_: Is the selection about a single Shortcut ?
     def singleShortcut?
       return ((@SelectedPrimaryShortcuts.size == 1) and
@@ -491,7 +491,7 @@ module PBS
 
     # Return a simple string summary of what is selected
     #
-    # Return:
+    # Return::
     # * _String_: The simple description of the selection
     def getDescription
       rDescription = nil
@@ -502,7 +502,7 @@ module PBS
         elsif (@SelectedPrimaryTags.size == 1)
           lTag = @SelectedPrimaryTags[0]
           if (lTag == nil)
-            logBug "Tag #{@SelectedPrimaryTags[0].Name} was selected, but does not exist in the data."
+            log_bug "Tag #{@SelectedPrimaryTags[0].Name} was selected, but does not exist in the data."
             rDescription = 'Error'
           else
             rDescription = "Tag #{lTag.Name}"
@@ -514,7 +514,7 @@ module PBS
         if (@SelectedPrimaryShortcuts.size == 1)
           lSC = @SelectedPrimaryShortcuts[0][0]
           if (lSC == nil)
-            logBug "Shortcut #{@SelectedPrimaryShortcuts[0][0].Metadata['title']} was selected, but does not exist in the data."
+            log_bug "Shortcut #{@SelectedPrimaryShortcuts[0][0].Metadata['title']} was selected, but does not exist in the data."
             rDescription = 'Error'
           else
             rDescription = "Shortcut #{lSC.Metadata['title']}"
@@ -531,7 +531,7 @@ module PBS
 
     # Get the complete selected data in a serialized way (that is without any references to objects, ready to be marshalled)
     #
-    # Return:
+    # Return::
     # * <em>MultipleSelection::Serialized</em>: The serialized selection
     def getSerializedSelection
       if (@SerializedSelection == nil)
@@ -542,7 +542,7 @@ module PBS
 
     # Add a given Tag to the serialized data
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag to add
     # * *ioSerializedTags* (<em>map<Integer,MultipleSelection::Serialized::Tag></em>): The serialized Tags
     def addTagToSerializedData(iTag, ioSerializedTags)
@@ -580,7 +580,7 @@ module PBS
     # Add a given Shortcut to the serialized data.
     # Fills @SerializedShortcutsIDs also
     #
-    # Parameters:
+    # Parameters::
     # * *iShortcut* (_Shortcut_): The Tag to add
     # * *ioSerializedShortcuts* (<em>map<Integer,MultipleSelection::Serialized::Shortcut></em>): The serialized Shortcuts
     def addShortcutToSerializedData(iShortcut, ioSerializedShortcuts)
@@ -640,10 +640,10 @@ module PBS
 
     # Get the bitmap representing this selection
     #
-    # Parameters:
+    # Parameters::
     # * *iFont* (<em>Wx::Font</em>): The font to be used to write
     # * *CodeBlock*: The code called once the bitmap has been created without alpha channel. This is used to put some modifications on it.
-    # Return:
+    # Return::
     # * <em>Wx::Bitmap</em>: The bitmap
     def getBitmap(iFont)
       # Paint the bitmap corresponding to the selection
@@ -673,10 +673,10 @@ module PBS
 
     # Draw the selection in a device context
     #
-    # Parameters:
+    # Parameters::
     # * *ioDC* (<em>Wx::DC</em>): The device context to draw into
     # * *iFont* (<em>Wx::Font</em>): The font to be used to write
-    # Return:
+    # Return::
     # * _Integer_: The final width used to draw
     # * _Integer_: The final height used to draw
     def draw(ioDC, iFont)
@@ -711,9 +711,9 @@ module PBS
 
     # Check if a Tag is part of the selection
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag
-    # Return:
+    # Return::
     # * _Boolean_: Is the Tag part of the selection ?
     def tagSelected?(iTag)
       rFound = false

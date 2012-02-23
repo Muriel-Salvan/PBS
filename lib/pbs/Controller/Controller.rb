@@ -1,5 +1,5 @@
 #--
-# Copyright (c) 2009 - 2011 Muriel Salvan (murielsalvan@users.sourceforge.net)
+# Copyright (c) 2009 - 2012 Muriel Salvan (muriel@x-aeon.com)
 # Licensed under the terms specified in LICENSE file. No warranty is provided.
 #++
 
@@ -83,7 +83,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iImportPluginName* (_String_): The import plugin ID
       # * *iMerge* (_Boolean_): Do we instantiate a command that merges data ?
       def initialize(iImportPluginName, iMerge)
@@ -93,10 +93,10 @@ module PBS
 
       # Command that imports data from an import plugin
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
+      #   * *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
       def execute(ioController, iParams)
         if (@Merge)
           ioController.Merging = true
@@ -116,7 +116,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iExportPluginName* (_String_): The export plugin ID
       def initialize(iExportPluginName)
         @ExportPluginName = iExportPluginName
@@ -124,10 +124,10 @@ module PBS
 
       # Command that exports data to an export plugin
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The data model controller
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
+      #   * *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
       def execute(iController, iParams)
         iController.accessExportPlugin(@ExportPluginName) do |iPlugin|
           iPlugin.execute(iController, iParams[:parentWindow])
@@ -141,7 +141,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iTypePluginName* (_String_): The type plugin ID
       def initialize(iTypePluginName)
         @TypePluginName = iTypePluginName
@@ -149,11 +149,11 @@ module PBS
 
       # Command that creates a new Shortcut via the corresponding Type plugin
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *tag* (_Tag_): Tag in which we create the new Tag (can be nil for no Tag)
-      # ** *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
+      #   * *tag* (_Tag_): Tag in which we create the new Tag (can be nil for no Tag)
+      #   * *parentWindow* (<em>Wx::Window</em>): The parent window calling this plugin.
       def execute(ioController, iParams)
         lWindow = iParams[:parentWindow]
         lTag = iParams[:tag]
@@ -182,7 +182,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iPluginName* (_String_): The plugin ID
       def initialize(iPluginName)
         @PluginName = iPluginName
@@ -190,10 +190,10 @@ module PBS
 
       # Command that creates a new Shortcut via the corresponding Type plugin
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters:
-      # ** *shortcutsList* (<em>list<Shortcut></em>): List of Shortcuts for which this command was called
+      #   * *shortcutsList* (<em>list<Shortcut></em>): List of Shortcuts for which this command was called
       def execute(ioController, iParams)
         lShortcutsList = iParams[:shortcutsList]
         ioController.accessShortcutCommandsPlugin(@PluginName) do |iPlugin|
@@ -215,7 +215,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iPluginName* (_String_): The plugin ID
       def initialize(iPluginName)
         @PluginName = iPluginName
@@ -223,7 +223,7 @@ module PBS
 
       # Command that creates a new Shortcut via the corresponding Type plugin
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       def execute(ioController)
         # First check if this plugin already has a declared instance for the Root Tag
@@ -238,7 +238,7 @@ module PBS
               # Found it
               lFound = true
               if (iActive)
-                logMsg "There is already an active view #{@PluginName}."
+                log_msg "There is already an active view #{@PluginName}."
                 lOldOptions = nil
               else
                 # Make sure the list we will modify is cloned
@@ -278,7 +278,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iPluginID* (_String_): Name if the integration plugin
       # * *iIdxView* (_Integer_): Index of the view to activate/deactivate
       def initialize(iPluginID, iIdxView)
@@ -288,7 +288,7 @@ module PBS
       # Set the plugin ID and view index.
       # This is used to avoid recreating a new object when commands are updated.
       #
-      # Parameters:
+      # Parameters::
       # * *iPluginID* (_String_): Name if the integration plugin
       # * *iIdxView* (_Integer_): Index of the view to activate/deactivate
       def setNewView(iPluginID, iIdxView)
@@ -297,7 +297,7 @@ module PBS
 
       # Activate/deactivate a view
       #
-      # Parameters:
+      # Parameters::
       # * *ioController* (_Controller_): The data model controller
       def execute(ioController)
         # Clone the old options
@@ -332,7 +332,7 @@ module PBS
 
       # Set parameters for a command invocation
       #
-      # Parameters:
+      # Parameters::
       # * *iParams* (<em>map<Symbol,Object></em>): The parameters
       def authorizeCmd(iParams)
         @Params = iParams
@@ -340,7 +340,7 @@ module PBS
 
       # Set an error
       #
-      # Parameters:
+      # Parameters::
       # * *iError* (_String_): The error message
       def setError(iError)
         @Error = iError
@@ -362,7 +362,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iTitle* (_String_): The title of the undoable operation
       def initialize(iTitle)
         @Title = iTitle
@@ -372,9 +372,9 @@ module PBS
       # Undo this operation
       def undo
         setupTextProgress(Wx::get_app.get_top_window, "Undo #{@Title}",
-          :Cancellable => true,
-          :Title => "Undo #{@Title}",
-          :Icon => getGraphic('IconProcess32.png')
+          :cancellable => true,
+          :title => "Undo #{@Title}",
+          :icon => getGraphic('IconProcess32.png')
         ) do |ioProgressDlg|
           ioProgressDlg.setRange(@AtomicOperations.size)
           @AtomicOperations.reverse_each do |iAtomicOperation|
@@ -387,9 +387,9 @@ module PBS
       # Redo this operation
       def redo
         setupTextProgress(Wx::get_app.get_top_window, "Redo #{@Title}",
-          :Cancellable => true,
-          :Title => "Redo #{@Title}",
-          :Icon => getGraphic('IconProcess32.png')
+          :cancellable => true,
+          :title => "Redo #{@Title}",
+          :icon => getGraphic('IconProcess32.png')
         ) do |ioProgressDlg|
           ioProgressDlg.setRange(@AtomicOperations.size)
           @AtomicOperations.each do |iAtomicOperation|
@@ -406,7 +406,7 @@ module PBS
 
       # Constructor
       #
-      # Parameters:
+      # Parameters::
       # * *iController* (_Controller_): The controller
       def initialize(iController)
         @Controller = iController
@@ -414,7 +414,7 @@ module PBS
 
       # Notify that a given Tag's children list has changed
       #
-      # Parameters:
+      # Parameters::
       # * *iParentTag* (_Tag_): The Tag whose children list has changed
       # * *iOldChildrenList* (<em>list<Tag></em>): The old children list
       def onTagChildrenUpdate(iParentTag, iOldChildrenList)
@@ -441,7 +441,7 @@ module PBS
 
       # An update has occured on a Tag's data
       #
-      # Parameters:
+      # Parameters::
       # * *iTag* (_Tag_): The Tag whose data was invalidated
       # * *iOldName* (_String_): The previous name
       # * *iOldIcon* (<em>Wx::Bitmap</em>): The previous icon (can be nil)
@@ -466,27 +466,27 @@ module PBS
     attr_accessor :Merging
 
     # Give access to a plugin.
-    # Handle exceptions with logErr, logBug and logExc
+    # Handle exceptions with log_err, log_bug and log_exc
     #
-    # Parameters:
+    # Parameters::
     # * *iCategoryName* (_String_): Category of the plugin to access
     # * *iPluginName* (_String_): Name of the plugin to access
     # * *iParameters* (<em>map<Symbol,Object></em>): Additional parameters:
-    # ** *OnlyIfExtDepsResolved* (_Boolean_): Do we return the plugin only if there is no need to install external dependencies ? [optional = false]
-    # ** *RDIInstaller* (<em>RDI::Installer</em>): The RDI installer if available, or nil otherwise [optional = nil]
+    #   * *OnlyIfExtDepsResolved* (_Boolean_): Do we return the plugin only if there is no need to install external dependencies ? [optional = false]
+    #   * *RDIInstaller* (<em>RDI::Installer</em>): The RDI installer if available, or nil otherwise [optional = nil]
     # * *CodeBlock*: The code called when the plugin is found:
-    # ** *ioPlugin* (_Object_): The corresponding plugin
-    def accessPlugin_Protected(iCategoryName, iPluginName)
+    #   * *ioPlugin* (_Object_): The corresponding plugin
+    def access_plugin_Protected(iCategoryName, iPluginName)
       begin
         lContextModifiers = {}
-        accessPlugin(iCategoryName, iPluginName,
+        access_plugin(iCategoryName, iPluginName,
           :RDIContextModifiers => lContextModifiers
         ) do |ioPlugin|
           yield(ioPlugin)
         end
         # Add the eventual context modifiers to the current ones
         if (!lContextModifiers.empty?)
-          logDebug "Add context modifiers applied: #{lContextModifiers.inspect}"
+          log_debug "Add context modifiers applied: #{lContextModifiers.inspect}"
           lContextModifiers.each do |iDepID, iCMList|
             if (@Options[:RDIContextModifiers][RUBY_PLATFORM][iDepID] == nil)
               @Options[:RDIContextModifiers][RUBY_PLATFORM][iDepID] = []
@@ -496,19 +496,19 @@ module PBS
         end
       rescue PluginDependenciesIgnoredError
         # That was cancelled on purpose by the user (ignoring dependencies)
-        logErr $!
+        log_err $!
       rescue PluginDependenciesUnresolvedError
         # The user is aware if those unresolved dependencies
-        logErr $!
+        log_err $!
       rescue Exception
         # This is not normal
-        logExc $!, "Error while loading plugin #{iPluginName} from category #{iCategoryName}: #{$!}"
+        log_exc $!, "Error while loading plugin #{iPluginName} from category #{iCategoryName}: #{$!}"
       end
     end
 
     # Instantiate a new view
     #
-    # Parameters:
+    # Parameters::
     # * *iPluginID* (_String_): The integration plugin ID
     # * *iOptions* (_Object_): Options (used for notifications only)
     # * *iTag* (_Tag_): Tag to display in this view
@@ -517,7 +517,7 @@ module PBS
     def createView(iPluginID, iOptions, iTag, iOldOptions, iOldTagID)
       rInstance = nil
 
-      logDebug "Instantiate integration plugin #{iPluginID} for Tag #{iTag.Name}"
+      log_debug "Instantiate integration plugin #{iPluginID} for Tag #{iTag.Name}"
       begin
         accessIntegrationPlugin(iPluginID) do |iPlugin|
           rInstance = iPlugin.createNewInstance(self)
@@ -527,7 +527,7 @@ module PBS
           registerGUI(rInstance)
         end
       rescue Exception
-        logExc $!, "Exception while instantiating plugin instance #{iPluginID} for Tag #{lTag.Name}"
+        log_exc $!, "Exception while instantiating plugin instance #{iPluginID} for Tag #{lTag.Name}"
       end
 
       return rInstance
@@ -535,12 +535,12 @@ module PBS
 
     # Delete a given view
     #
-    # Parameters:
+    # Parameters::
     # * *iPluginID* (_String_): The integration plugin ID
     # * *iTagID* (<em>list<String></em>): The Tag ID
     # * *ioInstance* (_Object_): View to delete
     def deleteView(iPluginID, iTagID, ioInstance)
-      logDebug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+      log_debug "Delete integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
       # Unregister the GUI
       unregisterGUI(ioInstance)
       begin
@@ -548,13 +548,13 @@ module PBS
           iPlugin.deleteInstance(self, ioInstance)
         end
       rescue Exception
-        logExc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+        log_exc $!, "Exception while deleting plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
       end
     end
 
     # Update the instantiated plugins instance
     #
-    # Parameters:
+    # Parameters::
     # * *iPluginID* (_String_): The integration plugin ID
     # * *ioInstantiatedPluginInfo* (<em>[list<String>,Boolean,Object,[Object,Tag]]</em>): The instantiated plugin info
     # * *iOldOptions* (_Object_): Old options (used for notifications only)
@@ -573,11 +573,11 @@ module PBS
             lTags = getTagsFromTagID(iTagID, @RootTag)
             if (lTags.empty?)
               # No Tag corresponds to this TagID
-              logErr "Unable to get a Tag corresponding to ID #{iTagID.join('/')}: instance of integration plugin #{getIntegrationPlugins[iPluginID][:Title]} will be ignored."
+              log_err "Unable to get a Tag corresponding to ID #{iTagID.join('/')}: instance of integration plugin #{getIntegrationPlugins[iPluginID][:Title]} will be ignored."
             else
               if (lTags.size > 1)
                 # Several Tags correspond
-                logErr "Several Tags correspond to ID #{iTagID.join('/')}: instance of integration plugin #{getIntegrationPlugins[iPluginID][:Title]} will be instantiated for an arbitrary one.\nPlease name your Tags differently if you want to remove the ambiguity."
+                log_err "Several Tags correspond to ID #{iTagID.join('/')}: instance of integration plugin #{getIntegrationPlugins[iPluginID][:Title]} will be instantiated for an arbitrary one.\nPlease name your Tags differently if you want to remove the ambiguity."
               end
               lTag = lTags[0]
               ioInstanceInfo[1] = lTag
@@ -589,7 +589,7 @@ module PBS
           else
             ioInstanceInfo[0] = createView(iPluginID, iOptions, lTag, iOldOptions, iOldTagID)
             if (iNotifyChanges)
-              logMsg "Plugin #{iPlugin.pluginDescription[:Title]} has been instantiated for Tag #{lTag.Name}"
+              log_msg "Plugin #{iPlugin.pluginDescription[:Title]} has been instantiated for Tag #{lTag.Name}"
             end
           end
         else
@@ -600,11 +600,11 @@ module PBS
             lTags = getTagsFromTagID(iTagID, @RootTag)
             if (lTags.empty?)
               # No Tag corresponds to this TagID
-              logErr "Unable to get a Tag corresponding to ID #{iTagID.join('/')}: instance of integration plugin #{getIntegrationPlugins[iPluginID][:Title]} will be ignored."
+              log_err "Unable to get a Tag corresponding to ID #{iTagID.join('/')}: instance of integration plugin #{getIntegrationPlugins[iPluginID][:Title]} will be ignored."
             else
               if (lTags.size > 1)
                 # Several Tags correspond
-                logErr "Several Tags correspond to ID #{iTagID.join('/')}: instance of integration plugin #{getIntegrationPlugins[iPluginID][:Title]} will be instantiated for an arbitrary one.\nPlease name your Tags differently if you want to remove the ambiguity."
+                log_err "Several Tags correspond to ID #{iTagID.join('/')}: instance of integration plugin #{getIntegrationPlugins[iPluginID][:Title]} will be instantiated for an arbitrary one.\nPlease name your Tags differently if you want to remove the ambiguity."
               end
               lTag = lTags[0]
               ioInstanceInfo[1] = lTag
@@ -618,20 +618,20 @@ module PBS
               ioInstanceInfo[1] = nil
             else
               # Notify options changed
-              logDebug "Notify changing options for integration plugin #{iPluginID} for Tag #{lTag.Name}"
+              log_debug "Notify changing options for integration plugin #{iPluginID} for Tag #{lTag.Name}"
               begin
                 ioInstance.onPluginOptionsChanged(iOptions, lTag, iOldOptions, iOldTagID)
               rescue Exception
-                logExc $!, "Exception while notifying plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+                log_exc $!, "Exception while notifying plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
               end
             end
           elsif (iOldOptions != iOptions)
             # It has changed: notify it
-            logDebug "Notify changing options for integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
+            log_debug "Notify changing options for integration plugin #{iPluginID} for Tag #{iTagID.join('/')}"
             begin
               ioInstance.onPluginOptionsChanged(iOptions, iTag, iOldOptions, iOldTagID)
             rescue Exception
-              logExc $!, "Exception while notifying plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
+              log_exc $!, "Exception while notifying plugin instance #{iPluginID} for Tag #{iTagID.join('/')}"
             end
           end
         end
@@ -649,7 +649,7 @@ module PBS
 
     # Check integration plugins instantiated for some specific Tags after some changes in the Tags
     #
-    # Parameters:
+    # Parameters::
     # * *iTagNames* (<em>list<String></em>): List of Tag names that may be impacted
     def checkIntPluginsTags(iTagNames)
       if (!iTagNames.empty?)
@@ -672,12 +672,12 @@ module PBS
 
     # Test if a given data does not violate unicity constraints for a Tag if it was to be added
     #
-    # Parameters:
+    # Parameters::
     # * *iParentTag* (_Tag_): The parent Tag
     # * *iTagName* (_String_): The new Tag name
     # * *iIcon* (<em>Wx::Bitmap</em>): The icon (can be nil)
     # * *iTagToIgnore* (_Tag_): The Tag to ignore in unicity checking (useful when editing: we don't match unicity with the already existing object). Can be nil to check all sub-Tags. [optional = nil]
-    # Return:
+    # Return::
     # * _Tag_: Tag that is a doublon of the data given, or nil otherwise.
     # * _Integer_: Action taken in case of doublon, or nil otherwise
     # * _String_: The new Tag name to consider
@@ -722,14 +722,14 @@ module PBS
               rAction = ID_MERGE_CONFLICTING
             elsif ((@Options[:tagsConflict] == TAGSCONFLICT_CANCEL) or
                    (@CurrentOperationTagsConflicts == Wx::ID_CANCEL))
-              logErr "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
+              log_err "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
               rAction = Wx::ID_CANCEL
             elsif (@Options[:tagsConflict] == TAGSCONFLICT_CANCEL_ALL)
-              logErr "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
+              log_err "Tags conflict between #{ioChildTag.Name} and #{iTagName}."
               @CurrentTransactionToBeCancelled = true
               rAction = Wx::ID_CANCEL
             else
-              logBug "Unknown decision to take concerning a Tags conflict: the option :tagsConflict is #{@Options[:tagsConflict]}, and the user decision to always apply is #{@CurrentOperationTagsConflicts}."
+              log_bug "Unknown decision to take concerning a Tags conflict: the option :tagsConflict is #{@Options[:tagsConflict]}, and the user decision to always apply is #{@CurrentOperationTagsConflicts}."
             end
           end
         end
@@ -740,13 +740,13 @@ module PBS
 
     # Test if a given data does not violate unicity constraints for a Shortcut if it was to be added
     #
-    # Parameters:
+    # Parameters::
     # * *iType* (_ShortcutType_): The type
     # * *iContent* (_Object_): The content
     # * *iMetadata* (<em>map<String,Object></em>): The metadata
     # * *iTags* (<em>map<Tag,nil></em>): The set of Tags
     # * *iShortcutToIgnore* (_Shortcut_): The Shortcut to ignore in unicity checking (useful when editing: we don't match unicity with the already existing object). Can be nil to check all Shortcuts. [optional = nil]
-    # Return:
+    # Return::
     # * _Shortcut_: Shortcut that is a doublon of the data given, or nil otherwise.
     # * _Integer_: Action taken in case of doublon, or nil otherwise
     # * _Object_: The new content to consider
@@ -798,14 +798,14 @@ module PBS
               rAction = ID_MERGE_CONFLICTING
             elsif ((@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_CANCEL) or
                    (@CurrentOperationShortcutsConflicts == Wx::ID_CANCEL))
-              logErr << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
+              log_err << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
               rAction = Wx::ID_CANCEL
             elsif (@Options[:shortcutsConflict] == SHORTCUTSCONFLICT_CANCEL_ALL)
-              logErr << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
+              log_err << "Shortcuts conflict between #{ioSC.Metadata['title']} and #{iMetadata['title']}."
               @CurrentTransactionToBeCancelled = true
               rAction = Wx::ID_CANCEL
             else
-              logBug "Unknown decision to take concerning a Shortcuts conflict: the option :shortcutsConflict is #{@Options[:shortutsConflict]}, and the user decision to always apply is #{@CurrentOperationShortcutsConflicts}."
+              log_bug "Unknown decision to take concerning a Shortcuts conflict: the option :shortcutsConflict is #{@Options[:shortutsConflict]}, and the user decision to always apply is #{@CurrentOperationShortcutsConflicts}."
             end
           end
         end
@@ -816,17 +816,17 @@ module PBS
 
     # Method that sends notifications to registered GUIs that implement desired methods
     #
-    # Parameters:
+    # Parameters::
     # * *iMethod* (_Symbol_): The method to call in the registered GUIs
     # * *iParams* (<em>list<Object></em>): Parameters to give the method
     def notifyRegisteredGUIs(iMethod, *iParams)
-      logDebug "Notify GUIs for #{iMethod.to_s}"
+      log_debug "Notify GUIs for #{iMethod.to_s}"
       @RegisteredGUIs.each do |iRegisteredGUI|
         if (iRegisteredGUI.respond_to?(iMethod))
           begin
             iRegisteredGUI.send(iMethod, *iParams)
           rescue Exception
-            logExc $!, 'A notified GUI (maybe from an Integration Plugin) threw an exception'
+            log_exc $!, 'A notified GUI (maybe from an Integration Plugin) threw an exception'
           end
         end
       end
@@ -834,7 +834,7 @@ module PBS
 
     # Register a new GUI to be notified upon events
     #
-    # Parameters:
+    # Parameters::
     # * *iGUI* (_Object_): The GUI to be notified.
     def registerGUI(iGUI)
       @RegisteredGUIs << iGUI
@@ -842,7 +842,7 @@ module PBS
 
     # Unregister a GUI that was notified upon events
     #
-    # Parameters:
+    # Parameters::
     # * *iGUI* (_Object_): The GUI to be notified.
     def unregisterGUI(iGUI)
       lFound = false
@@ -851,14 +851,14 @@ module PBS
         next (iExistingGUI == iGUI)
       end
       if (!lFound)
-        logBug "Gui #{iGUI} should have been registered to handle events, but we can't retrieve it."
+        log_bug "Gui #{iGUI} should have been registered to handle events, but we can't retrieve it."
       end
     end
 
     # Set the visible properties of a Menu Item.
     # The method also inserts the menu item in its menu, as it appears some properties can not be set before insertion (like enabled), and others can not be made after (like bitmap).
     #
-    # Parameters:
+    # Parameters::
     # * *ioMenuItem* (<em>Wx::MenuItem</em>): The menu item
     # * *iCommandID* (_Integer_): The corresponding command ID
     # * *iMenuItemPos* (_Integer_): The position to insert the new menu item into the menu
@@ -902,9 +902,9 @@ module PBS
           if (lValidator.Params != nil)
             executeCommand(iCommandID, lValidator.Params)
           elsif (lValidator.Error != nil)
-            logErr lValidator.Error
+            log_err lValidator.Error
           else
-            logBug 'The Command Validator did not return any error, and did not set any parameters either. Skipping the command.'
+            log_bug 'The Command Validator did not return any error, and did not set any parameters either. Skipping the command.'
           end
         else
           executeCommand(iCommandID)
@@ -915,14 +915,14 @@ module PBS
     # Update the appearance of a menu item based on a command.
     # !!! This method deletes the current menu item and inserts a new one at the same position. Otherwise, changing properties of menu items results in buggy behaviour.
     #
-    # Parameters:
+    # Parameters::
     # * *ioMenuItem* (<em>Wx::MenuItem</em>): The menu item to update
     # * *iCommand* (<em>map<Symbol,Object></em>): The command
     # * *iEvtWindow* (<em>Wx::EvtHandler</em>): The event handler that will receive the command
     # * *iFetchParametersCode* (_Proc_): Code to be called to fetch parameters (or nil if none needed)
     # * *iParams* (<em>map<Symbol,Object></em>): Additional properties, specific to this command item [optional = {}]
-    # ** *GUIEnabled* (_Boolean_): Does the GUI enable this item specifically ?
-    # ** *GUITitle* (_String_): Override title if not nil
+    #   * *GUIEnabled* (_Boolean_): Does the GUI enable this item specifically ?
+    #   * *GUITitle* (_String_): Override title if not nil
     def updateMenuItemAppearance(ioMenuItem, iCommand, iEvtWindow, iFetchParametersCode, iParams = {})
       lMenu = ioMenuItem.menu
       lCommandID = ioMenuItem.get_id
@@ -956,15 +956,15 @@ module PBS
 
     # Find the GUI specific parameters of a registered menu item
     #
-    # Parameters:
+    # Parameters::
     # * *iMenu* (<em>Wx::Menu</em>): Menu to which the menu item belongs.
     # * *iCommandID* (_Integer_): The command ID of the menu item
     # * *CodeBlock*: The code to call once the menu item has been retrieved
-    # ** *ioParams* (<em>map<Symbol,Object></em>): The parameters, free to be updated
+    #   * *ioParams* (<em>map<Symbol,Object></em>): The parameters, free to be updated
     def findRegisteredMenuItemParams(iMenu, iCommandID)
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        logBug "Unknown command of ID #{iCommandID}. Ignoring action."
+        log_bug "Unknown command of ID #{iCommandID}. Ignoring action."
       else
         # find the registered menu item
         lFound = false
@@ -983,19 +983,19 @@ module PBS
           end
         end
         if (!lFound)
-          logBug "Failed to retrieve the registered menu item for command ID #{iCommandID} under menu #{iMenu}."
+          log_bug "Failed to retrieve the registered menu item for command ID #{iCommandID} under menu #{iMenu}."
         end
       end
     end
 
     # Update the appearance of a toolbar button based on a command
     #
-    # Parameters:
+    # Parameters::
     # * *ioToolbarButton* (<em>Wx::ToolBarTool</em>): The toolbar button to update
     # * *iCommand* (<em>map<Symbol,Object></em>: The command's parameters
     # * *iParams* (<em>map<Symbol,Object></em>): Additional properties, specific to this command item [optional = {}]
-    # ** *GUIEnabled* (_Boolean_): Does the GUI enable this item specifically ?
-    # ** *GUITitle* (_String_): Override title if not nil
+    #   * *GUIEnabled* (_Boolean_): Does the GUI enable this item specifically ?
+    #   * *GUITitle* (_String_): Override title if not nil
     def updateToolbarButtonAppearance(iToolbarButton, iCommand, iParams = {})
       lToolbar = iToolbarButton.tool_bar
       lCommandID = iToolbarButton.id
@@ -1020,15 +1020,15 @@ module PBS
 
     # Find parameters associated to a registered toolbar button
     #
-    # Parameters:
+    # Parameters::
     # * *iToolbarButton* (<em>Wx::ToolbarTool</em>): The toolbar button
     # * *iCommandID* (_Integer_): ID of the command to add
     # * *CodeBlock*: The code to call once the menu item has been retrieved
-    # ** *ioParams* (<em>map<Symbol,Object></em>): The parameters, free to be updated
+    #   * *ioParams* (<em>map<Symbol,Object></em>): The parameters, free to be updated
     def findRegisteredToolbarButtonParams(iToolbarButton, iCommandID)
       lCommand = @Commands[iCommandID]
       if (lCommand == nil)
-        logBug "Unknown command of ID #{iCommandID}. Ignoring action."
+        log_bug "Unknown command of ID #{iCommandID}. Ignoring action."
       else
         # Find the toolbar button
         lFound = false
@@ -1046,14 +1046,14 @@ module PBS
           end
         end
         if (!lFound)
-          logBug "Failed to retrieve the registered toolbar button for command ID #{iCommandID}."
+          log_bug "Failed to retrieve the registered toolbar button for command ID #{iCommandID}."
         end
       end
     end
 
     # Update appearance of GUI components after changes in a command
     #
-    # Parameters:
+    # Parameters::
     # * *iCommandID* (_Integer_): The command ID that has been changed
     def updateImpactedAppearance(iCommandID)
       lCommandParams = @Commands[iCommandID]
@@ -1070,15 +1070,15 @@ module PBS
 
     # Give the possibility to update the description of a command, and update impacted GUI elements if necessary after.
     #
-    # Parameters:
+    # Parameters::
     # * *iCommandID* (_Integer_): The command iD
     # * *CodeBlock*: The code called to update the command
-    # ** *ioCommand* (<em>map<Symbol,Object></em>): The command description, free to be updated
+    #   * *ioCommand* (<em>map<Symbol,Object></em>): The command description, free to be updated
     def updateCommand(iCommandID)
       lCommand = @Commands[iCommandID]
       lOldCommand = nil
       if (lCommand == nil)
-        logBug "Command #{iCommandID} is not registered. Check command plugins."
+        log_bug "Command #{iCommandID} is not registered. Check command plugins."
         # Provide an empty command for the code block to execute correctly.
         lCommand = {}
       else
@@ -1093,7 +1093,7 @@ module PBS
 
     # Add a new command
     #
-    # Parameters:
+    # Parameters::
     # * *iCommandID* (_Integer_): The command ID
     # * *iCommandInfo* (<em>map<Symbol,Object></em>): The command information
     def addCommand(iCommandID, iCommandInfo)
@@ -1113,14 +1113,14 @@ module PBS
           end
         end
       else
-        logBug "Command #{iCommandID} was already registered. There is a conflict in the commands. Please check command IDs described in command plugins."
+        log_bug "Command #{iCommandID} was already registered. There is a conflict in the commands. Please check command IDs described in command plugins."
       end
     end
 
     # Delete a given command.
     # This also unregisters and deletes any menu item or toolbar button associated to it.
     #
-    # Parameters:
+    # Parameters::
     # * *iCommandID* (_Integer_): Command ID to delete
     def deleteCommand(iCommandID)
       # Delete every menu item
@@ -1139,7 +1139,7 @@ module PBS
 
     # Constructor
     #
-    # Parameters:
+    # Parameters::
     # * *iPBSRootDir* (_String_): PBS Root dir
     def initialize(iPBSRootDir)
       @PBSRootDir = iPBSRootDir
@@ -1241,17 +1241,17 @@ module PBS
       @RegisteredGUIs = []
 
       # Read plugins
-      parsePluginsFromDir('Type', "#{iPBSRootDir}/lib/pbs/Plugins/Types", 'PBS::Types')
-      parsePluginsFromDir('Import', "#{iPBSRootDir}/lib/pbs/Plugins/Imports", 'PBS::Imports')
-      parsePluginsFromDir('Export', "#{iPBSRootDir}/lib/pbs/Plugins/Exports", 'PBS::Exports')
-      parsePluginsFromDir('Integration', "#{iPBSRootDir}/lib/pbs/Plugins/Integration", 'PBS::Integration')
-      parsePluginsFromDir('Command', "#{iPBSRootDir}/lib/pbs/Plugins/Commands", 'PBS::Commands')
-      parsePluginsFromDir('ShortcutCommand', "#{iPBSRootDir}/lib/pbs/Plugins/ShortcutCommands", 'PBS::ShortcutCommands')
+      parse_plugins_from_dir('Type', "#{iPBSRootDir}/lib/pbs/Plugins/Types", 'PBS::Types')
+      parse_plugins_from_dir('Import', "#{iPBSRootDir}/lib/pbs/Plugins/Imports", 'PBS::Imports')
+      parse_plugins_from_dir('Export', "#{iPBSRootDir}/lib/pbs/Plugins/Exports", 'PBS::Exports')
+      parse_plugins_from_dir('Integration', "#{iPBSRootDir}/lib/pbs/Plugins/Integration", 'PBS::Integration')
+      parse_plugins_from_dir('Command', "#{iPBSRootDir}/lib/pbs/Plugins/Commands", 'PBS::Commands')
+      parse_plugins_from_dir('ShortcutCommand', "#{iPBSRootDir}/lib/pbs/Plugins/ShortcutCommands", 'PBS::ShortcutCommands')
 
       # Complete the descriptions for each plugin
       [ 'Type', 'Import', 'Export', 'Integration', 'Command', 'ShortcutCommand' ].each do |iCategoryName|
-        getPluginNames(iCategoryName).each do |iPluginName|
-          lDesc = getPluginDescription(iCategoryName, iPluginName)
+        get_plugins_names(iCategoryName).each do |iPluginName|
+          lDesc = get_plugin_description(iCategoryName, iPluginName)
           if (lDesc[:Title] == nil)
             lDesc[:Title] = iPluginName
           end
@@ -1286,7 +1286,7 @@ module PBS
       getCommandPlugins.each do |iPluginName, iCommandPluginInfo|
         lCommandID = iCommandPluginInfo[:CommandID]
         if (lCommandID == nil)
-          logBug "Command plugin #{iPluginName} does not declare any command ID. Ignoring it. Please check the pluginInfo method from this plugin."
+          log_bug "Command plugin #{iPluginName} does not declare any command ID. Ignoring it. Please check the pluginInfo method from this plugin."
         else
           addCommand( lCommandID, {
             :Title => iCommandPluginInfo[:Title],
@@ -1418,14 +1418,14 @@ module PBS
         end
         @TipsProvider = Wx::create_file_tip_provider(@TipsFile, @Options[:lastIdxTip])
       else
-        logBug "Missing Tips file: #{@TipsFile}."
+        log_bug "Missing Tips file: #{@TipsFile}."
       end
 
     end
 
     # Is there at least 1 active integration plugin ?
     #
-    # Return:
+    # Return::
     # * _Boolean_: Is there at least 1 active integration plugin ?
     def isIntPluginActive?
       rActiveOK = false
@@ -1448,22 +1448,22 @@ module PBS
     
     # Show tips
     #
-    # Parameters:
+    # Parameters::
     # * *iParentWindow* (<em>Wx::Window</em>): The parent window
     def showTips(iParentWindow)
       if (@TipsProvider != nil)
         @Options[:displayStartupTips] = Wx::show_tip(iParentWindow, @TipsProvider)
       else
-        logBug 'Tips could not be loaded correctly.'
+        log_bug 'Tips could not be loaded correctly.'
       end
     end
 
     # Get the Tags associated to a given TagID, starting from a given Tag
     #
-    # Parameters:
+    # Parameters::
     # * *iTagID* (<em>list<String></em>): The Tag ID
     # * *iTag* (_Tag_): The Tag to start the search from
-    # Return:
+    # Return::
     # * <em>list<Tag></em>: The retrieved Tags
     def getTagsFromTagID(iTagID, iTag)
       rFoundTags = []
@@ -1486,9 +1486,9 @@ module PBS
 
     # Get a Tag ID of a given Tag
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): The Tag
-    # Return:
+    # Return::
     # * <em>list<String></em>: The Tag ID
     def getTagID(iTag)
       rID = []
@@ -1504,11 +1504,11 @@ module PBS
 
     # Does a Tag equal another content ?
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): Existing Tag
     # * *iOtherName* (_String_): Name of other Tag
     # * *iOtherIcon* (<em>Wx::Bitmap</em>): Icon of other Tag
-    # Return:
+    # Return::
     # * _Boolean_: Does a Tag equal another content ?
     def tagSameAs?(iTag, iOtherName, iOtherIcon)
       rSame = false
@@ -1530,7 +1530,7 @@ module PBS
           end
         end
       else
-        logBug "Unknown value for option :tagsUnicity: #{@Options[:tagsUnicity]}."
+        log_bug "Unknown value for option :tagsUnicity: #{@Options[:tagsUnicity]}."
       end
 
       return rSame
@@ -1539,11 +1539,11 @@ module PBS
     # Does a Tag equal another serialized content ?
     # TODO (WxRuby): When Wx::Bitmap will be serializable, remove this method, and use tagSameAs? instead
     #
-    # Parameters:
+    # Parameters::
     # * *iTag* (_Tag_): Existing Tag
     # * *iOtherName* (_String_): Name of other Tag
     # * *iOtherIcon* (_String_): Serialized Icon of other Tag
-    # Return:
+    # Return::
     # * _Boolean_: Does a Tag equal another serialized content ?
     def tagSameAsSerialized?(iTag, iOtherName, iOtherIcon)
       lOtherIconBitmap = nil
@@ -1557,10 +1557,10 @@ module PBS
 
     # Are 2 metadata equal ?
     #
-    # Parameters:
+    # Parameters::
     # * *iMetadata1* (<em>map<String,Object></em>): First metadata
     # * *iMetadata2* (<em>map<String,Object></em>): Second metadata
-    # Return:
+    # Return::
     # * _Boolean_: Are 2 metadata equal ?
     def metadataSameAs?(iMetadata1, iMetadata2)
       rSame = true
@@ -1592,11 +1592,11 @@ module PBS
 
     # Does a Shortcut equal another content ?
     #
-    # Parameters:
+    # Parameters::
     # * *iShortcut* (_Shortcut_): Existing Shortcut
     # * *iOtherContent* (_Content_): Content of other Shortcut
     # * *iOtherMetadata* (<em>map<String,Object></em>): Metadata of other Shortcut
-    # Return:
+    # Return::
     # * _Boolean_: Does a Shortcut equal another content ?
     def shortcutSameAs?(iShortcut, iOtherContent, iOtherMetadata)
       rSame = false
@@ -1614,7 +1614,7 @@ module PBS
         rSame = ((iShortcut.Content == iOtherContent) and
                  (metadataSameAs?(iShortcut.Metadata, iOtherMetadata)))
       else
-        logBug "Unknown value for option :shortcutsUnicity: #{@Options[:shortcutsUnicity]}."
+        log_bug "Unknown value for option :shortcutsUnicity: #{@Options[:shortcutsUnicity]}."
       end
 
       return rSame
@@ -1623,11 +1623,11 @@ module PBS
     # Does a Shortcut equal another serialized content ?
     # TODO (WxRuby): When Wx::Bitmap will be serializable, remove this method, and use shortcutSameAs? instead
     #
-    # Parameters:
+    # Parameters::
     # * *iShortcut* (_Shortcut_): Existing Shortcut
     # * *iOtherContent* (_Content_): Content of other Shortcut
     # * *iOtherMetadata* (<em>map<String,Object></em>): Serialized Metadata of other Shortcut
-    # Return:
+    # Return::
     # * _Boolean_: Does a Shortcut equal another serialized content ?
     def shortcutSameAsSerialized?(iShortcut, iOtherContent, iOtherMetadata)
       return shortcutSameAs?(iShortcut, iOtherContent, getFromMarshallableObject(iOtherMetadata))
@@ -1635,12 +1635,12 @@ module PBS
 
     # Ensure that we are in a current undoableOperation, and create a default one if not.
     #
-    # Parameters:
+    # Parameters::
     # * *iDefaultTitle* (_String_): Default title for the undoable operation
     def ensureUndoableOperation(iDefaultTitle)
       if (@CurrentUndoableOperation == nil)
         # Create a default undoable operation
-        logBug "Operation \"#{iDefaultTitle}\" was not protected by undoableOperation, and it modifies some data. Create a default UndoableOperation."
+        log_bug "Operation \"#{iDefaultTitle}\" was not protected by undoableOperation, and it modifies some data. Create a default UndoableOperation."
         undoableOperation(iDefaultTitle) do
           yield
         end
@@ -1655,7 +1655,7 @@ module PBS
     # Set the current opened file name.
     # !!! This method has to be used only in the atomic operation replacing all the data
     #
-    # Parameters:
+    # Parameters::
     # * *iNewFileName* (_String_): New file name
     def _UNDO_setCurrentOpenedFileName(iNewFileName)
       @CurrentOpenedFileName = iNewFileName
@@ -1664,7 +1664,7 @@ module PBS
     # Set the current opened file modified flag
     # !!! This method has to be used only in the atomic operation replacing all the data
     #
-    # Parameters:
+    # Parameters::
     # * *iNewFileModified* (_Boolean_): The flag
     def _UNDO_setCurrentOpenedFileModified(iNewFileModified)
       @CurrentOpenedFileModified = iNewFileModified
@@ -1673,7 +1673,7 @@ module PBS
     # Add a new Shortcut
     # !!! This method has to be used only in the atomic operation adding new Shortcuts
     #
-    # Parameters:
+    # Parameters::
     # * *iSC* (_Shortcut_): The Shortcut to add
     def _UNDO_addShortcut(iSC)
       @ShortcutsList << iSC
@@ -1682,7 +1682,7 @@ module PBS
     # Delete a Shortcut
     # !!! This method has to be used only in the atomic operation adding new Shortcuts
     #
-    # Parameters:
+    # Parameters::
     # * *iSCToDelete* (_Shortcut_): The Shortcut to delete
     def _UNDO_deleteShortcut(iSCToDelete)
       @ShortcutsList.delete_if do |iSC|
@@ -1692,9 +1692,9 @@ module PBS
 
     # Dump debugging info
     def dumpDebugInfo
-      logDebug '=== Options:'
+      log_debug '=== Options:'
       @Options.each do |iKey, iValue|
-        logDebug "    #{iKey.to_s}: #{iValue.inspect}"
+        log_debug "    #{iKey.to_s}: #{iValue.inspect}"
       end
       # Create index based on plugin names
       # map< String, Integer >
@@ -1706,11 +1706,11 @@ module PBS
         end
         lCommandIndex[lPluginName] = iKey
       end
-      logDebug '=== Commands:'
+      log_debug '=== Commands:'
       lCommandIndex.keys.sort.each do |iPluginName|
         lKey = lCommandIndex[iPluginName]
         lCommand = @Commands[lKey]
-        logDebug "    #{iPluginName} (ID=#{lKey.to_s}): #{lCommand.inspect}"
+        log_debug "    #{iPluginName} (ID=#{lKey.to_s}): #{lCommand.inspect}"
       end
     end
 
