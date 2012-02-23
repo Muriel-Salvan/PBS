@@ -1,6 +1,3 @@
--- This file is best viewed when processed by rdoc.
-++
-
 = PBS
 
 Cross platform GUI managing bookmarks and shortcuts in a portable way. Support import/export, search, encryption, hierarchical tags, USB key installation, various environments integration, OS-dependent shortcuts, plugins extensibility.
