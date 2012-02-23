@@ -60,15 +60,15 @@ module PBS
         require 'rdi/rdi'
         # Ensure wxRuby is installed, and propose it to be in a local repository if needed
         lInstaller = RDI::Installer.new(iPBSRootDir)
-        lInstaller.setDefaultOptions( {
-          :PreferredViews => [ 'SimpleWxGUI', 'Text' ],
-          :PreferredProgressViews => [ 'SimpleWxGUI', 'Text' ]
+        lInstaller.set_default_options( {
+          :preferred_views => [ 'SimpleWxGUI', 'Text' ],
+          :preferred_progress_views => [ 'SimpleWxGUI', 'Text' ]
         } )
         # Get the local installation directory for Gems
-        lLocalGemsDir = lInstaller.getDefaultInstallLocation('Gem', RDI::DEST_LOCAL)
-        lError, lCMApplied, lIgnored, lUnresolved = lInstaller.ensureDependencies(
+        lLocalGemsDir = lInstaller.get_default_install_location('Gem', RDI::DEST_LOCAL)
+        lError, lCMApplied, lIgnored, lUnresolved = lInstaller.ensure_dependencies(
           [
-            RDI::Model::DependencyDescription.new('WxRuby').addDescription( {
+            RDI::Model::DependencyDescription.new('WxRuby').add_description( {
               :Testers => [
                 {
                   :Type => 'RubyRequires',
@@ -89,15 +89,15 @@ module PBS
               ]
             } )
           ],
-          :PossibleContextModifiers => {
+          :possible_context_modifiers => {
             'WxRuby' => [
               [
                 [ 'GemPath', lLocalGemsDir ]
               ]
             ]
           },
-          :AutoInstall => RDI::DEST_OTHER,
-          :AutoInstallLocation => lLocalGemsDir
+          :auto_install => RDI::DEST_OTHER,
+          :auto_install_location => lLocalGemsDir
         )
         if ((lError == nil) and
             (lUnresolved.empty?))

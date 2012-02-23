@@ -102,7 +102,7 @@ module PBS
     # Parameters::
     # * *iIncrement* (_Integer_): Increment to apply [optional = 1]
     def incProgression(iIncrement = 1)
-      @CurrentProgressDlg.incValue(iIncrement)
+      @CurrentProgressDlg.inc_value(iIncrement)
     end
 
     # Set the progression text

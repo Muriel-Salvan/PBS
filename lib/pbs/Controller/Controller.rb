@@ -376,10 +376,10 @@ module PBS
           :title => "Undo #{@Title}",
           :icon => getGraphic('IconProcess32.png')
         ) do |ioProgressDlg|
-          ioProgressDlg.setRange(@AtomicOperations.size)
+          ioProgressDlg.set_range(@AtomicOperations.size)
           @AtomicOperations.reverse_each do |iAtomicOperation|
             iAtomicOperation.undoOperation
-            ioProgressDlg.incValue
+            ioProgressDlg.inc_value
           end
         end
       end
@@ -391,10 +391,10 @@ module PBS
           :title => "Redo #{@Title}",
           :icon => getGraphic('IconProcess32.png')
         ) do |ioProgressDlg|
-          ioProgressDlg.setRange(@AtomicOperations.size)
+          ioProgressDlg.set_range(@AtomicOperations.size)
           @AtomicOperations.each do |iAtomicOperation|
             iAtomicOperation.doOperation
-            ioProgressDlg.incValue
+            ioProgressDlg.inc_value
           end
         end
       end
@@ -1232,8 +1232,8 @@ module PBS
       if (@Options[:RDIContextModifiers][RUBY_PLATFORM] == nil)
         @Options[:RDIContextModifiers][RUBY_PLATFORM] = {}
       end
-      RDI::Installer.getMainInstance.setDefaultOptions(
-        :PossibleContextModifiers => @Options[:RDIContextModifiers][RUBY_PLATFORM]
+      RDI::Installer.get_main_instance.set_default_options(
+        :possible_context_modifiers => @Options[:RDIContextModifiers][RUBY_PLATFORM]
       )
       
       # The GUIS registered

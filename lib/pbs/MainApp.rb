@@ -89,7 +89,7 @@ module PBS
           :title => "Launching PBS #{$PBS_ReleaseInfo[:Version]}",
           :icon => getGraphic('Icon32.png')
         ) do |ioProgressDlg|
-          ioProgressDlg.setRange(6)
+          ioProgressDlg.set_range(6)
           # If we are in debug mode, make the GC clean memory every second.
           # It will help finding bugs that are memory related.
           if ($PBS_DevDebug)
@@ -97,7 +97,7 @@ module PBS
           end
           # Create the Controller
           lController = PBS::Controller.new(@PBSRootDir)
-          ioProgressDlg.incValue
+          ioProgressDlg.inc_value
           # Load the startup file if needed
           if (!@StartupFileNames.empty?)
             lFirstOne = true
@@ -116,14 +116,14 @@ module PBS
               end
             end
           end
-          ioProgressDlg.incValue
+          ioProgressDlg.inc_value
           # Begin
           lController.notifyInit
-          ioProgressDlg.incValue
+          ioProgressDlg.inc_value
           # Notify everybody that options have been changed to initialize them
           # This step creates all integration plugin instances
           lController.notifyOptionsChanged({})
-          ioProgressDlg.incValue
+          ioProgressDlg.inc_value
 
           # If no integration plugin is to be instantiated, bring the Options dialog
           lIntPluginActive = lController.isIntPluginActive?
@@ -134,7 +134,7 @@ module PBS
             # Check again
             lIntPluginActive = lController.isIntPluginActive?
           end
-          ioProgressDlg.incValue
+          ioProgressDlg.inc_value
 
           # If we ask for startup tips, go on !
           if (lController.Options[:displayStartupTips])
@@ -145,7 +145,7 @@ module PBS
               lController.showTips(lTopWindow)
             end
           end
-          ioProgressDlg.incValue
+          ioProgressDlg.inc_value
           rEnterEventLoop = lIntPluginActive
         end
       rescue Exception

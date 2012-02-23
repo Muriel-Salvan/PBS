@@ -10,7 +10,7 @@ module PBS
   # Return::
   # * <em>RDI::Model::DependencyDescription</em>: The dependency description
   def self.getNokogiriDepDesc
-    return RDI::Model::DependencyDescription.new('Nokogiri').addDescription( {
+    return RDI::Model::DependencyDescription.new('Nokogiri').add_description( {
       :Testers => [
         {
           :Type => 'RubyRequires',

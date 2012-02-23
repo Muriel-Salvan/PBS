@@ -10,7 +10,7 @@ module PBS
   # Return::
   # * <em>list<RDI::Model::DependencyDescription></em>: The dependencies descriptions
   def self.getSQLite3Dependencies
-    rDeps = [ RDI::Model::DependencyDescription.new('Ruby-SQLite3').addDescription( {
+    rDeps = [ RDI::Model::DependencyDescription.new('Ruby-SQLite3').add_description( {
         :Testers => [
           {
             :Type => 'RubyRequires',
@@ -58,7 +58,7 @@ module PBS
     # TODO: Specify for other OS
     end
     if (lLibDepDesc != nil)
-      rDeps << RDI::Model::DependencyDescription.new('SQLite 3 Library').addDescription(lLibDepDesc)
+      rDeps << RDI::Model::DependencyDescription.new('SQLite 3 Library').add_description(lLibDepDesc)
     end
 
     return rDeps
